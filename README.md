@@ -16,6 +16,15 @@ của dự án (`.guardian/policies/*.md`) bằng hai cơ chế:
   "vi phạm policy nào" trong báo cáo cuối cùng luôn được dựng lại từ policy thật đã load, không
   bao giờ lấy nguyên văn text tự do từ model (grounding — chống hallucination).
 
+**Inter-file context (RAG-lite)**: ngoài nội dung file đang thay đổi, `guardian` dùng regex trích
+các câu lệnh `import ... from "..."` trỏ tới file nội bộ (bắt đầu bằng `./` hoặc `../`) — bỏ qua
+import từ package/node builtin — resolve đường dẫn (thử thêm đuôi `.ts/.tsx/.js/.jsx` hoặc
+`/index.*`), rồi đọc tối đa **3 file vệ tinh đầu tiên tìm được**, mỗi file giới hạn **10KB**, đưa
+vào prompt dưới mục `=== BỔ SUNG NGỮ CẢNH TỪ CÁC FILE LIÊN QUAN (RAG) ===`. Nhờ vậy LLM thấy được
+định nghĩa type/interface/function ở file khác mà diff phụ thuộc vào, thay vì chỉ đoán từ tên biến.
+Toàn bộ bước này fail-safe — lỗi đọc/resolve bất kỳ file vệ tinh nào cũng bị bỏ qua âm thầm, không
+làm crash lượt kiểm tra.
+
 **Cache LLM check**: `guardian` lưu SHA-256 hash của diff lần chạy PASS gần nhất vào
 `.git/guardian_cache.json` (không track/push, an toàn). Nếu diff push tiếp theo giống hệt hash
 đã lưu, LLM check bị bỏ qua hoàn toàn (secretScan vẫn luôn chạy vì miễn phí) — tránh trả tiền
