@@ -16,6 +16,12 @@ của dự án (`.guardian/policies/*.md`) bằng hai cơ chế:
   "vi phạm policy nào" trong báo cáo cuối cùng luôn được dựng lại từ policy thật đã load, không
   bao giờ lấy nguyên văn text tự do từ model (grounding — chống hallucination).
 
+**Cache LLM check**: `guardian` lưu SHA-256 hash của diff lần chạy PASS gần nhất vào
+`.git/guardian_cache.json` (không track/push, an toàn). Nếu diff push tiếp theo giống hệt hash
+đã lưu, LLM check bị bỏ qua hoàn toàn (secretScan vẫn luôn chạy vì miễn phí) — tránh trả tiền
+API cho cùng một đoạn diff không đổi. Kết quả `BLOCK` không bao giờ được cache, để đảm bảo mọi
+lần sửa lỗi đều được quét lại từ đầu.
+
 Mỗi vi phạm được báo cáo theo đúng 6 trường trong đề xuất sản phẩm: **lỗi gì, vi phạm policy
 nào, mức độ rủi ro, tại sao sai, cách sửa, tự động tạo bản sửa** (trường cuối luôn `null` ở MVP
 này — dành cho Phase 2).

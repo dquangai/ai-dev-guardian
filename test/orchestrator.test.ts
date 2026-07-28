@@ -3,8 +3,13 @@ import { runGuardianCheck } from "../src/orchestrator";
 import type { DiffResult } from "../src/git/diff";
 import type { Violation } from "../src/report/types";
 import type { Policy } from "../src/policy/types";
+import { hashDiffText, type GuardianCache } from "../src/cache";
 
 const EMPTY_DIFF: DiffResult = { diffText: "", changedFiles: [] };
+
+// Disables caching by default — tests opt in explicitly where they exercise it.
+// Also keeps every test isolated from the real project's .git/guardian_cache.json.
+const NO_CACHE = { readCache: (): GuardianCache | null => null, writeCache: (): void => {} };
 
 function violation(overrides: Partial<Violation>): Violation {
   return {
@@ -25,6 +30,7 @@ describe("runGuardianCheck", () => {
       loadPolicies: () => [],
       scanForSecrets: () => [],
       checkPoliciesWithLLM: async () => [],
+      ...NO_CACHE,
     });
     expect(report.verdict).toBe("PASS");
     expect(report.violations).toEqual([]);
@@ -36,6 +42,7 @@ describe("runGuardianCheck", () => {
       loadPolicies: () => [],
       scanForSecrets: () => [critical],
       checkPoliciesWithLLM: async () => [],
+      ...NO_CACHE,
     });
     expect(report.verdict).toBe("BLOCK");
     expect(report.violations).toEqual([critical]);
@@ -47,6 +54,7 @@ describe("runGuardianCheck", () => {
       loadPolicies: () => [],
       scanForSecrets: () => [],
       checkPoliciesWithLLM: async () => [medium],
+      ...NO_CACHE,
     });
     expect(report.verdict).toBe("BLOCK");
   });
@@ -57,6 +65,7 @@ describe("runGuardianCheck", () => {
       loadPolicies: () => [],
       scanForSecrets: () => [low],
       checkPoliciesWithLLM: async () => [],
+      ...NO_CACHE,
     });
     expect(report.verdict).toBe("PASS");
     expect(report.violations).toEqual([low]);
@@ -69,6 +78,7 @@ describe("runGuardianCheck", () => {
       loadPolicies: () => [],
       scanForSecrets: () => [secretViolation],
       checkPoliciesWithLLM: async () => [llmViolation],
+      ...NO_CACHE,
     });
     expect(report.verdict).toBe("BLOCK");
     expect(report.violations).toHaveLength(2);
@@ -99,6 +109,7 @@ describe("runGuardianCheck", () => {
         loadPolicies: () => [matched, unmatched],
         scanForSecrets: () => [],
         checkPoliciesWithLLM,
+        ...NO_CACHE,
       }
     );
 
@@ -128,7 +139,7 @@ describe("runGuardianCheck", () => {
 
     await runGuardianCheck(
       { diffText, changedFiles: ["src/app.ts", "test/secretScan.test.ts"] },
-      { loadPolicies: () => [], scanForSecrets, checkPoliciesWithLLM }
+      { loadPolicies: () => [], scanForSecrets, checkPoliciesWithLLM, ...NO_CACHE }
     );
 
     const secretsDiffArg = scanForSecrets.mock.calls[0][0] as DiffResult;
@@ -148,8 +159,92 @@ describe("runGuardianCheck", () => {
       loadPolicies: () => [],
       scanForSecrets,
       checkPoliciesWithLLM: async () => [],
+      ...NO_CACHE,
     });
 
     expect(scanForSecrets.mock.calls[0][0]).toEqual(diff);
+  });
+
+  describe("cache", () => {
+    it("bỏ qua checkPoliciesWithLLM khi hash diff khớp cache của lần PASS trước, secretScan vẫn chạy", async () => {
+      const diff: DiffResult = { diffText: "same diff content", changedFiles: ["src/app.ts"] };
+      const checkPoliciesWithLLM = vi.fn(async () => []);
+      const scanForSecrets = vi.fn(() => []);
+
+      const report = await runGuardianCheck(diff, {
+        loadPolicies: () => [],
+        scanForSecrets,
+        checkPoliciesWithLLM,
+        readCache: () => ({ lastPassDiffHash: hashDiffText(diff.diffText) }),
+        writeCache: () => {},
+      });
+
+      expect(checkPoliciesWithLLM).not.toHaveBeenCalled();
+      expect(scanForSecrets).toHaveBeenCalledTimes(1);
+      expect(report.verdict).toBe("PASS");
+    });
+
+    it("vẫn chạy checkPoliciesWithLLM khi hash diff khác cache", async () => {
+      const diff: DiffResult = { diffText: "new content", changedFiles: ["src/app.ts"] };
+      const checkPoliciesWithLLM = vi.fn(async () => []);
+
+      await runGuardianCheck(diff, {
+        loadPolicies: () => [],
+        scanForSecrets: () => [],
+        checkPoliciesWithLLM,
+        readCache: () => ({ lastPassDiffHash: "some-other-hash" }),
+        writeCache: () => {},
+      });
+
+      expect(checkPoliciesWithLLM).toHaveBeenCalledTimes(1);
+    });
+
+    it("vẫn chạy checkPoliciesWithLLM khi chưa có cache (readCache trả về null)", async () => {
+      const checkPoliciesWithLLM = vi.fn(async () => []);
+
+      await runGuardianCheck(EMPTY_DIFF, {
+        loadPolicies: () => [],
+        scanForSecrets: () => [],
+        checkPoliciesWithLLM,
+        readCache: () => null,
+        writeCache: () => {},
+      });
+
+      expect(checkPoliciesWithLLM).toHaveBeenCalledTimes(1);
+    });
+
+    it("ghi cache với hash của diff khi verdict là PASS", async () => {
+      const diff: DiffResult = { diffText: "clean diff", changedFiles: ["src/app.ts"] };
+      const writeCache = vi.fn();
+
+      const report = await runGuardianCheck(diff, {
+        loadPolicies: () => [],
+        scanForSecrets: () => [],
+        checkPoliciesWithLLM: async () => [],
+        readCache: () => null,
+        writeCache,
+      });
+
+      expect(report.verdict).toBe("PASS");
+      expect(writeCache).toHaveBeenCalledTimes(1);
+      expect(writeCache.mock.calls[0][0]).toBe(hashDiffText(diff.diffText));
+    });
+
+    it("KHÔNG ghi cache khi verdict là BLOCK", async () => {
+      const diff: DiffResult = { diffText: "bad diff", changedFiles: ["src/app.ts"] };
+      const writeCache = vi.fn();
+      const critical = violation({ riskLevel: "critical" });
+
+      const report = await runGuardianCheck(diff, {
+        loadPolicies: () => [],
+        scanForSecrets: () => [critical],
+        checkPoliciesWithLLM: async () => [],
+        readCache: () => null,
+        writeCache,
+      });
+
+      expect(report.verdict).toBe("BLOCK");
+      expect(writeCache).not.toHaveBeenCalled();
+    });
   });
 });
