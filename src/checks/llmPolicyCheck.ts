@@ -4,14 +4,28 @@ import type { Policy } from "../policy/types";
 import { routePolicies } from "../policy/router";
 import type { Violation } from "../report/types";
 import { resolveLLMClient } from "./llm/resolveClient";
-import { readFileContextSafe } from "./llm/fileContext";
+import { readFileContextSafe, readSatelliteFiles, type SatelliteFile } from "./llm/fileContext";
 
 const BINARY_DIFF_MARKER = "Binary files";
+
+function buildSatelliteSection(satelliteFiles: SatelliteFile[]): string {
+  if (satelliteFiles.length === 0) return "";
+
+  const blocks = satelliteFiles
+    .map(
+      (s) =>
+        `### File "${s.resolvedPath}" (import từ "${s.importPath}")\n\`\`\`\n${s.content}\n\`\`\``
+    )
+    .join("\n\n");
+
+  return `=== BỔ SUNG NGỮ CẢNH TỪ CÁC FILE LIÊN QUAN (RAG) ===\n\n${blocks}\n\n`;
+}
 
 function buildPrompt(
   file: string,
   fileDiffText: string,
   fileContent: string | null,
+  satelliteFiles: SatelliteFile[],
   policies: Policy[]
 ): string {
   const policyBlocks = policies
@@ -21,6 +35,7 @@ function buildPrompt(
   const contentSection = fileContent
     ? `## Nội dung hiện tại của file "${file}"\n\n\`\`\`\n${fileContent}\n\`\`\`\n\n`
     : "";
+  const satelliteSection = buildSatelliteSection(satelliteFiles);
 
   return `Bạn là AI Dev Guardian, một AI Engineering Governance Agent. Nhiệm vụ của bạn là kiểm tra
 thay đổi trong file "${file}" dưới đây có vi phạm bất kỳ policy nào trong danh sách policy được
@@ -28,13 +43,15 @@ cung cấp hay không.
 
 CHỈ đánh giá dựa trên các policy được liệt kê — không đưa ra nhận xét code review chung chung
 (style, performance...) nằm ngoài các policy này. Chỉ đánh giá file "${file}", không suy diễn về
-các file khác.
+các file khác. Có thể dùng phần "BỔ SUNG NGỮ CẢNH" bên dưới (nếu có) để hiểu đúng type/interface/
+function được import vào file này, nhưng KHÔNG báo vi phạm nằm trong các file đó — chúng chỉ để
+tham khảo ngữ cảnh.
 
 ## Policies áp dụng cho file này
 
 ${policyBlocks}
 
-${contentSection}## Diff cần kiểm tra (file "${file}")
+${contentSection}${satelliteSection}## Diff cần kiểm tra (file "${file}")
 
 \`\`\`diff
 ${fileDiffText}
@@ -94,10 +111,11 @@ export async function checkPoliciesWithLLM(
       if (fileDiffText.includes(BINARY_DIFF_MARKER)) return [];
 
       const fileContent = readFileContextSafe(file, cwd);
+      const satelliteFiles = readSatelliteFiles(file, fileContent, cwd);
       const policyById = new Map(filePolicies.map((p) => [p.id, p]));
 
       const rawViolations = await client.reportViolations(
-        buildPrompt(file, fileDiffText, fileContent, filePolicies),
+        buildPrompt(file, fileDiffText, fileContent, satelliteFiles, filePolicies),
         filePolicies.map((p) => p.id)
       );
 
