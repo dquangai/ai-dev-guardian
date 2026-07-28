@@ -1,4 +1,6 @@
 import type { DiffResult } from "./git/diff";
+import { splitDiffByFile } from "./git/diffSplitter";
+import { isIgnoredPath } from "./git/ignorePaths";
 import { loadPolicies } from "./policy/loader";
 import { routePolicies } from "./policy/router";
 import { scanForSecrets } from "./checks/secretScan";
@@ -14,6 +16,24 @@ export interface OrchestratorDeps {
   checkPoliciesWithLLM: typeof checkPoliciesWithLLM;
 }
 
+/**
+ * Drops test/fixture files from the diff before either check sees it — they
+ * intentionally contain fake secrets and adversarial policy content to
+ * exercise secretScan/llmPolicyCheck, which would otherwise always false-positive.
+ */
+function excludeIgnoredFiles(diff: DiffResult): DiffResult {
+  const changedFiles = diff.changedFiles.filter((file) => !isIgnoredPath(file));
+  if (changedFiles.length === diff.changedFiles.length) return diff;
+
+  const diffByFile = splitDiffByFile(diff.diffText);
+  const diffText = changedFiles
+    .map((file) => diffByFile.get(file))
+    .filter((segment): segment is string => segment !== undefined)
+    .join("\n");
+
+  return { diffText, changedFiles };
+}
+
 export async function runGuardianCheck(
   diff: DiffResult,
   deps: Partial<OrchestratorDeps> = {}
@@ -22,12 +42,13 @@ export async function runGuardianCheck(
   const _scanForSecrets = deps.scanForSecrets ?? scanForSecrets;
   const _checkPoliciesWithLLM = deps.checkPoliciesWithLLM ?? checkPoliciesWithLLM;
 
+  const filteredDiff = excludeIgnoredFiles(diff);
   const allPolicies = _loadPolicies();
-  const matchedPolicies = routePolicies(allPolicies, diff.changedFiles);
+  const matchedPolicies = routePolicies(allPolicies, filteredDiff.changedFiles);
 
   const [secretViolations, llmViolations] = await Promise.all([
-    Promise.resolve(_scanForSecrets(diff)),
-    _checkPoliciesWithLLM(diff, matchedPolicies),
+    Promise.resolve(_scanForSecrets(filteredDiff)),
+    _checkPoliciesWithLLM(filteredDiff, matchedPolicies),
   ]);
 
   const violations: Violation[] = [...secretViolations, ...llmViolations];

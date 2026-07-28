@@ -106,4 +106,50 @@ describe("runGuardianCheck", () => {
     const policiesArg = checkPoliciesWithLLM.mock.calls[0][1];
     expect(policiesArg.map((p) => p.id)).toEqual(["match.md"]);
   });
+
+  it("loại bỏ file trong test/ khỏi diff trước khi đưa vào secretScan và checkPoliciesWithLLM", async () => {
+    const diffText = [
+      "diff --git a/src/app.ts b/src/app.ts",
+      "--- a/src/app.ts",
+      "+++ b/src/app.ts",
+      "@@ -1,1 +1,1 @@",
+      "-old",
+      "+new",
+      "diff --git a/test/secretScan.test.ts b/test/secretScan.test.ts",
+      "--- a/test/secretScan.test.ts",
+      "+++ b/test/secretScan.test.ts",
+      "@@ -1,1 +1,1 @@",
+      '-old',
+      '+const fakeKey = "AKIAABCDEFGHIJKLMNOP";',
+    ].join("\n");
+
+    const scanForSecrets = vi.fn(() => []);
+    const checkPoliciesWithLLM = vi.fn(async () => []);
+
+    await runGuardianCheck(
+      { diffText, changedFiles: ["src/app.ts", "test/secretScan.test.ts"] },
+      { loadPolicies: () => [], scanForSecrets, checkPoliciesWithLLM }
+    );
+
+    const secretsDiffArg = scanForSecrets.mock.calls[0][0] as DiffResult;
+    const llmDiffArg = checkPoliciesWithLLM.mock.calls[0][0] as DiffResult;
+
+    expect(secretsDiffArg.changedFiles).toEqual(["src/app.ts"]);
+    expect(secretsDiffArg.diffText).not.toContain("test/secretScan.test.ts");
+    expect(llmDiffArg.changedFiles).toEqual(["src/app.ts"]);
+    expect(llmDiffArg.diffText).not.toContain("AKIAABCDEFGHIJKLMNOP");
+  });
+
+  it("giữ nguyên diff nếu không có file nào bị ignore", async () => {
+    const scanForSecrets = vi.fn(() => []);
+    const diff: DiffResult = { diffText: "unchanged", changedFiles: ["src/app.ts"] };
+
+    await runGuardianCheck(diff, {
+      loadPolicies: () => [],
+      scanForSecrets,
+      checkPoliciesWithLLM: async () => [],
+    });
+
+    expect(scanForSecrets.mock.calls[0][0]).toEqual(diff);
+  });
 });
