@@ -23,8 +23,12 @@ API cho cùng một đoạn diff không đổi. Kết quả `BLOCK` không bao g
 lần sửa lỗi đều được quét lại từ đầu.
 
 Mỗi vi phạm được báo cáo theo đúng 6 trường trong đề xuất sản phẩm: **lỗi gì, vi phạm policy
-nào, mức độ rủi ro, tại sao sai, cách sửa, tự động tạo bản sửa** (trường cuối luôn `null` ở MVP
-này — dành cho Phase 2).
+nào, mức độ rủi ro, tại sao sai, cách sửa, và một prompt gợi ý sửa lỗi** (`promptToFix`). Guardian
+không tự sinh code vá lỗi trực tiếp (rủi ro vỡ code) — thay vào đó sinh một prompt ngôn ngữ tự
+nhiên theo mẫu cố định (`"Xin chào, trong file [tên file], tôi đã vi phạm luật [tên luật] do [lỗi
+cụ thể]. Hãy giúp tôi sửa đoạn code này theo hướng [cách sửa] mà không làm ảnh hưởng đến logic
+hiện tại."`) để dev copy-paste thẳng vào Copilot/ChatGPT/Claude cá nhân của họ nhờ sửa. Với
+secret-scan (không dùng LLM), prompt này được hardcode theo đúng loại secret phát hiện được.
 
 ## Cài đặt
 
@@ -100,6 +104,7 @@ npm test
 ## Phạm vi MVP hiện tại
 
 Đã có: secret scan + LLM policy check (Security Policy, Coding Convention), CLI local, git
-pre-push hook. Chưa có (fast-follow): CI/GitHub Action gate, tích hợp Jira, sinh auto-fix, các
-category còn lại (Architecture Rules, Git Workflow, Testing Standards, Dependency Rules,
-Business Requirements).
+pre-push hook, cache LLM check theo diff hash, prompt gợi ý sửa lỗi (`promptToFix`). Chưa có
+(fast-follow): CI/GitHub Action gate, tích hợp Jira, sinh code vá lỗi trực tiếp (auto-fix thật
+sự — rủi ro cao hơn, cân nhắc kỹ trước khi làm), các category còn lại (Architecture Rules, Git
+Workflow, Testing Standards, Dependency Rules, Business Requirements).

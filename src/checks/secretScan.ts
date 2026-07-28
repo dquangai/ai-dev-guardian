@@ -63,7 +63,7 @@ export function scanForSecrets(diff: DiffResult): Violation[] {
         riskLevel: "critical",
         why: "Secret bị commit vào lịch sử git sẽ lộ vĩnh viễn, kể cả khi xoá ở commit sau — bất kỳ ai clone repo đều đọc được.",
         howToFix: "Chuyển giá trị này sang biến môi trường hoặc secret manager, revoke/rotate secret đã lộ ngay lập tức.",
-        autoFix: null,
+        promptToFix: `Hãy giúp tôi tìm và ẩn an toàn đoạn ${rule.name} trong file này bằng biến môi trường (environment variables).`,
         source: "secret-scan",
       });
     }

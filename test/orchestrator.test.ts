@@ -18,7 +18,7 @@ function violation(overrides: Partial<Violation>): Violation {
     riskLevel: "medium",
     why: "vì",
     howToFix: "sửa",
-    autoFix: null,
+    promptToFix: null,
     source: "secret-scan",
     ...overrides,
   };

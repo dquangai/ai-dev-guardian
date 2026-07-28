@@ -11,8 +11,12 @@ export interface Violation {
   why: string;
   /** Cách sửa — concrete remediation guidance. */
   howToFix: string;
-  /** Tự động tạo bản sửa — reserved for Phase 2 (auto-fix generation). Always null in MVP. */
-  autoFix: string | null;
+  /**
+   * Prompt ngôn ngữ tự nhiên, sẵn sàng copy-paste vào Copilot/ChatGPT/Claude cá
+   * nhân của dev để nhờ sửa lỗi này. Guardian không tự sinh code vá lỗi (rủi ro
+   * vỡ code) — chỉ sinh prompt nhờ vả có cấu trúc rõ ràng.
+   */
+  promptToFix: string | null;
   /** Which check produced this violation. */
   source: "secret-scan" | "llm-policy-check";
 }

@@ -97,6 +97,9 @@ describe("checkPoliciesWithLLM", () => {
         riskLevel: "low",
         why: "kém an toàn",
         howToFix: "đổi type",
+        promptToFix:
+          'Xin chào, trong file "x.ts", tôi đã vi phạm luật Coding Convention do dùng any. ' +
+          "Hãy giúp tôi sửa đoạn code này theo hướng đổi type mà không làm ảnh hưởng đến logic hiện tại.",
       },
     ]);
     const diff: DiffResult = {
@@ -112,7 +115,7 @@ describe("checkPoliciesWithLLM", () => {
     expect(violations).toHaveLength(1);
     expect(violations[0].policyViolated).toBe("Coding Convention (conv.md)");
     expect(violations[0].source).toBe("llm-policy-check");
-    expect(violations[0].autoFix).toBeNull();
+    expect(violations[0].promptToFix).toContain('trong file "x.ts"');
   });
 
   it("loại bỏ violation nếu model trả về policyId không nằm trong danh sách đã cho", async () => {
@@ -124,6 +127,7 @@ describe("checkPoliciesWithLLM", () => {
         riskLevel: "high",
         why: "vì",
         howToFix: "sửa",
+        promptToFix: "prompt bất kỳ",
       },
     ]);
     const diff: DiffResult = {
