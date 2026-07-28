@@ -5,6 +5,7 @@ import { getStagedDiff, getPushRangeDiff } from "./git/diff";
 import { runGuardianCheck } from "./orchestrator";
 import { printReport } from "./report/terminalReporter";
 import { installPrePushHook } from "./hooks/installHook";
+import { confirmOnTTY } from "./ttyConfirm";
 
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -31,6 +32,17 @@ program
   )
   .option("--staged", "Kiểm tra diff của các thay đổi đã staged (index vs HEAD) thay vì đọc stdin")
   .action(async (options: { staged?: boolean }) => {
+    if (!options.staged) {
+      const proceed = await confirmOnTTY(
+        "Bạn có muốn chạy AI Dev Guardian để kiểm tra code trước khi push không? (Y/n): "
+      );
+      if (!proceed) {
+        console.log("[guardian] Bỏ qua kiểm tra theo lựa chọn của bạn — cho phép push.");
+        process.exitCode = 0;
+        return;
+      }
+    }
+
     const diff = options.staged ? await getStagedDiff() : await getPushRangeDiff(await readStdin());
     const report = await runGuardianCheck(diff);
     printReport(report);
