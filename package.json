@@ -2,6 +2,8 @@
   "name": "ai-dev-guardian",
   "version": "0.1.0",
   "description": "AI Engineering Governance Agent — kiểm soát tuân thủ code trước khi push/merge.",
+  "license": "MIT",
+  "author": "DoanQuang",
   "type": "commonjs",
   "bin": {
     "guardian": "dist/cli.js"
