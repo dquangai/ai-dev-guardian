@@ -1,15 +1,4 @@
-import fs from "node:fs";
 import readline from "node:readline";
-
-// Under a git hook, process.stdin is already consumed by git piping ref info
-// into it — reading a real interactive answer requires bypassing stdin and
-// talking to the controlling terminal device directly.
-const TTY_DEVICE_PATH = process.platform === "win32" ? "\\\\.\\CONIN$" : "/dev/tty";
-
-// A TTY device can exist (open succeeds) with nobody actually there to answer
-// it — e.g. some CI runners still allocate a pty. Bound the wait so that case
-// fails open instead of hanging the push forever.
-const PROMPT_TIMEOUT_MS = 20_000;
 
 /**
  * "" (Enter) follows defaultYes; explicit "n"/"no" declines; anything else
@@ -23,47 +12,25 @@ export function parseYesNoAnswer(answer: string, defaultYes: boolean): boolean {
 }
 
 /**
- * Prompts on the controlling terminal directly (not process.stdin — see
- * above). Falls back to `defaultYes` without prompting if no TTY is
- * reachable (CI, another non-interactive invocation, etc.) so an automated
- * push keeps being gated by Guardian instead of hanging forever waiting for
- * a human who isn't there.
+ * Prompts on process.stdin/stdout — but ONLY when both are already a real
+ * interactive terminal. Under a git hook, stdin is always a pipe carrying
+ * ref info (never a TTY), so this safely no-ops to `defaultYes` there
+ * instead of trying to bypass stdin by opening a raw platform TTY device —
+ * that approach (CONIN$ on Windows) crashed in the wild with
+ * "EBADF: bad file descriptor, write", since CONIN$ is an input-only handle
+ * and isn't reliably writable through Node's fs stream layer. Not worth the
+ * risk: no custom device/stream plumbing here, just the standard library,
+ * wrapped so a prompting failure can never crash the push.
  */
 export async function confirmOnTTY(promptText: string, defaultYes = true): Promise<boolean> {
-  // Fast path: no interactive terminal attached at all (CI, output piped to a
-  // file, ...) — don't even attempt to open the TTY device.
-  if (!process.stdout.isTTY) return defaultYes;
+  if (!process.stdin.isTTY || !process.stdout.isTTY) return defaultYes;
 
-  let ttyFd: number;
   try {
-    ttyFd = fs.openSync(TTY_DEVICE_PATH, "r+");
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await new Promise<string>((resolve) => rl.question(promptText, resolve));
+    rl.close();
+    return parseYesNoAnswer(answer, defaultYes);
   } catch {
     return defaultYes;
-  }
-
-  const input = fs.createReadStream("", { fd: ttyFd, autoClose: false });
-  const output = fs.createWriteStream("", { fd: ttyFd, autoClose: false });
-  const rl = readline.createInterface({ input, output, terminal: true });
-
-  try {
-    const answer = await Promise.race([
-      new Promise<string>((resolve) => rl.question(promptText, resolve)),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), PROMPT_TIMEOUT_MS).unref()),
-    ]);
-
-    if (answer === null) {
-      output.write("\n[guardian] Không có phản hồi, tiếp tục chạy kiểm tra mặc định.\n");
-      return defaultYes;
-    }
-    return parseYesNoAnswer(answer, defaultYes);
-  } finally {
-    rl.close();
-    input.destroy();
-    output.destroy();
-    try {
-      fs.closeSync(ttyFd);
-    } catch {
-      // already closed by stream teardown
-    }
   }
 }
