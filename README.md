@@ -56,6 +56,14 @@ guardian check --staged
 guardian install-hook
 ```
 
+Khi được kích hoạt qua pre-push hook (không dùng `--staged`), `guardian` hỏi xác nhận trước khi
+chạy: `Bạn có muốn chạy AI Dev Guardian để kiểm tra code trước khi push không? (Y/n):`. Gõ `Y`
+hoặc Enter để chạy kiểm tra như bình thường; gõ `N` để bỏ qua và cho phép push ngay (exit code 0).
+Vì stdin lúc này đã bị Git chiếm dụng để truyền ref info, prompt đọc trực tiếp từ thiết bị terminal
+(`/dev/tty` trên Unix, `CONIN$` trên Windows) — nếu không có terminal tương tác thật (CI, script
+tự động...) hoặc không nhận được phản hồi trong 20 giây, `guardian` tự động tiếp tục chạy kiểm tra
+như trước đây (fail-open), không bao giờ treo vô thời hạn.
+
 Thoát code `1` khi verdict là `BLOCK` (có vi phạm mức `medium` trở lên), `0` khi `PASS`.
 
 ## Viết Project Policy
