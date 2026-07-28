@@ -21,7 +21,8 @@ function renderViolation(v: Violation, index: number): string {
     `   ${chalk.dim("Mức độ rủi ro:")} ${color(v.riskLevel.toUpperCase())}`,
     `   ${chalk.dim("Tại sao sai:")} ${v.why}`,
     `   ${chalk.dim("Cách sửa:")} ${v.howToFix}`,
-    `   ${chalk.dim("Tự động tạo bản sửa:")} ${v.autoFix ?? chalk.dim("chưa hỗ trợ trong MVP")}`,
+    `   ${chalk.bold.cyan("Prompt gợi ý sửa lỗi (Copy paste vào AI của bạn):")}`,
+    `   ${chalk.magenta(v.promptToFix ?? chalk.dim("(không có gợi ý)"))}`,
   ];
   return lines.join("\n");
 }
