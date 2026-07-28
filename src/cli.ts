@@ -6,7 +6,7 @@ import { runGuardianCheck } from "./orchestrator";
 import { printReport } from "./report/terminalReporter";
 import { installPrePushHook } from "./hooks/installHook";
 import { confirmOnTTY } from "./ttyConfirm";
-
+// Test tính năng cache
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = "";
@@ -28,7 +28,7 @@ program
   .command("check")
   .description(
     "Kiểm tra diff so với Project Policy. Mặc định đọc ref info từ stdin theo chuẩn " +
-      "pre-push hook của Git; dùng --staged để kiểm tra tay các thay đổi đã staged trước khi commit."
+    "pre-push hook của Git; dùng --staged để kiểm tra tay các thay đổi đã staged trước khi commit."
   )
   .option("--staged", "Kiểm tra diff của các thay đổi đã staged (index vs HEAD) thay vì đọc stdin")
   .action(async (options: { staged?: boolean }) => {

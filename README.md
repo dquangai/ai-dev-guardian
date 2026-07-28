@@ -1,4 +1,4 @@
-# AI Dev Guardian
+# AI Dev Guardian ( By DoanQuang )
 
 AI Engineering Governance Agent — kiểm soát tuân thủ code trước khi push/merge vào codebase.
 
