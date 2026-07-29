@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { parse as parseAstGrep, Lang } from "@ast-grep/napi";
 
 const DEFAULT_MAX_BYTES = 20_000;
 
@@ -101,7 +102,61 @@ const TS_IMPORT_REGEX = /import\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g;
 const TS_LOCAL_PATTERN = /^\.\.?\//;
 const TS_RESOLVE_SUFFIXES = ["", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx"];
 
-function extractTsSpecifiers(sourceCode: string): string[] {
+const AST_GREP_CALL_NAMES = new Set(["require", "import"]);
+
+function astGrepLangFor(file: string): Lang {
+  const ext = path.extname(file).toLowerCase();
+  if (ext === ".tsx" || ext === ".jsx") return Lang.Tsx;
+  if (ext === ".ts") return Lang.TypeScript;
+  return Lang.JavaScript; // .js, .mjs, .cjs
+}
+
+/**
+ * Real parser (tree-sitter via ast-grep) instead of a regex — correctly
+ * handles `import type {...}`, `export {...} from "..."` re-exports, and
+ * `require("...")`/dynamic `import("...")` calls that TS_IMPORT_REGEX misses.
+ */
+function extractTsSpecifiersWithAstGrep(file: string, sourceCode: string): string[] {
+  const root = parseAstGrep(astGrepLangFor(file), sourceCode).root();
+  const specifiers: string[] = [];
+  const seen = new Set<string>();
+  const add = (raw: string | null | undefined) => {
+    if (raw && !seen.has(raw)) {
+      seen.add(raw);
+      specifiers.push(raw);
+    }
+  };
+
+  for (const kind of ["import_statement", "export_statement"]) {
+    for (const node of root.findAll({ rule: { kind } })) {
+      const source = node.field("source")?.text();
+      add(source ? source.slice(1, -1) : null); // strip surrounding quotes
+    }
+  }
+
+  for (const node of root.findAll({ rule: { kind: "call_expression" } })) {
+    const fnName = node.field("function")?.text();
+    if (!fnName || !AST_GREP_CALL_NAMES.has(fnName)) continue;
+    add(node.find({ rule: { kind: "string_fragment" } })?.text());
+  }
+
+  return specifiers;
+}
+
+/**
+ * Tries the real parser first; falls back to the regex extractor if parsing
+ * throws (unsupported syntax) or comes back empty (tree-sitter is fault
+ * tolerant and rarely throws outright, so an empty result is the more likely
+ * failure signal — and a false-positive fallback here just costs re-running
+ * a cheap regex, never produces wrong data).
+ */
+function extractTsSpecifiers(file: string, sourceCode: string): string[] {
+  try {
+    const specifiers = extractTsSpecifiersWithAstGrep(file, sourceCode);
+    if (specifiers.length > 0) return specifiers;
+  } catch {
+    // fall through to the regex fallback below
+  }
   return dedupCaptures(sourceCode, TS_IMPORT_REGEX);
 }
 
@@ -255,7 +310,7 @@ export function readSatelliteFiles(
   try {
     const specifiers =
       language === "ts"
-        ? extractTsSpecifiers(fileContent)
+        ? extractTsSpecifiers(file, fileContent)
         : language === "py"
           ? extractPySpecifiers(fileContent)
           : language === "c"

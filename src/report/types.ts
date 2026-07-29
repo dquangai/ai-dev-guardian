@@ -18,7 +18,7 @@ export interface Violation {
    */
   promptToFix: string | null;
   /** Which check produced this violation. */
-  source: "secret-scan" | "llm-policy-check";
+  source: "secret-scan" | "llm-policy-check" | "architecture-check" | "semgrep-check";
 }
 
 export interface CheckReport {

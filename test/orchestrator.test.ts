@@ -11,6 +11,16 @@ const EMPTY_DIFF: DiffResult = { diffText: "", changedFiles: [] };
 // Also keeps every test isolated from the real project's .git/guardian_cache.json.
 const NO_CACHE = { readCache: (): GuardianCache | null => null, writeCache: (): void => {} };
 
+// Stubs out the (real, madge-backed) architecture check and the (real,
+// semgrep-binary-backed) Semgrep check by default — without this, every test
+// that doesn't override them would run real external processes against this
+// repo's actual filesystem, making unit tests slow/flaky and dependent on
+// this machine having semgrep installed.
+const NO_ARCH = {
+  checkCircularDependencies: async (): Promise<Violation[]> => [],
+  checkWithSemgrep: async (): Promise<Violation[]> => [],
+};
+
 function violation(overrides: Partial<Violation>): Violation {
   return {
     errorWhat: "lỗi",
@@ -31,6 +41,7 @@ describe("runGuardianCheck", () => {
       scanForSecrets: () => [],
       checkPoliciesWithLLM: async () => [],
       ...NO_CACHE,
+      ...NO_ARCH,
     });
     expect(report.verdict).toBe("PASS");
     expect(report.violations).toEqual([]);
@@ -43,6 +54,7 @@ describe("runGuardianCheck", () => {
       scanForSecrets: () => [critical],
       checkPoliciesWithLLM: async () => [],
       ...NO_CACHE,
+      ...NO_ARCH,
     });
     expect(report.verdict).toBe("BLOCK");
     expect(report.violations).toEqual([critical]);
@@ -55,6 +67,7 @@ describe("runGuardianCheck", () => {
       scanForSecrets: () => [],
       checkPoliciesWithLLM: async () => [medium],
       ...NO_CACHE,
+      ...NO_ARCH,
     });
     expect(report.verdict).toBe("BLOCK");
   });
@@ -66,6 +79,7 @@ describe("runGuardianCheck", () => {
       scanForSecrets: () => [low],
       checkPoliciesWithLLM: async () => [],
       ...NO_CACHE,
+      ...NO_ARCH,
     });
     expect(report.verdict).toBe("PASS");
     expect(report.violations).toEqual([low]);
@@ -79,9 +93,38 @@ describe("runGuardianCheck", () => {
       scanForSecrets: () => [secretViolation],
       checkPoliciesWithLLM: async () => [llmViolation],
       ...NO_CACHE,
+      ...NO_ARCH,
     });
     expect(report.verdict).toBe("BLOCK");
     expect(report.violations).toHaveLength(2);
+  });
+
+  it("trả BLOCK khi architecture check phát hiện circular dependency", async () => {
+    const cyclic = violation({ riskLevel: "medium", source: "architecture-check" });
+    const report = await runGuardianCheck(EMPTY_DIFF, {
+      loadPolicies: () => [],
+      scanForSecrets: () => [],
+      checkPoliciesWithLLM: async () => [],
+      checkCircularDependencies: async () => [cyclic],
+      ...NO_CACHE,
+    });
+    expect(report.verdict).toBe("BLOCK");
+    expect(report.violations).toEqual([cyclic]);
+  });
+
+  it("gộp vi phạm từ cả 3 check: secret scan, LLM policy check, architecture check", async () => {
+    const secretViolation = violation({ source: "secret-scan", riskLevel: "critical" });
+    const llmViolation = violation({ source: "llm-policy-check", riskLevel: "high" });
+    const archViolation = violation({ source: "architecture-check", riskLevel: "medium" });
+    const report = await runGuardianCheck(EMPTY_DIFF, {
+      loadPolicies: () => [],
+      scanForSecrets: () => [secretViolation],
+      checkPoliciesWithLLM: async () => [llmViolation],
+      checkCircularDependencies: async () => [archViolation],
+      ...NO_CACHE,
+    });
+    expect(report.verdict).toBe("BLOCK");
+    expect(report.violations).toHaveLength(3);
   });
 
   it("chỉ route các policy có scope khớp changedFiles tới checkPoliciesWithLLM", async () => {
@@ -110,6 +153,7 @@ describe("runGuardianCheck", () => {
         scanForSecrets: () => [],
         checkPoliciesWithLLM,
         ...NO_CACHE,
+        ...NO_ARCH,
       }
     );
 
@@ -139,7 +183,7 @@ describe("runGuardianCheck", () => {
 
     await runGuardianCheck(
       { diffText, changedFiles: ["src/app.ts", "test/secretScan.test.ts"] },
-      { loadPolicies: () => [], scanForSecrets, checkPoliciesWithLLM, ...NO_CACHE }
+      { loadPolicies: () => [], scanForSecrets, checkPoliciesWithLLM, ...NO_CACHE, ...NO_ARCH }
     );
 
     const secretsDiffArg = scanForSecrets.mock.calls[0][0] as DiffResult;
@@ -160,6 +204,7 @@ describe("runGuardianCheck", () => {
       scanForSecrets,
       checkPoliciesWithLLM: async () => [],
       ...NO_CACHE,
+      ...NO_ARCH,
     });
 
     expect(scanForSecrets.mock.calls[0][0]).toEqual(diff);
@@ -175,6 +220,7 @@ describe("runGuardianCheck", () => {
         loadPolicies: () => [],
         scanForSecrets,
         checkPoliciesWithLLM,
+        ...NO_ARCH,
         readCache: () => ({ passedDiffHashes: [hashDiffText(diff.diffText)] }),
         writeCache: () => {},
       });
@@ -192,6 +238,7 @@ describe("runGuardianCheck", () => {
         loadPolicies: () => [],
         scanForSecrets: () => [],
         checkPoliciesWithLLM,
+        ...NO_ARCH,
         readCache: () => ({
           passedDiffHashes: ["hash-nhanh-khac", hashDiffText(diff.diffText), "hash-cu-hon"],
         }),
@@ -209,6 +256,7 @@ describe("runGuardianCheck", () => {
         loadPolicies: () => [],
         scanForSecrets: () => [],
         checkPoliciesWithLLM,
+        ...NO_ARCH,
         readCache: () => ({ passedDiffHashes: ["some-other-hash"] }),
         writeCache: () => {},
       });
@@ -223,6 +271,7 @@ describe("runGuardianCheck", () => {
         loadPolicies: () => [],
         scanForSecrets: () => [],
         checkPoliciesWithLLM,
+        ...NO_ARCH,
         readCache: () => null,
         writeCache: () => {},
       });
@@ -238,6 +287,7 @@ describe("runGuardianCheck", () => {
         loadPolicies: () => [],
         scanForSecrets: () => [],
         checkPoliciesWithLLM: async () => [],
+        ...NO_ARCH,
         readCache: () => null,
         writeCache,
       });
@@ -256,6 +306,7 @@ describe("runGuardianCheck", () => {
         loadPolicies: () => [],
         scanForSecrets: () => [critical],
         checkPoliciesWithLLM: async () => [],
+        ...NO_ARCH,
         readCache: () => null,
         writeCache,
       });

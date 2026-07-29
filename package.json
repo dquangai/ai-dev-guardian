@@ -18,10 +18,12 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
+    "@ast-grep/napi": "^0.45.0",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "dotenv": "^17.4.2",
     "gray-matter": "^4.0.3",
+    "madge": "^8.0.0",
     "micromatch": "^4.0.8",
     "openai": "^7.0.0",
     "simple-git": "^3.27.0"
