@@ -11,3 +11,7 @@ tags: [style, naming, readability]
 - Không để lại code đã comment-out, `console.log` debug, hoặc TODO không có ngữ cảnh trong code chuẩn bị merge.
 - Hàm/method nên có một trách nhiệm rõ ràng; tránh hàm quá dài (>50 dòng) gộp nhiều việc không liên quan.
 - Không dùng `any` trong TypeScript trừ khi có comment giải thích rõ lý do vì sao không thể type chặt hơn.
+  Ví dụ vi phạm: `let data: any;`, `function f(x: any) {}`.
+  Ví dụ KHÔNG vi phạm: một dòng comment hoặc string chỉ NHẮC TỚI chữ "any" bằng ngôn ngữ tự nhiên
+  (ví dụ `// xử lý any lỗi có thể xảy ra`, `"any madge error"`) — đây không phải kiểu dữ liệu
+  TypeScript, chỉ là một từ tiếng Anh trong câu văn, không tính là vi phạm.

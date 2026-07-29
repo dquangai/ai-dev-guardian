@@ -47,7 +47,7 @@ export interface SatelliteFile {
   content: string;
 }
 
-type Language = "ts" | "py" | "c" | "go";
+export type Language = "ts" | "py" | "c" | "go";
 
 const LANGUAGE_EXTENSIONS: Record<Language, string[]> = {
   ts: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
@@ -56,7 +56,7 @@ const LANGUAGE_EXTENSIONS: Record<Language, string[]> = {
   go: [".go"],
 };
 
-function detectLanguage(file: string): Language | null {
+export function detectLanguage(file: string): Language | null {
   const ext = path.extname(file).toLowerCase();
   for (const lang of Object.keys(LANGUAGE_EXTENSIONS) as Language[]) {
     if (LANGUAGE_EXTENSIONS[lang].includes(ext)) return lang;
@@ -104,7 +104,7 @@ const TS_RESOLVE_SUFFIXES = ["", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/in
 
 const AST_GREP_CALL_NAMES = new Set(["require", "import"]);
 
-function astGrepLangFor(file: string): Lang {
+export function astGrepLangFor(file: string): Lang {
   const ext = path.extname(file).toLowerCase();
   if (ext === ".tsx" || ext === ".jsx") return Lang.Tsx;
   if (ext === ".ts") return Lang.TypeScript;

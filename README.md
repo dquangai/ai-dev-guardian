@@ -195,6 +195,13 @@ tags: [security]
 The rule itself, written like you're explaining it to a developer.
 ```
 
+Add a "Ví dụ vi phạm" / "Ví dụ KHÔNG vi phạm" (violating / non-violating example) block under any
+rule prone to false positives — since the body is handed to the model verbatim, this is free
+few-shot prompting with zero code changes, and `buildPrompt()` explicitly instructs the model to
+follow example boundaries precisely. See `.guardian/policies/coding-convention.policy.md`'s `any`
+rule for a real example: it disambiguates the TypeScript type `any` from the English word "any"
+appearing in a comment, which the LLM check otherwise conflates in practice.
+
 `loadPolicies()` (`src/policy/loader.ts`) reads every `.md` file under `.guardian/policies/`
 (default via `DEFAULT_POLICY_DIR`), parsing frontmatter with `gray-matter` and defaulting
 `severity` to `medium` if invalid/missing. `routePolicies()` (`src/policy/router.ts`) then
