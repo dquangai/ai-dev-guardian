@@ -31,22 +31,12 @@ export function readFileContextSafe(
 
 // --- Inter-file context ("RAG-lite"): pull in local files the changed file
 // imports, so the LLM can see type/interface/function definitions the diff
-// depends on, without needing a real embedding/retrieval pipeline. ---
+// depends on, without needing a real embedding/retrieval pipeline. Not a
+// real parser for any of these languages — good enough to find specifiers
+// for an MVP, per the deliberately lightweight scope of this feature. ---
 
 const MAX_SATELLITE_FILES = 3;
 const SATELLITE_MAX_BYTES = 10_000;
-
-// Matches `import ... from "spec"` and bare `import "spec"`. Not a real
-// parser — good enough to find specifiers for an MVP, per the deliberately
-// lightweight scope of this feature.
-const IMPORT_REGEX = /import\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g;
-
-// Local relative imports only — anything else is a package (node_modules),
-// a subpath import alias, or a Node builtin, none of which are useful/safe
-// to read off the local filesystem here.
-const LOCAL_IMPORT_PATTERN = /^\.\.?\//;
-
-const RESOLVE_CANDIDATE_SUFFIXES = ["", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx"];
 
 export interface SatelliteFile {
   /** The raw specifier as written in the source, e.g. "./types". */
@@ -56,29 +46,30 @@ export interface SatelliteFile {
   content: string;
 }
 
-/** Extracts local (./ or ../) import specifiers from source code, in order, de-duplicated. */
-function extractLocalImportSpecifiers(sourceCode: string): string[] {
-  const specifiers: string[] = [];
-  const seen = new Set<string>();
+type Language = "ts" | "py" | "c" | "go";
 
-  for (const match of sourceCode.matchAll(IMPORT_REGEX)) {
-    const specifier = match[1];
-    if (!LOCAL_IMPORT_PATTERN.test(specifier) || seen.has(specifier)) continue;
-    seen.add(specifier);
-    specifiers.push(specifier);
+const LANGUAGE_EXTENSIONS: Record<Language, string[]> = {
+  ts: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
+  py: [".py"],
+  c: [".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx"],
+  go: [".go"],
+};
+
+function detectLanguage(file: string): Language | null {
+  const ext = path.extname(file).toLowerCase();
+  for (const lang of Object.keys(LANGUAGE_EXTENSIONS) as Language[]) {
+    if (LANGUAGE_EXTENSIONS[lang].includes(ext)) return lang;
   }
-
-  return specifiers;
+  return null;
 }
 
-/** Resolves a local import specifier (relative to `fromFile`) to an existing file, trying common extensions. */
-function resolveLocalImportPath(fromFile: string, specifier: string, cwd: string): string | null {
-  const basePath = path
-    .join(path.dirname(fromFile), specifier)
-    .split(path.sep)
-    .join("/");
+function joinAsPosix(...segments: string[]): string {
+  return path.join(...segments).split(path.sep).join("/");
+}
 
-  for (const suffix of RESOLVE_CANDIDATE_SUFFIXES) {
+/** Tries each candidate `${basePath}${suffix}` in order, returning the first that exists as a file. */
+function resolveWithSuffixes(basePath: string, suffixes: string[], cwd: string): string | null {
+  for (const suffix of suffixes) {
     const candidate = `${basePath}${suffix}`;
     try {
       if (fs.statSync(path.join(cwd, candidate)).isFile()) return candidate;
@@ -86,16 +77,162 @@ function resolveLocalImportPath(fromFile: string, specifier: string, cwd: string
       continue;
     }
   }
-
   return null;
 }
 
+/** Collects unique capture-group-1 matches of `regex` against `sourceCode`, in order. */
+function dedupCaptures(sourceCode: string, regex: RegExp): string[] {
+  const specifiers: string[] = [];
+  const seen = new Set<string>();
+  for (const match of sourceCode.matchAll(regex)) {
+    if (!seen.has(match[1])) {
+      seen.add(match[1]);
+      specifiers.push(match[1]);
+    }
+  }
+  return specifiers;
+}
+
+// --- TS/JS: `import ... from "spec"` / bare `import "spec"`. Local only
+// (./ or ../) — anything else is a package (node_modules), a subpath import
+// alias, or a Node builtin, none of which are useful/safe to read here. ---
+
+const TS_IMPORT_REGEX = /import\s+(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g;
+const TS_LOCAL_PATTERN = /^\.\.?\//;
+const TS_RESOLVE_SUFFIXES = ["", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx"];
+
+function extractTsSpecifiers(sourceCode: string): string[] {
+  return dedupCaptures(sourceCode, TS_IMPORT_REGEX);
+}
+
+function resolveTsImportPath(fromFile: string, specifier: string, cwd: string): string | null {
+  if (!TS_LOCAL_PATTERN.test(specifier)) return null;
+  return resolveWithSuffixes(joinAsPosix(path.dirname(fromFile), specifier), TS_RESOLVE_SUFFIXES, cwd);
+}
+
+// --- Python: `from .foo.bar import x` / `from . import x`. Relative
+// imports only (leading dot) — plain `import pkg` is always a top-level
+// package, never a same-project relative file. ---
+
+const PY_IMPORT_REGEX = /^\s*from\s+(\.[\w.]*)\s+import\s*([^\n]*)/gm;
+
 /**
- * Best-effort "inter-file RAG": extracts local import specifiers from the
- * changed file's own (already-read) content, resolves up to
+ * `from . import pkg` (bare dots) names the current/parent package itself —
+ * the actual submodule being addressed is the first name after `import`, so
+ * fold it into the specifier as ".pkg" for resolution. A module already
+ * named after the dots (`from .a import X`) doesn't need this: `.a` already
+ * points at the right file, and `X` is just a name defined inside it.
+ */
+function extractPySpecifiers(sourceCode: string): string[] {
+  const specifiers: string[] = [];
+  const seen = new Set<string>();
+
+  for (const match of sourceCode.matchAll(PY_IMPORT_REGEX)) {
+    const pkg = match[1];
+    const isBarePackage = /^\.+$/.test(pkg);
+    // undefined for "*", "(" (multi-line parenthesized import) — nothing usable to fold in.
+    const firstName = match[2].match(/^([A-Za-z_]\w*)/)?.[1];
+    const specifier = isBarePackage && firstName ? `${pkg}${firstName}` : pkg;
+
+    if (!seen.has(specifier)) {
+      seen.add(specifier);
+      specifiers.push(specifier);
+    }
+  }
+
+  return specifiers;
+}
+
+function resolvePyImportPath(fromFile: string, specifier: string, cwd: string): string | null {
+  const match = specifier.match(/^(\.+)(.*)$/);
+  if (!match) return null;
+
+  // First dot = current package (this file's directory); each extra dot walks up one more.
+  let dir = path.dirname(fromFile);
+  for (let i = 1; i < match[1].length; i++) dir = path.dirname(dir);
+
+  const rest = match[2].replace(/\./g, "/"); // "foo.bar" -> "foo/bar"
+  const basePath = joinAsPosix(dir, rest);
+  // "from . import x" (rest === "") can only resolve to the package's own __init__.py.
+  const suffixes = rest ? [".py", "/__init__.py"] : ["/__init__.py"];
+  return resolveWithSuffixes(basePath, suffixes, cwd);
+}
+
+// --- C/C++: `#include "relative/path.h"`. Quote form only — angle-bracket
+// `#include <...>` is always a system/library header, never local. ---
+
+const C_INCLUDE_REGEX = /^\s*#include\s+"([^"]+)"/gm;
+
+function extractCSpecifiers(sourceCode: string): string[] {
+  return dedupCaptures(sourceCode, C_INCLUDE_REGEX);
+}
+
+function resolveCImportPath(fromFile: string, specifier: string, cwd: string): string | null {
+  return resolveWithSuffixes(joinAsPosix(path.dirname(fromFile), specifier), [""], cwd);
+}
+
+// --- Go: `import "module/path/pkg"`, single or grouped `import (...)`.
+// Local when prefixed by this module's own go.mod path. Go imports name a
+// *package directory*, not a file, so resolution reads the first non-test
+// .go file in that directory as a representative satellite. ---
+
+const GO_IMPORT_BLOCK_REGEX = /import\s*\(([\s\S]*?)\)/g;
+const GO_IMPORT_LINE_REGEX = /"([^"]+)"/g;
+const GO_SINGLE_IMPORT_REGEX = /^\s*import\s+(?:\w+\s+)?"([^"]+)"/gm;
+
+function extractGoSpecifiers(sourceCode: string): string[] {
+  const specifiers: string[] = [];
+  const seen = new Set<string>();
+  const add = (raw: string) => {
+    if (!seen.has(raw)) {
+      seen.add(raw);
+      specifiers.push(raw);
+    }
+  };
+
+  for (const block of sourceCode.matchAll(GO_IMPORT_BLOCK_REGEX)) {
+    for (const line of block[1].matchAll(GO_IMPORT_LINE_REGEX)) add(line[1]);
+  }
+  for (const single of sourceCode.matchAll(GO_SINGLE_IMPORT_REGEX)) add(single[1]);
+
+  return specifiers;
+}
+
+function readGoModuleName(cwd: string): string | null {
+  try {
+    const content = fs.readFileSync(path.join(cwd, "go.mod"), "utf-8");
+    return content.match(/^module\s+(\S+)/m)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveGoImportPath(specifier: string, cwd: string, moduleName: string | null): string | null {
+  if (!moduleName || !specifier.startsWith(`${moduleName}/`)) return null;
+
+  const dirPath = specifier.slice(moduleName.length + 1);
+  try {
+    const fullDir = path.join(cwd, dirPath);
+    if (!fs.statSync(fullDir).isDirectory()) return null;
+
+    const goFiles = fs
+      .readdirSync(fullDir)
+      .filter((f) => f.endsWith(".go") && !f.endsWith("_test.go"))
+      .sort();
+    return goFiles.length > 0 ? `${dirPath}/${goFiles[0]}` : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Best-effort "inter-file RAG": extracts local import/include specifiers
+ * from the changed file's own (already-read) content, resolves up to
  * MAX_SATELLITE_FILES of them, and reads their content (each capped at
  * SATELLITE_MAX_BYTES) — so the LLM sees the type/interface/function
  * definitions the diff actually depends on, at bounded token cost.
+ * Supports TS/JS, Python, C/C++, and Go; any other file extension yields no
+ * satellites.
  *
  * Fully fail-safe: any error extracting, resolving, or reading a given
  * import is silently swallowed and that import is skipped — this is a
@@ -108,14 +245,35 @@ export function readSatelliteFiles(
 ): SatelliteFile[] {
   if (!fileContent) return [];
 
+  const language = detectLanguage(file);
+  if (!language) return [];
+
   const satellites: SatelliteFile[] = [];
+  // Read once per call, not once per specifier — go.mod doesn't change mid-scan.
+  const goModuleName = language === "go" ? readGoModuleName(cwd) : null;
 
   try {
-    for (const importPath of extractLocalImportSpecifiers(fileContent)) {
+    const specifiers =
+      language === "ts"
+        ? extractTsSpecifiers(fileContent)
+        : language === "py"
+          ? extractPySpecifiers(fileContent)
+          : language === "c"
+            ? extractCSpecifiers(fileContent)
+            : extractGoSpecifiers(fileContent);
+
+    for (const importPath of specifiers) {
       if (satellites.length >= MAX_SATELLITE_FILES) break;
 
       try {
-        const resolvedPath = resolveLocalImportPath(file, importPath, cwd);
+        const resolvedPath =
+          language === "ts"
+            ? resolveTsImportPath(file, importPath, cwd)
+            : language === "py"
+              ? resolvePyImportPath(file, importPath, cwd)
+              : language === "c"
+                ? resolveCImportPath(file, importPath, cwd)
+                : resolveGoImportPath(importPath, cwd, goModuleName);
         if (!resolvedPath || resolvedPath === file) continue;
 
         const content = readFileContextSafe(resolvedPath, cwd, SATELLITE_MAX_BYTES);

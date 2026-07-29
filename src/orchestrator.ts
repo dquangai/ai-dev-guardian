@@ -54,7 +54,7 @@ export async function runGuardianCheck(
   // Same diff text as a prior PASS -> skip the paid LLM call (secretScan
   // still always runs — it's free/deterministic, no reason to cache it).
   const diffHash = hashDiffText(filteredDiff.diffText);
-  const cacheHit = _readCache()?.lastPassDiffHash === diffHash;
+  const cacheHit = _readCache()?.passedDiffHashes.includes(diffHash) ?? false;
 
   const runLLMCheck = async (): Promise<Violation[]> => {
     if (cacheHit) {

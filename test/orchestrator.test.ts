@@ -175,13 +175,30 @@ describe("runGuardianCheck", () => {
         loadPolicies: () => [],
         scanForSecrets,
         checkPoliciesWithLLM,
-        readCache: () => ({ lastPassDiffHash: hashDiffText(diff.diffText) }),
+        readCache: () => ({ passedDiffHashes: [hashDiffText(diff.diffText)] }),
         writeCache: () => {},
       });
 
       expect(checkPoliciesWithLLM).not.toHaveBeenCalled();
       expect(scanForSecrets).toHaveBeenCalledTimes(1);
       expect(report.verdict).toBe("PASS");
+    });
+
+    it("bỏ qua checkPoliciesWithLLM khi hash diff khớp BẤT KỲ hash nào trong danh sách cache (không chỉ hash gần nhất)", async () => {
+      const diff: DiffResult = { diffText: "diff từ nhánh cũ", changedFiles: ["src/app.ts"] };
+      const checkPoliciesWithLLM = vi.fn(async () => []);
+
+      await runGuardianCheck(diff, {
+        loadPolicies: () => [],
+        scanForSecrets: () => [],
+        checkPoliciesWithLLM,
+        readCache: () => ({
+          passedDiffHashes: ["hash-nhanh-khac", hashDiffText(diff.diffText), "hash-cu-hon"],
+        }),
+        writeCache: () => {},
+      });
+
+      expect(checkPoliciesWithLLM).not.toHaveBeenCalled();
     });
 
     it("vẫn chạy checkPoliciesWithLLM khi hash diff khác cache", async () => {
@@ -192,7 +209,7 @@ describe("runGuardianCheck", () => {
         loadPolicies: () => [],
         scanForSecrets: () => [],
         checkPoliciesWithLLM,
-        readCache: () => ({ lastPassDiffHash: "some-other-hash" }),
+        readCache: () => ({ passedDiffHashes: ["some-other-hash"] }),
         writeCache: () => {},
       });
 
