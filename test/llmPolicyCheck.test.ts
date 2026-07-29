@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { checkPoliciesWithLLM } from "../src/checks/llmPolicyCheck";
 import type { DiffResult } from "../src/git/diff";
 import type { Policy } from "../src/policy/types";
-import type { LLMClient, RawViolation } from "../src/checks/llm/types";
+import type { JudgeVerdict, LLMClient, RawViolation } from "../src/checks/llm/types";
 
 const FIXTURES_CWD = path.join(__dirname, "fixtures", "llm");
 
@@ -38,8 +38,37 @@ function recordingClient(responses: (calls: RecordedCall[]) => RawViolation[]): 
       calls.push({ prompt, policyIds });
       return responses(calls);
     },
+    async judgeClaims() {
+      throw new Error("the main LLM client's judgeClaims should never be called — only the judge client's");
+    },
   };
   return { client, calls };
+}
+
+interface RecordedJudgeCall {
+  prompt: string;
+  claimCount: number;
+}
+
+function recordingJudgeClient(verdicts: (calls: RecordedJudgeCall[]) => JudgeVerdict[]): {
+  client: LLMClient;
+  calls: RecordedJudgeCall[];
+} {
+  const calls: RecordedJudgeCall[] = [];
+  const client: LLMClient = {
+    async reportViolations() {
+      throw new Error("the judge client's reportViolations should never be called — only judgeClaims");
+    },
+    async judgeClaims(prompt, claimCount) {
+      calls.push({ prompt, claimCount });
+      return verdicts(calls);
+    },
+  };
+  return { client, calls };
+}
+
+function fakeJudgeResolver(client: LLMClient) {
+  return () => ({ provider: "openai" as const, client });
 }
 
 function twoFileDiff(fileA: string, fileB: string, opts: { binaryA?: boolean } = {}): DiffResult {
@@ -78,6 +107,7 @@ describe("checkPoliciesWithLLM", () => {
 
     await checkPoliciesWithLLM(diff, [policyGlobal, policyA, policyB], {
       resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 
@@ -111,6 +141,7 @@ describe("checkPoliciesWithLLM", () => {
 
     const violations = await checkPoliciesWithLLM(diff, [policy], {
       resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 
@@ -142,6 +173,7 @@ describe("checkPoliciesWithLLM", () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const violations = await checkPoliciesWithLLM(diff, [policy], {
       resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 
@@ -172,6 +204,7 @@ describe("checkPoliciesWithLLM", () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const violations = await checkPoliciesWithLLM(diff, [policy], {
       resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 
@@ -209,6 +242,7 @@ describe("checkPoliciesWithLLM", () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const violations = await checkPoliciesWithLLM(diff, [policy], {
       resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 
@@ -245,6 +279,7 @@ describe("checkPoliciesWithLLM", () => {
 
     const violations = await checkPoliciesWithLLM(diff, [policy], {
       resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 
@@ -278,6 +313,7 @@ describe("checkPoliciesWithLLM", () => {
 
       const violations = await checkPoliciesWithLLM(CRITICAL_DIFF, [policy], {
         resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
         cwd: FIXTURES_CWD,
       });
 
@@ -291,6 +327,7 @@ describe("checkPoliciesWithLLM", () => {
 
       const violations = await checkPoliciesWithLLM(CRITICAL_DIFF, [policy], {
         resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
         cwd: FIXTURES_CWD,
       });
 
@@ -308,6 +345,7 @@ describe("checkPoliciesWithLLM", () => {
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const violations = await checkPoliciesWithLLM(CRITICAL_DIFF, [policy], {
         resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
         cwd: FIXTURES_CWD,
       });
 
@@ -318,6 +356,135 @@ describe("checkPoliciesWithLLM", () => {
     });
   });
 
+  describe("judge pass (LLM-as-a-judge, xác minh độc lập sau grounding)", () => {
+    const JUDGE_DIFF: DiffResult = {
+      diffText: "diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1,1 +1,1 @@\n-a\n+b",
+      changedFiles: ["x.ts"],
+    };
+
+    function groundedViolation(overrides: Partial<RawViolation> = {}): RawViolation {
+      return {
+        reasoning: "suy luận ban đầu",
+        errorWhat: "claim cần judge xác minh",
+        policyId: "conv.md",
+        riskLevel: "low",
+        why: "vì",
+        howToFix: "sửa",
+        promptToFix: "prompt bất kỳ",
+        evidenceSnippet: "b",
+        ...overrides,
+      };
+    }
+
+    it("judge bác bỏ claim (claimIsTrue: false) -> violation bị loại", async () => {
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const { client } = recordingClient(() => [groundedViolation()]);
+      const { client: judgeClient } = recordingJudgeClient(() => [
+        { index: 0, reasoning: "kiểm tra lại thấy không đúng", claimIsTrue: false },
+      ]);
+
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const violations = await checkPoliciesWithLLM(JUDGE_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: fakeJudgeResolver(judgeClient),
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(violations).toEqual([]);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("judge xác nhận claim (claimIsTrue: true) -> violation được giữ", async () => {
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const { client } = recordingClient(() => [groundedViolation()]);
+      const { client: judgeClient } = recordingJudgeClient(() => [
+        { index: 0, reasoning: "kiểm tra lại thấy đúng", claimIsTrue: true },
+      ]);
+
+      const violations = await checkPoliciesWithLLM(JUDGE_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: fakeJudgeResolver(judgeClient),
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(violations).toHaveLength(1);
+    });
+
+    it("judge không khả dụng (resolver trả null) -> giữ nguyên violation, không throw", async () => {
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const { client } = recordingClient(() => [groundedViolation()]);
+
+      const violations = await checkPoliciesWithLLM(JUDGE_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(violations).toHaveLength(1);
+    });
+
+    it("judge throw lỗi -> fail-open, giữ nguyên violation", async () => {
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const { client } = recordingClient(() => [groundedViolation()]);
+      const judgeClient: LLMClient = {
+        async reportViolations() {
+          throw new Error("not used");
+        },
+        async judgeClaims() {
+          throw new Error("judge lỗi mạng");
+        },
+      };
+
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const violations = await checkPoliciesWithLLM(JUDGE_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: fakeJudgeResolver(judgeClient),
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(violations).toHaveLength(1);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("không có violation nào sống sót sau grounding -> không gọi judge", async () => {
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const { client } = recordingClient(() => []);
+      const { client: judgeClient, calls: judgeCalls } = recordingJudgeClient(() => []);
+
+      await checkPoliciesWithLLM(JUDGE_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: fakeJudgeResolver(judgeClient),
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(judgeCalls).toHaveLength(0);
+    });
+
+    it("nhiều violation trong 1 file -> đúng 1 lượt gọi judge với claimCount đúng", async () => {
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const { client } = recordingClient(() => [
+        groundedViolation(),
+        groundedViolation({ errorWhat: "claim thứ 2" }),
+      ]);
+      const { client: judgeClient, calls: judgeCalls } = recordingJudgeClient(() => [
+        { index: 0, reasoning: "ok", claimIsTrue: true },
+        { index: 1, reasoning: "ok", claimIsTrue: true },
+      ]);
+
+      const violations = await checkPoliciesWithLLM(JUDGE_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: fakeJudgeResolver(judgeClient),
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(judgeCalls).toHaveLength(1);
+      expect(judgeCalls[0].claimCount).toBe(2);
+      expect(violations).toHaveLength(2);
+    });
+  });
+
   it("bỏ qua file binary, không gọi LLM cho file đó", async () => {
     const policy = makePolicy({ id: "global.md", scope: [] });
     const { client, calls } = recordingClient(() => []);
@@ -325,6 +492,7 @@ describe("checkPoliciesWithLLM", () => {
 
     await checkPoliciesWithLLM(diff, [policy], {
       resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 
@@ -340,6 +508,7 @@ describe("checkPoliciesWithLLM", () => {
     await expect(
       checkPoliciesWithLLM(diff, [policy], {
         resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
         cwd: FIXTURES_CWD,
       })
     ).resolves.toEqual([]);
@@ -362,6 +531,7 @@ describe("checkPoliciesWithLLM", () => {
 
     await checkPoliciesWithLLM(diff, [policy], {
       resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 
@@ -376,6 +546,7 @@ describe("checkPoliciesWithLLM", () => {
 
     const violations = await checkPoliciesWithLLM(diff, [], {
       resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 
@@ -390,6 +561,7 @@ describe("checkPoliciesWithLLM", () => {
 
     const violations = await checkPoliciesWithLLM(diff, [policy], {
       resolveLLMClient: () => null,
+      resolveJudgeClient: () => null,
       cwd: FIXTURES_CWD,
     });
 

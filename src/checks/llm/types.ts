@@ -102,7 +102,69 @@ export function buildViolationsSchema(policyIds: string[]) {
   } as const;
 }
 
+export interface JudgeVerdict {
+  /** 0-based index into the list of claims sent to the judge, in the order they were given. */
+  index: number;
+  /** CoT before the verdict — re-derive the fact from evidence, don't trust the claim's own wording. */
+  reasoning: string;
+  /** true only if the evidence actually demonstrates the claim as stated. */
+  claimIsTrue: boolean;
+}
+
+export const JUDGE_CLAIMS_TOOL_NAME = "judge_claims";
+
+export const JUDGE_CLAIMS_TOOL_DESCRIPTION =
+  "Independently verify each numbered claim against the real file/diff content provided. " +
+  "Return a verdict for every claim.";
+
+/**
+ * Builds the JSON Schema for the judge's structured tool call. `index` is
+ * constrained to an enum of 0..claimCount-1 — the same grounding trick as
+ * `policyId`'s enum in buildViolationsSchema, so the judge can't answer about
+ * a claim that wasn't actually given to it.
+ */
+export function buildJudgeClaimsSchema(claimCount: number) {
+  const indices = Array.from({ length: claimCount }, (_, i) => i);
+  return {
+    type: "object",
+    properties: {
+      verdicts: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            index: {
+              type: "integer",
+              enum: indices,
+              description: "Which claim (by index) this verdict is about.",
+            },
+            reasoning: {
+              type: "string",
+              description:
+                "Independently re-derive the fact from the real file/diff content given — e.g. " +
+                "actually count the lines, actually re-read the quoted evidence in context. Do NOT " +
+                "just restate or trust the claim's own wording or the original reasoning attached " +
+                "to it; the claim may be wrong even though it sounds specific and confident.",
+            },
+            claimIsTrue: {
+              type: "boolean",
+              description:
+                "true only if your independent re-derivation in `reasoning` actually confirms the " +
+                "claim. false if the claim mischaracterizes, exaggerates, or misreads the real " +
+                "content — including getting a specific number (line count, etc.) wrong.",
+            },
+          },
+          required: ["index", "reasoning", "claimIsTrue"],
+        },
+      },
+    },
+    required: ["verdicts"],
+  } as const;
+}
+
 /** A provider-agnostic client that turns a prompt into structured violations. */
 export interface LLMClient {
   reportViolations(prompt: string, policyIds: string[]): Promise<RawViolation[]>;
+  /** Independent second-pass verification of already-grounded claims. See llmPolicyCheck.ts. */
+  judgeClaims(prompt: string, claimCount: number): Promise<JudgeVerdict[]>;
 }
