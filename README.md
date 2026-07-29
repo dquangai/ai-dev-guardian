@@ -12,7 +12,7 @@
 
 ---
 
-4 independent checks per push · evidence-grounded LLM reasoning · zero auto-patch · one `npm install`
+4 independent checks per push · evidence-grounded + judge-verified LLM reasoning · zero auto-patch · one `npm install`
 
 AI Dev Guardian is a Node/TypeScript CLI and git pre-push hook that gates a push against a
 project's own **Project Policy**. It is not a linter and not a thin LLM wrapper: every check runs
@@ -105,7 +105,7 @@ recent `PASS` (see [Caching](#caching)). The Semgrep check is skipped when the `
 isn't found in `PATH` — in both skip cases Guardian logs a warning and continues, never blocking
 the push over a missing optional dependency.
 
-## LLM reasoning: evidence grounding & self-consistency
+## LLM reasoning: 5 layers against hallucination
 
 The LLM is never asked to freely describe a violation. It must call a `report_violations` tool
 whose JSON Schema (`src/checks/llm/types.ts`) constrains every field:
@@ -114,20 +114,70 @@ whose JSON Schema (`src/checks/llm/types.ts`) constrains every field:
   outside that enum is dropped before it ever reaches the report — the model cannot cite a policy
   that doesn't exist, and the final report text is always reconstructed from the real policy
   file, never trusted verbatim from the model.
+- **`reasoning`** is declared *first* in the schema and required before every other field —
+  forces the model to work through (1) what the code actually does, (2) what the policy requires,
+  (3) whether it really contradicts the policy, before it's allowed to commit to a verdict.
+  Declared-property order is what makes structured tool-calling generate this chain-of-thought
+  before the conclusion, not after.
 - **`evidenceSnippet`** must be the exact line(s) copied from the diff that trigger the
   violation. `isEvidenceGrounded()` in `llmPolicyCheck.ts` splits it into trimmed lines and
-  requires every one to occur verbatim in the file's real diff text — a claim that can't be
-  traced back to actual code is dropped, the same grounding mechanism as `policyId`.
+  requires every one to occur verbatim in the file's real diff text (comment-only lines excluded
+  from the valid pool — see [AST annotation](#ast-annotation-comment-vs-code) below) — a claim
+  that can't be traced back to actual code is dropped, the same grounding mechanism as `policyId`.
 - **`riskLevel: "critical"`** — the one severity that alone blocks a push — additionally requires
   self-consistency: on any first-pass `critical` finding, `checkPoliciesWithLLM` re-runs the
   *identical* prompt against the same file a second time and keeps the finding only if the same
   `policyId` appears in both passes. A disagreement between the two independent passes is treated
   as a false positive and dropped, at the cost of exactly one extra LLM call — paid only on the
   pushes that actually contain a critical finding, not on every push.
+- **Every surviving violation** (any severity, not just `critical`) then goes through an
+  independent [judge pass](#llm-as-a-judge-second-opinion-on-every-violation) — see below.
 
 Every file is reasoned about independently: one prompt per changed file, containing only the
 policies whose `scope` glob (matched via `micromatch`) applies to that file — never a multi-file
 diff crammed into a single call.
+
+## AST annotation: comment vs. code
+
+Grounding proves a quote is *real*; it doesn't prove the quote means what the model says it
+means. Observed in practice: a JSDoc sentence like `// Fail-safe: any madge error...` grounds
+successfully for a claim like "uses the `any` type" — the model quoted a real line, but that
+line is prose describing the code, not code using `any`.
+
+`annotateForLLM()` (`src/checks/llm/annotate.ts`) closes that gap structurally for TS/JS/JSX/TSX
+(ast-grep's built-in languages — Python/C/Go fall back to unannotated content): before the
+current file content and satellite files are shown to the model, every `comment`,
+`string`, and `template_string` AST node is wrapped in `<comment>...</comment>` /
+`<string>...</string>` tags. The prompt then instructs the model that `<comment>` content is
+never executing code, and that `<string>` content is only valid evidence if the string's own
+*value* is the problem (e.g. a hardcoded secret) — not if it merely *describes* something in
+natural language. Fails open to unannotated content on any parse error.
+
+## LLM-as-a-Judge: second opinion on every violation
+
+Grounding and annotation stop claims that quote a comment or invent evidence outright — they
+don't stop the model quoting *real, non-comment code* and still asserting something false about
+it (e.g. claiming a 24-line function "has more than 50 lines"). Self-consistency doesn't catch
+this either, since it only reruns `critical` findings and this class of error showed up
+reproducibly at `medium`/`low`.
+
+After grounding (and critical self-consistency) narrow a file's violations down to survivors,
+`checkPoliciesWithLLM` sends them — batched, one extra call per *file*, not per violation — to a
+second model via `resolveJudgeClient()` (`src/checks/llm/resolveClient.ts`), asking it to
+independently re-derive each claim from the real file/diff content (explicitly instructed to
+recount rather than trust the original claim's wording) and return a `judge_claims` verdict per
+claim. A violation is dropped only if the judge explicitly returns `claimIsTrue: false` for it.
+
+- Same provider/API key as the main check — no separate key needed — but a cheaper/faster model
+  by default (`DEFAULT_ANTHROPIC_JUDGE_MODEL` / `DEFAULT_OPENAI_JUDGE_MODEL`), overridable via
+  `GUARDIAN_JUDGE_MODEL` in `.env`.
+- Zero cost on clean files (only runs when a file has survivors); fails open on any error or
+  missing key — the judge can only *remove* false positives, never make Guardian less reliable
+  than before this layer existed.
+- Verified against a real, previously-reproducible false positive (a 24-line function
+  hallucinated as ">50 lines", `medium` severity, enough to `BLOCK` a real push three separate
+  times before this layer existed): the judge re-counted the real code and correctly rejected the
+  claim, flipping the verdict from `BLOCK` to `PASS`.
 
 ## RAG-lite: per-language context retrieval
 
@@ -250,7 +300,10 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | LLM policy check | Per-file, per-policy-scope reasoning via Anthropic Claude or OpenAI GPT (auto-selected by which `.env` key is present) |
 | Policy as Code | Markdown + YAML frontmatter under `.guardian/policies/`, glob-routed via `micromatch` |
 | Evidence-grounded violations | `evidenceSnippet` must occur verbatim in the real diff text or the violation is dropped |
+| Chain-of-thought reasoning field | `reasoning` required and declared first in the schema — forces think-before-conclude on every claim |
+| AST comment/string annotation | TS/JS content shown to the LLM is tagged `<comment>`/`<string>` so it can't mistake prose for executing code |
 | Self-consistency on critical findings | A second independent LLM pass must reproduce the same `policyId` before a `critical` verdict is kept |
+| LLM-as-a-Judge second pass | Every surviving violation (any severity) is independently re-verified by a second, cheaper-model call before being kept |
 | Prompt-as-a-Fix | Model generates a templated fix-request prompt; Guardian never writes code itself |
 | SHA-256 diff-hash caching | LRU of last 20 `PASS` hashes in `.git/guardian_cache.json`, survives branch switching |
 | Inter-file RAG-lite context | TypeScript/JavaScript (ast-grep, regex fallback), Python, C/C++, Go — up to 3 satellite files, 10KB each |
