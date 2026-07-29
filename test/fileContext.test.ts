@@ -57,4 +57,69 @@ describe("readSatelliteFiles", () => {
       readSatelliteFiles("main.ts", 'import { X } from "./x";', "/duong-dan-khong-ton-tai")
     ).not.toThrow();
   });
+
+  it("trả về [] cho ngôn ngữ không được hỗ trợ (vd .rs)", () => {
+    expect(readSatelliteFiles("main.rs", 'use crate::foo;', CWD)).toEqual([]);
+  });
+});
+
+describe("readSatelliteFiles — Python", () => {
+  const PY_CWD = path.join(__dirname, "fixtures", "rag-py");
+
+  it("resolve 'from .a import A' tới a.py cùng thư mục", () => {
+    const content = readFileContextSafe("main.py", PY_CWD);
+    const satellites = readSatelliteFiles("main.py", content, PY_CWD);
+
+    const a = satellites.find((s) => s.importPath === ".a");
+    expect(a?.resolvedPath).toBe("a.py");
+    expect(a?.content).toContain('A = "a"');
+  });
+
+  it("resolve 'from . import pkg' tới __init__.py của submodule pkg (không phải __init__.py của thư mục hiện tại)", () => {
+    const content = readFileContextSafe("main.py", PY_CWD);
+    const satellites = readSatelliteFiles("main.py", content, PY_CWD);
+
+    const pkg = satellites.find((s) => s.importPath === ".pkg");
+    expect(pkg?.resolvedPath).toBe("pkg/__init__.py");
+  });
+
+  it("bỏ qua 'import os' (không phải relative import)", () => {
+    const content = readFileContextSafe("main.py", PY_CWD);
+    const satellites = readSatelliteFiles("main.py", content, PY_CWD);
+
+    expect(satellites).toHaveLength(2);
+  });
+});
+
+describe("readSatelliteFiles — C/C++", () => {
+  const C_CWD = path.join(__dirname, "fixtures", "rag-c");
+
+  it("resolve #include \"util.h\" nhưng bỏ qua #include <stdio.h>", () => {
+    const content = readFileContextSafe("main.c", C_CWD);
+    const satellites = readSatelliteFiles("main.c", content, C_CWD);
+
+    expect(satellites).toHaveLength(1);
+    expect(satellites[0].importPath).toBe("util.h");
+    expect(satellites[0].resolvedPath).toBe("util.h");
+    expect(satellites[0].content).toContain("UTIL_VERSION");
+  });
+});
+
+describe("readSatelliteFiles — Go", () => {
+  const GO_CWD = path.join(__dirname, "fixtures", "rag-go");
+
+  it("resolve import trong module (dùng go.mod) tới file .go đầu tiên của package, bỏ qua 'fmt'", () => {
+    const content = readFileContextSafe("main.go", GO_CWD);
+    const satellites = readSatelliteFiles("main.go", content, GO_CWD);
+
+    expect(satellites).toHaveLength(1);
+    expect(satellites[0].importPath).toBe("example.com/proj/util");
+    expect(satellites[0].resolvedPath).toBe("util/helper.go");
+    expect(satellites[0].content).toContain("func Helper()");
+  });
+
+  it("trả về [] nếu không có go.mod (không xác định được module prefix)", () => {
+    const content = 'package main\n\nimport "example.com/proj/util"\n';
+    expect(readSatelliteFiles("main.go", content, path.join(__dirname, "fixtures", "rag"))).toEqual([]);
+  });
 });

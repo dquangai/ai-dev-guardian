@@ -36,13 +36,28 @@ describe("readCache / writeCache", () => {
 
   it("writeCache rồi readCache đọc lại đúng hash vừa ghi", () => {
     writeCache("deadbeef", tmpDir);
-    expect(readCache(tmpDir)).toEqual({ lastPassDiffHash: "deadbeef" });
+    expect(readCache(tmpDir)).toEqual({ passedDiffHashes: ["deadbeef"] });
   });
 
-  it("ghi đè hash cũ khi writeCache gọi lại với hash mới", () => {
+  it("giữ lại cả hash cũ khi writeCache gọi lại với hash mới (LRU, mới nhất lên đầu)", () => {
     writeCache("hash-1", tmpDir);
     writeCache("hash-2", tmpDir);
-    expect(readCache(tmpDir)).toEqual({ lastPassDiffHash: "hash-2" });
+    expect(readCache(tmpDir)).toEqual({ passedDiffHashes: ["hash-2", "hash-1"] });
+  });
+
+  it("đưa hash đã tồn tại lên đầu danh sách thay vì lưu trùng lặp", () => {
+    writeCache("hash-1", tmpDir);
+    writeCache("hash-2", tmpDir);
+    writeCache("hash-1", tmpDir);
+    expect(readCache(tmpDir)).toEqual({ passedDiffHashes: ["hash-1", "hash-2"] });
+  });
+
+  it("giới hạn tối đa 20 hash, loại bỏ hash cũ nhất khi vượt quá", () => {
+    for (let i = 0; i < 25; i++) writeCache(`hash-${i}`, tmpDir);
+    const cache = readCache(tmpDir);
+    expect(cache?.passedDiffHashes).toHaveLength(20);
+    expect(cache?.passedDiffHashes[0]).toBe("hash-24");
+    expect(cache?.passedDiffHashes).not.toContain("hash-4");
   });
 
   it("trả về null (không throw) nếu file cache là JSON hỏng", () => {
@@ -50,8 +65,16 @@ describe("readCache / writeCache", () => {
     expect(readCache(tmpDir)).toBeNull();
   });
 
-  it("trả về null (không throw) nếu file cache thiếu field lastPassDiffHash", () => {
+  it("trả về null (không throw) nếu file cache thiếu field passedDiffHashes", () => {
     fs.writeFileSync(path.join(tmpDir, ".git", "guardian_cache.json"), JSON.stringify({ foo: "bar" }));
+    expect(readCache(tmpDir)).toBeNull();
+  });
+
+  it("trả về null nếu passedDiffHashes không phải mảng string", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, ".git", "guardian_cache.json"),
+      JSON.stringify({ passedDiffHashes: [1, 2, 3] })
+    );
     expect(readCache(tmpDir)).toBeNull();
   });
 
