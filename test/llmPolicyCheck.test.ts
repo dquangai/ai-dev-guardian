@@ -92,6 +92,7 @@ describe("checkPoliciesWithLLM", () => {
     const policy = makePolicy({ id: "conv.md", category: "Coding Convention", scope: [] });
     const { client } = recordingClient(() => [
       {
+        reasoning: "code thực sự dùng kiểu any",
         errorWhat: "dùng any",
         policyId: "conv.md",
         riskLevel: "low",
@@ -123,6 +124,7 @@ describe("checkPoliciesWithLLM", () => {
     const policy = makePolicy({ id: "real.md", scope: [] });
     const { client } = recordingClient(() => [
       {
+        reasoning: "suy luận bất kỳ",
         errorWhat: "lỗi bịa",
         policyId: "khong-ton-tai.md",
         riskLevel: "high",
@@ -152,6 +154,7 @@ describe("checkPoliciesWithLLM", () => {
     const policy = makePolicy({ id: "real.md", scope: [] });
     const { client } = recordingClient(() => [
       {
+        reasoning: "suy luận bất kỳ",
         errorWhat: "lỗi được mô tả nhưng không trỏ vào đâu cả",
         policyId: "real.md",
         riskLevel: "medium",
@@ -177,6 +180,77 @@ describe("checkPoliciesWithLLM", () => {
     consoleErrorSpy.mockRestore();
   });
 
+  it("loại bỏ violation nếu evidenceSnippet chỉ khớp một dòng comment, không khớp code thật (case thật đã xảy ra: model trích chữ 'any' trong câu tiếng Anh 'Fail-safe: any madge error...' rồi hiểu nhầm là code dùng kiểu TypeScript any)", async () => {
+    const policy = makePolicy({ id: "conv.md", scope: [] });
+    const { client } = recordingClient(() => [
+      {
+        reasoning: "thấy chữ any trong dòng trích dẫn",
+        errorWhat: "Sử dụng kiểu 'any' mà không có comment giải thích",
+        policyId: "conv.md",
+        riskLevel: "low",
+        why: "vì",
+        howToFix: "sửa",
+        promptToFix: "prompt bất kỳ",
+        evidenceSnippet: "// Fail-safe: any madge error (missing tsconfig, unparseable project, ...)",
+      },
+    ]);
+    const diff: DiffResult = {
+      diffText: [
+        "diff --git a/x.ts b/x.ts",
+        "--- a/x.ts",
+        "+++ b/x.ts",
+        "@@ -1,1 +1,2 @@",
+        "+// Fail-safe: any madge error (missing tsconfig, unparseable project, ...)",
+        "+const seen = new Set<string>();",
+      ].join("\n"),
+      changedFiles: ["x.ts"],
+    };
+
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const violations = await checkPoliciesWithLLM(diff, [policy], {
+      resolveLLMClient: fakeResolver(client),
+      cwd: FIXTURES_CWD,
+    });
+
+    expect(violations).toEqual([]);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("vẫn giữ violation nếu evidenceSnippet khớp dòng code thật (không phải comment)", async () => {
+    const policy = makePolicy({ id: "conv.md", scope: [] });
+    const { client } = recordingClient(() => [
+      {
+        reasoning: "code thực sự khai báo kiểu any",
+        errorWhat: "dùng any thật",
+        policyId: "conv.md",
+        riskLevel: "low",
+        why: "vì",
+        howToFix: "sửa",
+        promptToFix: "prompt bất kỳ",
+        evidenceSnippet: "const x: any = 1;",
+      },
+    ]);
+    const diff: DiffResult = {
+      diffText: [
+        "diff --git a/x.ts b/x.ts",
+        "--- a/x.ts",
+        "+++ b/x.ts",
+        "@@ -1,1 +1,2 @@",
+        "+// some unrelated comment",
+        "+const x: any = 1;",
+      ].join("\n"),
+      changedFiles: ["x.ts"],
+    };
+
+    const violations = await checkPoliciesWithLLM(diff, [policy], {
+      resolveLLMClient: fakeResolver(client),
+      cwd: FIXTURES_CWD,
+    });
+
+    expect(violations).toHaveLength(1);
+  });
+
   describe("self-consistency cho vi phạm critical", () => {
     const CRITICAL_DIFF: DiffResult = {
       diffText: "diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1,1 +1,1 @@\n-a\n+b",
@@ -185,6 +259,7 @@ describe("checkPoliciesWithLLM", () => {
 
     function criticalViolation(): RawViolation {
       return {
+        reasoning: "phát hiện secret hardcode",
         errorWhat: "hardcode secret",
         policyId: "sec.md",
         riskLevel: "critical",
@@ -275,6 +350,24 @@ describe("checkPoliciesWithLLM", () => {
     expect(sampleCall?.prompt).toContain("Nội dung hiện tại của file");
     expect(sampleCall?.prompt).toContain("export const sample = 1;");
     expect(deletedCall?.prompt).not.toContain("Nội dung hiện tại của file");
+  });
+
+  it("bọc comment/string trong nội dung file bằng tag <comment>/<string> trước khi gửi cho LLM (chống semantic hallucination)", async () => {
+    const policy = makePolicy({ id: "global.md", scope: [] });
+    const { client, calls } = recordingClient(() => []);
+    const diff: DiffResult = {
+      diffText: "diff --git a/withComment.ts b/withComment.ts\n--- a/withComment.ts\n+++ b/withComment.ts\n@@ -1,1 +1,1 @@\n-old\n+new",
+      changedFiles: ["withComment.ts"],
+    };
+
+    await checkPoliciesWithLLM(diff, [policy], {
+      resolveLLMClient: fakeResolver(client),
+      cwd: FIXTURES_CWD,
+    });
+
+    expect(calls[0].prompt).toContain("<comment>// a real comment mentioning any</comment>");
+    expect(calls[0].prompt).toContain('<string>"a string value"</string>');
+    expect(calls[0].prompt).toContain("<comment>...</comment>");
   });
 
   it("trả về [] mà không gọi LLM nếu không có policy nào", async () => {

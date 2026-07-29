@@ -5,31 +5,53 @@ import { routePolicies } from "../policy/router";
 import type { Violation } from "../report/types";
 import { resolveLLMClient } from "./llm/resolveClient";
 import { readFileContextSafe, readSatelliteFiles, type SatelliteFile } from "./llm/fileContext";
+import { annotateForLLM } from "./llm/annotate";
 
 const BINARY_DIFF_MARKER = "Binary files";
 const CRITICAL_RISK_LEVEL = "critical";
+
+// Matches a diff line (after stripping its leading +/-/space marker) that is
+// entirely a comment — //, /*, JSDoc continuation (*), or # (Python/shell).
+// Not a real per-language parser, just enough to catch the observed failure
+// mode below.
+const COMMENT_ONLY_LINE_PATTERN = /^[+\- ]?\s*(\/\/|\/\*|\*\/?|#)/;
 
 /**
  * Checks that a model-claimed evidenceSnippet actually occurs in the real
  * diff text, line by line — grounding for the free-text part of a
  * violation, the same way policyId grounding works via the schema enum.
+ *
+ * Comment-only diff lines are excluded from the pool of valid evidence.
+ * Without this, a JSDoc sentence like "Fail-safe: any madge error..." grounds
+ * successfully (the text is real) for a claim like "uses the `any` type" —
+ * the model quoted a real line, but that line is prose describing the code,
+ * not code using `any`. Grounding proves the quote is real; it doesn't prove
+ * the quote means what the model says it means. Restricting evidence to
+ * non-comment lines closes that specific gap (observed in practice — see the
+ * project's own commit history around this function).
  */
 function isEvidenceGrounded(evidenceSnippet: string, fileDiffText: string): boolean {
-  const lines = evidenceSnippet
+  const codeLines = fileDiffText
+    .split("\n")
+    .filter((line) => !COMMENT_ONLY_LINE_PATTERN.test(line))
+    .join("\n");
+
+  const snippetLines = evidenceSnippet
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  return lines.length > 0 && lines.every((line) => fileDiffText.includes(line));
+
+  return snippetLines.length > 0 && snippetLines.every((line) => codeLines.includes(line));
 }
 
 function buildSatelliteSection(satelliteFiles: SatelliteFile[]): string {
   if (satelliteFiles.length === 0) return "";
 
   const blocks = satelliteFiles
-    .map(
-      (s) =>
-        `### File "${s.resolvedPath}" (import từ "${s.importPath}")\n\`\`\`\n${s.content}\n\`\`\``
-    )
+    .map((s) => {
+      const annotated = annotateForLLM(s.resolvedPath, s.content);
+      return `### File "${s.resolvedPath}" (import từ "${s.importPath}")\n\`\`\`\n${annotated}\n\`\`\``;
+    })
     .join("\n\n");
 
   return `=== BỔ SUNG NGỮ CẢNH TỪ CÁC FILE LIÊN QUAN (RAG) ===\n\n${blocks}\n\n`;
@@ -47,7 +69,7 @@ function buildPrompt(
     .join("\n\n");
 
   const contentSection = fileContent
-    ? `## Nội dung hiện tại của file "${file}"\n\n\`\`\`\n${fileContent}\n\`\`\`\n\n`
+    ? `## Nội dung hiện tại của file "${file}"\n\n\`\`\`\n${annotateForLLM(file, fileContent)}\n\`\`\`\n\n`
     : "";
   const satelliteSection = buildSatelliteSection(satelliteFiles);
 
@@ -59,7 +81,17 @@ CHỈ đánh giá dựa trên các policy được liệt kê — không đưa r
 (style, performance...) nằm ngoài các policy này. Chỉ đánh giá file "${file}", không suy diễn về
 các file khác. Có thể dùng phần "BỔ SUNG NGỮ CẢNH" bên dưới (nếu có) để hiểu đúng type/interface/
 function được import vào file này, nhưng KHÔNG báo vi phạm nằm trong các file đó — chúng chỉ để
-tham khảo ngữ cảnh.
+tham khảo ngữ cảnh. Nếu một policy có phần "Ví dụ vi phạm" / "Ví dụ KHÔNG vi phạm", bám sát chính
+xác ranh giới của các ví dụ đó khi ra quyết định — đừng suy diễn rộng hơn những gì ví dụ thể hiện.
+
+Trong phần nội dung file (nếu có), comment được đánh dấu bằng <comment>...</comment> và chuỗi
+string được đánh dấu bằng <string>...</string>. Bên trong <comment> KHÔNG BAO GIỜ tính là code
+đang thực thi — không được báo vi phạm về cú pháp/kiểu dữ liệu (type, syntax) dựa trên nội dung
+trong <comment>, trừ khi chính policy đang áp dụng nói rõ về nội dung/định dạng của comment. Bên
+trong <string> vẫn có thể là bằng chứng vi phạm hợp lệ nếu chính GIÁ TRỊ của chuỗi đó là vấn đề
+(ví dụ: chuỗi là secret/API key thật) — nhưng nội dung mô tả bằng ngôn ngữ tự nhiên bên trong một
+string (thông báo lỗi, text hiển thị cho người dùng) không phải là báo cáo về trạng thái thật của
+codebase.
 
 ## Policies áp dụng cho file này
 
@@ -158,7 +190,7 @@ export async function checkPoliciesWithLLM(
         }
         if (!isEvidenceGrounded(v.evidenceSnippet, fileDiffText)) {
           console.error(
-            `[guardian] Vi phạm "${v.policyId}" cho file ${file} thiếu bằng chứng khớp với diff thật — bỏ qua.`
+            `[guardian] Vi phạm "${v.policyId}" cho file ${file} thiếu bằng chứng khớp với diff thật — bỏ qua. Reasoning của model: ${v.reasoning}`
           );
           continue;
         }

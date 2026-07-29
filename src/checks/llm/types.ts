@@ -1,4 +1,11 @@
 export interface RawViolation {
+  /**
+   * Chain-of-thought, generated before the rest of the fields: forces the
+   * model to work through (1) what the code actually does, (2) what the
+   * policy requires, (3) whether it actually contradicts the policy — before
+   * committing to a verdict. Internal only, never shown to the end user.
+   */
+  reasoning: string;
   errorWhat: string;
   /** Must be one of the policy ids passed to reportViolations for this call. */
   policyId: string;
@@ -37,6 +44,17 @@ export function buildViolationsSchema(policyIds: string[]) {
         items: {
           type: "object",
           properties: {
+            reasoning: {
+              type: "string",
+              description:
+                "Think through this BEFORE the other fields, in order: (1) What does this exact " +
+                "code/comment/string actually do or represent — is it executing logic, or is it " +
+                "prose (a comment, a natural-language string value)? (2) What does the policy " +
+                "literally require? (3) Given (1) and (2), does this specific code really " +
+                "contradict the policy, or does it only superficially resemble the violation " +
+                "(e.g. an English word appearing inside a comment, not the code construct it " +
+                "names)? Only report a violation if step (3) concludes yes.",
+            },
             errorWhat: {
               type: "string",
               description: "Concrete description of what was found, referencing the specific code.",
@@ -68,6 +86,7 @@ export function buildViolationsSchema(policyIds: string[]) {
             },
           },
           required: [
+            "reasoning",
             "errorWhat",
             "policyId",
             "riskLevel",
