@@ -3,6 +3,10 @@ import {
   REPORT_VIOLATIONS_TOOL_DESCRIPTION,
   REPORT_VIOLATIONS_TOOL_NAME,
   buildViolationsSchema,
+  JUDGE_CLAIMS_TOOL_DESCRIPTION,
+  JUDGE_CLAIMS_TOOL_NAME,
+  buildJudgeClaimsSchema,
+  type JudgeVerdict,
   type LLMClient,
   type RawViolation,
 } from "./types";
@@ -34,6 +38,29 @@ export function createAnthropicClient(model: string = DEFAULT_ANTHROPIC_MODEL): 
       if (!toolUse) return [];
 
       return (toolUse.input as { violations: RawViolation[] }).violations ?? [];
+    },
+
+    async judgeClaims(prompt: string, claimCount: number): Promise<JudgeVerdict[]> {
+      const response = await client.messages.create({
+        model,
+        max_tokens: 4096,
+        tools: [
+          {
+            name: JUDGE_CLAIMS_TOOL_NAME,
+            description: JUDGE_CLAIMS_TOOL_DESCRIPTION,
+            input_schema: buildJudgeClaimsSchema(claimCount) as unknown as Anthropic.Tool.InputSchema,
+          },
+        ],
+        tool_choice: { type: "tool", name: JUDGE_CLAIMS_TOOL_NAME },
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const toolUse = response.content.find(
+        (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
+      );
+      if (!toolUse) return [];
+
+      return (toolUse.input as { verdicts: JudgeVerdict[] }).verdicts ?? [];
     },
   };
 }
