@@ -7,6 +7,13 @@ export interface RawViolation {
   howToFix: string;
   /** Natural-language prompt the developer can paste into their own AI assistant. */
   promptToFix: string;
+  /**
+   * Exact line(s) quoted from the diff that trigger this violation — checked
+   * against the real diff text before the violation is trusted (grounding,
+   * same idea as the policyId enum: the model must point at something real
+   * instead of asserting a violation in its own words).
+   */
+  evidenceSnippet: string;
 }
 
 export const REPORT_VIOLATIONS_TOOL_NAME = "report_violations";
@@ -42,6 +49,13 @@ export function buildViolationsSchema(policyIds: string[]) {
             riskLevel: { type: "string", enum: ["low", "medium", "high", "critical"] },
             why: { type: "string", description: "Why this matters if left unfixed." },
             howToFix: { type: "string", description: "Concrete remediation guidance." },
+            evidenceSnippet: {
+              type: "string",
+              description:
+                "The exact line(s) copied verbatim from the diff below that trigger this violation " +
+                "(with or without the leading +/- marker). Do not paraphrase or reconstruct — quote " +
+                "real text from the diff. If no specific line can be quoted, do not report this as a violation.",
+            },
             promptToFix: {
               type: "string",
               description:
@@ -53,7 +67,15 @@ export function buildViolationsSchema(policyIds: string[]) {
                 'logic hiện tại." Do NOT generate the fix code itself — only this request prompt.',
             },
           },
-          required: ["errorWhat", "policyId", "riskLevel", "why", "howToFix", "promptToFix"],
+          required: [
+            "errorWhat",
+            "policyId",
+            "riskLevel",
+            "why",
+            "howToFix",
+            "promptToFix",
+            "evidenceSnippet",
+          ],
         },
       },
     },

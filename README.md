@@ -64,12 +64,18 @@ Exit code `1` on a `BLOCK` verdict (any violation at `medium` severity or above)
 | **Prompt-as-a-Fix — zero risk** | Guardian never patches code directly (too risky). Instead it generates a ready-to-paste prompt for your own Copilot/ChatGPT/Claude session. |
 | **Deterministic secret scan** | Regex-based, free, always runs even with no API key configured. |
 | **Interactive, never-hanging git hook** | Prompts Y/n in a real terminal; fails open (still runs the check) in CI/scripts so it never blocks a pipeline. |
+| **Evidence-grounded violations** | Every violation must quote the exact diff line that triggers it — checked against the real diff text before being trusted. A claim that doesn't match real code is dropped, never reported. |
+| **Self-consistency check on critical findings** | A `critical` verdict (the one severity that alone blocks a push) requires a second, independent pass on the same file to confirm — disagreement is treated as a false positive and dropped. |
 
 ## Why Guardian's reasoning is different
 
 Most "AI code review" tools do one thing: throw a diff into a prompt and print whatever the model says. That's easy to build, and it's exactly why they tend to invent rules, lose track of which file they're talking about, and drift into generic style commentary instead of the project's actual policy. Guardian's reasoning pipeline is built to avoid that:
 
 - **Can't invent a policy.** The model is never asked to describe a violation in its own words — every response is constrained by a JSON Schema whose `policyId` is an enum built from exactly the policies loaded for that file. The final report is always reconstructed from the real policy text, never trusted verbatim from the model. An id outside that enum is dropped, not reported.
+
+- **Can't assert a violation without pointing at real code.** Every violation must include an `evidenceSnippet` — the exact line quoted from the diff that triggers it. Guardian checks that snippet against the real diff text before trusting the violation; a claim that can't be traced back to actual code is dropped, the same way an invented `policyId` is.
+
+- **Double-checks itself before blocking a push.** A `critical` finding — the only severity that alone blocks the push — triggers one additional, independent pass over the same file. The violation survives only if the model reports the same `policyId` both times; a disagreement between the two passes is treated as a false positive and dropped.
 
 - **Sees more than a raw diff.** A raw diff usually lacks the detail that decides the outcome — a comment just above the hunk, a type defined in another file. Guardian hands the model the full current content of the changed file, plus (via RAG-lite) up to 3 locally-imported files it depends on — context close to what a human reviewer would actually have, not a disconnected fragment.
 
@@ -141,6 +147,8 @@ npm test   # runs the full unit test suite — no API calls, no real terminal ne
 | Interactive pre-push git hook | Done | Y/n in a real terminal, fail-open in CI/scripts |
 | SHA-256 diff-hash caching | Done | LRU of the last 20 PASS hashes, survives branch switching |
 | Inter-file RAG-lite context | Done | TypeScript/JavaScript, Python, C/C++, Go |
+| Evidence-grounded violations | Done | Rejects any violation whose quoted evidence doesn't match the real diff text |
+| Self-consistency check for critical findings | Done | A second independent pass must confirm any `critical` verdict before it's kept |
 | CI / GitHub Action gate | Planned | Required-check integration with a git-versioned baseline |
 | Jira integration | Planned | Link policy violations to tracked issues |
 | Architecture Rules category | Planned | Dependency-direction rules (e.g. "module A must not import module B") |

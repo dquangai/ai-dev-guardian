@@ -100,6 +100,7 @@ describe("checkPoliciesWithLLM", () => {
         promptToFix:
           'Xin chào, trong file "x.ts", tôi đã vi phạm luật Coding Convention do dùng any. ' +
           "Hãy giúp tôi sửa đoạn code này theo hướng đổi type mà không làm ảnh hưởng đến logic hiện tại.",
+        evidenceSnippet: "b",
       },
     ]);
     const diff: DiffResult = {
@@ -128,6 +129,7 @@ describe("checkPoliciesWithLLM", () => {
         why: "vì",
         howToFix: "sửa",
         promptToFix: "prompt bất kỳ",
+        evidenceSnippet: "b",
       },
     ]);
     const diff: DiffResult = {
@@ -144,6 +146,101 @@ describe("checkPoliciesWithLLM", () => {
     expect(violations).toEqual([]);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it("loại bỏ violation nếu evidenceSnippet không khớp với nội dung diff thật (grounding)", async () => {
+    const policy = makePolicy({ id: "real.md", scope: [] });
+    const { client } = recordingClient(() => [
+      {
+        errorWhat: "lỗi được mô tả nhưng không trỏ vào đâu cả",
+        policyId: "real.md",
+        riskLevel: "medium",
+        why: "vì",
+        howToFix: "sửa",
+        promptToFix: "prompt bất kỳ",
+        evidenceSnippet: "dòng này không hề tồn tại trong diff",
+      },
+    ]);
+    const diff: DiffResult = {
+      diffText: "diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1,1 +1,1 @@\n-a\n+b",
+      changedFiles: ["x.ts"],
+    };
+
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const violations = await checkPoliciesWithLLM(diff, [policy], {
+      resolveLLMClient: fakeResolver(client),
+      cwd: FIXTURES_CWD,
+    });
+
+    expect(violations).toEqual([]);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
+  describe("self-consistency cho vi phạm critical", () => {
+    const CRITICAL_DIFF: DiffResult = {
+      diffText: "diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1,1 +1,1 @@\n-a\n+b",
+      changedFiles: ["x.ts"],
+    };
+
+    function criticalViolation(): RawViolation {
+      return {
+        errorWhat: "hardcode secret",
+        policyId: "sec.md",
+        riskLevel: "critical",
+        why: "lộ secret",
+        howToFix: "dùng biến môi trường",
+        promptToFix: "prompt bất kỳ",
+        evidenceSnippet: "b",
+      };
+    }
+
+    it("không gọi LLM lần 2 nếu lượt đầu không có vi phạm critical nào", async () => {
+      const policy = makePolicy({ id: "conv.md", severity: "low", scope: [] });
+      const { client, calls } = recordingClient(() => [
+        { ...criticalViolation(), policyId: "conv.md", riskLevel: "low" },
+      ]);
+
+      const violations = await checkPoliciesWithLLM(CRITICAL_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(violations).toHaveLength(1);
+    });
+
+    it("giữ vi phạm critical nếu lượt kiểm tra thứ 2 xác nhận lại cùng policyId", async () => {
+      const policy = makePolicy({ id: "sec.md", severity: "critical", scope: [] });
+      const { client, calls } = recordingClient(() => [criticalViolation()]);
+
+      const violations = await checkPoliciesWithLLM(CRITICAL_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(calls).toHaveLength(2);
+      expect(violations).toHaveLength(1);
+      expect(violations[0].riskLevel).toBe("critical");
+    });
+
+    it("bỏ qua vi phạm critical nếu lượt kiểm tra thứ 2 không xác nhận lại", async () => {
+      const policy = makePolicy({ id: "sec.md", severity: "critical", scope: [] });
+      const { client, calls } = recordingClient((calls) =>
+        calls.length === 1 ? [criticalViolation()] : []
+      );
+
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const violations = await checkPoliciesWithLLM(CRITICAL_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(calls).toHaveLength(2);
+      expect(violations).toEqual([]);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
   });
 
   it("bỏ qua file binary, không gọi LLM cho file đó", async () => {
