@@ -7,6 +7,20 @@ import { resolveLLMClient } from "./llm/resolveClient";
 import { readFileContextSafe, readSatelliteFiles, type SatelliteFile } from "./llm/fileContext";
 
 const BINARY_DIFF_MARKER = "Binary files";
+const CRITICAL_RISK_LEVEL = "critical";
+
+/**
+ * Checks that a model-claimed evidenceSnippet actually occurs in the real
+ * diff text, line by line — grounding for the free-text part of a
+ * violation, the same way policyId grounding works via the schema enum.
+ */
+function isEvidenceGrounded(evidenceSnippet: string, fileDiffText: string): boolean {
+  const lines = evidenceSnippet
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.length > 0 && lines.every((line) => fileDiffText.includes(line));
+}
 
 function buildSatelliteSection(satelliteFiles: SatelliteFile[]): string {
   if (satelliteFiles.length === 0) return "";
@@ -73,9 +87,13 @@ export interface LLMPolicyCheckDeps {
  * Runs an LLM-based semantic check of the diff against the given (already
  * route-matched) policies — one call per changed file, each scoped to only
  * that file's diff, full current content (best-effort), and only the
- * policies whose scope actually matches that file. `policyId` returned by
- * the model is validated against the exact set offered for that file before
- * being trusted (grounding — see llm/types.ts).
+ * policies whose scope actually matches that file. Every violation is
+ * grounded before being trusted: `policyId` must be one of the ids offered
+ * for that file (schema enum), and `evidenceSnippet` must actually occur in
+ * the real diff text (see llm/types.ts). A `critical` violation additionally
+ * requires a second, independent pass on the same file to confirm the same
+ * policyId before it's kept — self-consistency for the severity that
+ * actually blocks a push.
  *
  * Returns [] without calling any API if there are no policies to check
  * against, or if no LLM provider is configured (see resolveLLMClient:
@@ -114,10 +132,20 @@ export async function checkPoliciesWithLLM(
       const satelliteFiles = readSatelliteFiles(file, fileContent, cwd);
       const policyById = new Map(filePolicies.map((p) => [p.id, p]));
 
-      const rawViolations = await client.reportViolations(
-        buildPrompt(file, fileDiffText, fileContent, satelliteFiles, filePolicies),
-        filePolicies.map((p) => p.id)
-      );
+      const prompt = buildPrompt(file, fileDiffText, fileContent, satelliteFiles, filePolicies);
+      const policyIds = filePolicies.map((p) => p.id);
+      const rawViolations = await client.reportViolations(prompt, policyIds);
+
+      // Self-consistency re-check: a `critical` verdict blocks the push, so
+      // before trusting one, ask the same question again and only keep it if
+      // the model agrees with itself both times. Only fires when the first
+      // pass actually found a critical violation, so a normal push (no
+      // critical findings) still costs exactly one call.
+      let confirmedCriticalPolicyIds: Set<string> | null = null;
+      if (rawViolations.some((v) => v.riskLevel === CRITICAL_RISK_LEVEL)) {
+        const secondPass = await client.reportViolations(prompt, policyIds);
+        confirmedCriticalPolicyIds = new Set(secondPass.map((v) => v.policyId));
+      }
 
       const violations: Violation[] = [];
       for (const v of rawViolations) {
@@ -125,6 +153,18 @@ export async function checkPoliciesWithLLM(
         if (!policy) {
           console.error(
             `[guardian] LLM trả về policyId không hợp lệ ("${v.policyId}") cho file ${file} — bỏ qua vi phạm này.`
+          );
+          continue;
+        }
+        if (!isEvidenceGrounded(v.evidenceSnippet, fileDiffText)) {
+          console.error(
+            `[guardian] Vi phạm "${v.policyId}" cho file ${file} thiếu bằng chứng khớp với diff thật — bỏ qua.`
+          );
+          continue;
+        }
+        if (v.riskLevel === CRITICAL_RISK_LEVEL && !confirmedCriticalPolicyIds?.has(v.policyId)) {
+          console.error(
+            `[guardian] Vi phạm critical "${v.policyId}" cho file ${file} không được xác nhận lại ở lượt kiểm tra thứ 2 — bỏ qua để tránh false positive.`
           );
           continue;
         }
