@@ -2,199 +2,162 @@
 
 # AI Dev Guardian
 
-**The Open-source AI Engineering Governance Agent.**
-**Shift-left your code quality!**
-
 [![npm version](https://img.shields.io/npm/v/ai-dev-guardian.svg)](https://www.npmjs.com/package/ai-dev-guardian)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#đóng-góp)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
+[![GitHub stars](https://img.shields.io/github/stars/dquangai/ai-dev-guardian?style=social)](https://github.com/dquangai/ai-dev-guardian/stargazers)
 
 </div>
 
 ---
 
-AI Dev Guardian là một **AI Engineering Governance Agent**, đứng giữa developer và Git/CI-CD.
-Trước khi code được push, Guardian tự động đối chiếu diff với **Project Policy** của chính dự
-án bạn — không phải một linter chung chung, cũng không phải một lớp vỏ mỏng chỉ biết ném diff
-vào LLM rồi in ra bất cứ thứ gì model trả lời. Khả năng suy luận ở đây được ràng buộc chặt chẽ,
-đánh giá theo từng phạm vi cụ thể, và bám sát đúng luật *bạn* thật sự đã viết ra — xem
-[vì sao điều đó quan trọng](#vì-sao-khả-năng-suy-luận-của-guardian-khác-biệt).
+Policy-as-Code · scoped per-file reasoning · RAG-lite context · SHA-256 diff caching · zero auto-patch
 
-## Vì sao cần Guardian
+AI Dev Guardian is an **AI engineering governance agent** that sits between a developer and Git/CI-CD. Before code gets pushed, Guardian checks the diff against your project's own **Project Policy** — not a generic linter, and not a thin wrapper that throws a diff at an LLM and prints back whatever it says. Reasoning is constrained, scoped per file, and grounded in rules *you* actually wrote — see [why that matters](#why-guardians-reasoning-is-different).
 
-- **Review thủ công tốn quá nhiều thời gian.**
-  Reviewer cứ phải lặp đi lặp lại việc bắt lỗi convention, kiến trúc, bảo mật ở từng PR — công
-  việc nhàm chán, dễ bỏ sót, nhưng không thể bỏ qua.
-  → **Guardian tự động hoá bước này.** Mỗi lần `git push` đều được đối chiếu với luật thật của
-  dự án (Policy as Code), không cần ai ngồi soi từng dòng nữa.
+## Why Guardian
 
-- **AI coding agent viết code rất nhanh nhưng không biết luật của bạn — và phần lớn công cụ "AI review" cũng vậy.**
-  Copilot, Cursor, Claude Code giúp bạn code nhanh hơn, nhưng chúng không biết kiến trúc, coding
-  convention hay chính sách bảo mật riêng của bạn. Và không ít công cụ AI review khác cũng thế —
-  chúng chỉ ném diff vào một model rồi in ra nhận xét style chung chung.
-  → **Cách Guardian suy luận thì khác.** Nó đọc code với ngữ cảnh thật (RAG-lite kéo thêm các
-  file liên quan), đánh giá từng file riêng biệt chỉ với đúng policy áp dụng cho file đó, và về
-  bản chất không thể trích dẫn một policy không hề tồn tại. Chi tiết ở phần dưới.
+- **Manual review doesn't scale.** Reviewers re-catch the same convention, architecture, and security issues on every PR — tedious, easy to miss, impossible to skip. → **Guardian automates that step.** Every `git push` is checked against your project's real rules (Policy as Code), no one has to eyeball every line.
 
-- **Gọi LLM ở mỗi lần push rất tốn tiền.**
-  Mỗi lần push kích hoạt một lượt gọi LLM là một khoản chi phí — nhân với số dev × số lần push
-  mỗi ngày sẽ đội chi phí rất nhanh.
-  → **Smart diff caching (SHA-256)** đảm bảo Guardian không bao giờ trả tiền hai lần cho cùng
-  một đoạn diff đã từng PASS.
+- **AI coding agents write fast but don't know your rules — and most "AI review" tools don't either.** Copilot, Cursor, and Claude Code make you faster, but they don't know your architecture, conventions, or security policy. Plenty of "AI review" tools have the same gap — they throw a diff at a model and print back generic style commentary. → **Guardian reasons differently.** It reads code with real context (RAG-lite pulls in related files), evaluates each changed file separately against only the policies that apply to it, and structurally cannot cite a policy that doesn't exist. Details below.
 
-## Xem thực tế
+- **Calling an LLM on every push costs money.** Every push that triggers an LLM call is a cost — multiplied by devs × pushes/day, that adds up fast. → **SHA-256 diff-hash caching** means Guardian never pays twice for a diff that already passed.
+
+## See it in action
 
 ![AI Dev Guardian demo](./docs/AIDEV.png)
 
-## Tính năng nổi bật
-
-| Tính năng | Mô tả |
-|---|---|
-| **Context-Aware RAG-lite** | Không chỉ đọc diff — Guardian trích các câu lệnh `import` nội bộ trong file thay đổi và đọc kèm tối đa 3 file liên quan (10KB/file) để LLM hiểu đúng type/interface/function thực sự đang được dùng. |
-| **Multi-Provider LLM** | Dùng Anthropic Claude hoặc OpenAI GPT — tự động chọn theo API key đang có sẵn trong `.env`. |
-| **Smart Diff Caching** | Hash SHA-256 của diff; bỏ qua hoàn toàn lượt gọi LLM nếu diff giống hệt lần chạy PASS gần nhất. |
-| **Policy as Code** | Luật của dự án là các file Markdown thuần (`.guardian/policies/*.md`). LLM bị ép tuân thủ nghiêm ngặt qua JSON Schema (`policyId` enum) — không thể tự bịa ra policy không tồn tại. |
-| **Prompt-as-a-Fix — Zero Risk** | Guardian không bao giờ tự vá code trực tiếp (quá rủi ro). Thay vào đó sinh sẵn một prompt để bạn copy-paste thẳng vào Copilot/ChatGPT/Claude của riêng mình. |
-| **Deterministic Secret Scan** | Regex-based, miễn phí, luôn chạy kể cả khi chưa cấu hình API key nào. |
-| **Git Hook tương tác, không bao giờ treo** | Hỏi xác nhận Y/n khi chạy trong terminal thật; tự fail-open (vẫn chạy check) trong CI/script để không bao giờ chặn pipeline. |
-
-## Vì sao khả năng suy luận của Guardian khác biệt
-
-Phần lớn các công cụ "AI code review" chỉ làm một việc: ném diff vào prompt rồi in ra bất cứ gì
-model nói. Cách làm này dễ xây nhưng cũng chính là lý do chúng hay bịa ra luật, lẫn lộn đang nói
-về file nào, và trôi dần sang những nhận xét style chung chung thay vì policy thật của dự án.
-Pipeline suy luận của Guardian được thiết kế để không rơi vào tình trạng đó:
-
-- **Không thể tự bịa ra policy.** Model không được tự mô tả vi phạm bằng lời của nó — mọi phản
-  hồi đều bị ràng buộc bởi JSON Schema với `policyId` là một enum dựng từ đúng tập policy đã
-  load cho file đó. Nội dung báo cáo cuối cùng luôn được dựng lại từ policy thật, không bao giờ
-  tin nguyên văn text từ model. Nếu model trả về một id không nằm trong danh sách, vi phạm đó bị
-  loại bỏ, không được đưa vào báo cáo.
-
-- **Nhìn thấy nhiều hơn một đoạn diff.** Một diff thô thường thiếu đúng chi tiết quyết định kết
-  quả — một comment nằm ngay phía trên vùng diff, một type được định nghĩa ở file khác. Guardian
-  đưa cho model toàn bộ nội dung hiện tại của file đang thay đổi, cộng với (qua RAG-lite) tối đa
-  3 file được import nội bộ mà nó phụ thuộc vào — để model suy luận với ngữ cảnh gần giống một
-  reviewer con người thật sự có, chứ không phải một mảnh vỡ rời rạc.
-
-- **Mỗi file một lượt đánh giá riêng, tập trung.** Thay vì nhồi cả một diff nhiều file vào một
-  prompt duy nhất rồi hy vọng model nhớ đúng file nào áp dụng luật nào, Guardian chạy một lượt
-  suy luận riêng cho từng file thay đổi, chỉ với đúng những policy có `scope` khớp file đó.
-  Không lẫn lộn giữa các file, không bị loãng sự chú ý khi push lớn.
-
-- **Bám sát luật của bạn, không phải "best practice" chung chung.** Model không bao giờ được hỏi
-  "đoạn code này có tốt không?" — câu hỏi mà bất kỳ LLM nào cũng sẵn sàng trả lời bằng ý kiến
-  chung chung. Nó được hỏi "đoạn này có vi phạm policy X, đúng như được viết trong
-  `.guardian/policies/` của dự án này không?" — một câu hỏi hẹp hơn, có thể kiểm chứng được, cho
-  ra kết quả nhất quán và đúng đặc thù dự án, thay vì những nhận xét style nghe có vẻ thông minh
-  nhưng chung chung.
-
-- **Biết dừng đúng lúc.** Tự sinh code vá lỗi là chỗ mà phần lớn tính năng "AI auto-fix" trở nên
-  nguy hiểm — một bản vá biên dịch được nhưng phá vỡ logic còn tệ hơn không vá gì cả. Model của
-  Guardian chỉ bao giờ được yêu cầu diễn đạt một *prompt nhờ sửa* thật chính xác
-  (Prompt-as-a-Fix) — việc thay đổi code thật sự vẫn luôn là quyết định của bạn hoặc AI assistant
-  riêng của bạn.
-
-## Bắt đầu nhanh
-
-**1. Cài đặt**
+## Install
 
 ```bash
 npm install
 npm run build
-npm link   # để dùng lệnh `guardian` toàn cục, hoặc chạy trực tiếp `node dist/cli.js`
+npm link   # exposes the `guardian` command globally; or run `node dist/cli.js` directly
 ```
 
-**2. Cấu hình API key** — tạo file `.env` ở gốc project (đã có sẵn trong `.gitignore`):
+## Quick Start
 
 ```bash
-# Chỉ cần điền MỘT trong hai key dưới đây
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
+# 1. Configure an LLM key — create .env at the project root (already gitignored)
+echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env   # or OPENAI_API_KEY=sk-...
 
-# Tuỳ chọn
-GUARDIAN_LLM_PROVIDER=   # "anthropic" | "openai" — ép provider khi có cả 2 key
-GUARDIAN_LLM_MODEL=      # đổi model mặc định (mặc định: claude-sonnet-5 / gpt-4.1)
-```
-
-> Không set key nào cũng không sao — Guardian vẫn chạy secret scan bình thường, chỉ log cảnh
-> báo và bỏ qua phần kiểm tra bằng LLM.
-
-**3. Chạy thử**
-
-```bash
-# Kiểm tra tay các thay đổi đã staged, trước khi commit
+# 2. Check staged changes by hand, before committing
 guardian check --staged
 
-# Cài git pre-push hook — mỗi lần `git push` sẽ tự hỏi và chạy `guardian check`
+# 3. Install the pre-push hook — every `git push` prompts and runs `guardian check`
 guardian install-hook
 ```
 
-Exit code `1` khi verdict `BLOCK` (có vi phạm mức `medium` trở lên), `0` khi `PASS` — sẵn sàng
-dùng làm required check trong CI.
+No key set is fine too — Guardian still runs the deterministic secret scan, logs a warning, and skips the LLM-powered checks.
 
-## Kiến trúc
+Exit code `1` on a `BLOCK` verdict (any violation at `medium` severity or above), `0` on `PASS` — safe to wire in as a required CI check.
+
+## Features
+
+| Feature | Description |
+|---|---|
+| **Context-aware RAG-lite** | Doesn't just read the diff — extracts local `import`/`#include` statements from the changed file and pulls in up to 3 related files (10KB each) so the LLM sees the actual type/interface/function it's reasoning about. |
+| **Multi-provider LLM** | Anthropic Claude or OpenAI GPT, auto-selected from whichever API key is present in `.env`. |
+| **Smart diff caching** | SHA-256 hash of the diff, checked against the last 20 PASS results — skips the LLM call entirely on a repeat diff, even across branches. |
+| **Policy as Code** | Project rules live as plain Markdown (`.guardian/policies/*.md`). The LLM is constrained via JSON Schema (`policyId` as an enum) — it cannot invent a policy that doesn't exist. |
+| **Prompt-as-a-Fix — zero risk** | Guardian never patches code directly (too risky). Instead it generates a ready-to-paste prompt for your own Copilot/ChatGPT/Claude session. |
+| **Deterministic secret scan** | Regex-based, free, always runs even with no API key configured. |
+| **Interactive, never-hanging git hook** | Prompts Y/n in a real terminal; fails open (still runs the check) in CI/scripts so it never blocks a pipeline. |
+
+## Why Guardian's reasoning is different
+
+Most "AI code review" tools do one thing: throw a diff into a prompt and print whatever the model says. That's easy to build, and it's exactly why they tend to invent rules, lose track of which file they're talking about, and drift into generic style commentary instead of the project's actual policy. Guardian's reasoning pipeline is built to avoid that:
+
+- **Can't invent a policy.** The model is never asked to describe a violation in its own words — every response is constrained by a JSON Schema whose `policyId` is an enum built from exactly the policies loaded for that file. The final report is always reconstructed from the real policy text, never trusted verbatim from the model. An id outside that enum is dropped, not reported.
+
+- **Sees more than a raw diff.** A raw diff usually lacks the detail that decides the outcome — a comment just above the hunk, a type defined in another file. Guardian hands the model the full current content of the changed file, plus (via RAG-lite) up to 3 locally-imported files it depends on — context close to what a human reviewer would actually have, not a disconnected fragment.
+
+- **One focused pass per file.** Instead of stuffing a multi-file diff into a single prompt and hoping the model remembers which rule applies to which file, Guardian runs a separate reasoning pass per changed file, scoped to only the policies whose `scope` matches that file. No cross-file confusion, no diluted attention on large pushes.
+
+- **Your rules, not generic "best practice."** The model is never asked "is this code good?" — a question any LLM will happily answer with a generic opinion. It's asked "does this violate policy X, as written in this project's `.guardian/policies/`?" — a narrower, verifiable question that produces consistent, project-specific results instead of plausible-sounding platitudes.
+
+- **Knows when to stop.** Auto-generating a fix is where most "AI auto-fix" features turn dangerous — a patch that compiles but breaks logic is worse than no patch. Guardian's model is only ever asked to phrase a precise *fix-request prompt* (Prompt-as-a-Fix) — the actual code change stays your call, or your own AI assistant's.
+
+## RAG-lite: supported languages
+
+Local-import resolution (best-effort, not a full parser) currently covers:
+
+- TypeScript/JavaScript (full support) — `import ... from "./x"`
+- Python (full support) — `from .foo import x`, `from . import pkg`
+- C/C++ (full support) — `#include "relative/path.h"`
+- Go (full support) — resolved via `go.mod`'s module path, picks the first non-test `.go` file in the imported package directory
+
+Any other file extension is checked on diff content alone, with no satellite context pulled in.
+
+## Architecture
 
 ```mermaid
 flowchart LR
     A["git push"] --> B{Pre-push Hook}
-    B -->|Xác nhận Y/n| C["Guardian CLI"]
-    C --> D["Lấy diff & loại bỏ test/"]
+    B -->|Confirm Y/n| C["Guardian CLI"]
+    C --> D["Get diff, drop test/"]
     D --> E["Secret Scan (regex)"]
-    D --> F{Hash trùng<br/>lần PASS trước?}
-    F -->|Có| G["Bỏ qua lượt gọi LLM"]
-    F -->|Không| H["RAG-lite: đọc file liên quan"]
+    D --> F{Hash matches a<br/>recent PASS?}
+    F -->|Yes| G["Skip the LLM call"]
+    F -->|No| H["RAG-lite: read related files"]
     H --> I["LLM Reasoning (Claude / GPT)"]
-    E --> J{Tổng hợp Verdict}
+    E --> J{Merge into Verdict}
     G --> J
     I --> J
-    J -->|PASS| K["Cho phép Push + lưu Cache"]
-    J -->|BLOCK| L["Chặn Push + in Prompt-to-Fix"]
+    J -->|PASS| K["Allow Push + update cache"]
+    J -->|BLOCK| L["Block Push + print fix prompt"]
 ```
 
-## Viết Policy riêng cho dự án của bạn
+## Writing policies for your project
 
-Mỗi file trong `.guardian/policies/*.md` là một policy — YAML frontmatter cộng nội dung
-Markdown (được đưa thẳng cho LLM, không qua xử lý trung gian):
+Each file under `.guardian/policies/*.md` is one policy — YAML frontmatter plus Markdown body (handed to the LLM as-is, no intermediate processing):
 
 ```markdown
 ---
 category: Security Policy
-scope: ["src/**/*.ts"]   # rỗng ([]) nghĩa là áp dụng toàn cục
+scope: ["src/**/*.ts"]   # [] means it applies globally
 severity: critical        # low | medium | high | critical
 tags: [security]
 ---
 
-Nội dung quy định, viết như đang giải thích cho một developer.
+The rule itself, written like you're explaining it to a developer.
 ```
 
-`scope` dùng glob (qua `micromatch`) để chỉ gửi đúng policy liên quan tới file đã thay đổi cho
-LLM — không nhồi toàn bộ policy library vào mỗi lần gọi.
+`scope` uses glob matching (via `micromatch`) so only the policies relevant to each changed file are sent to the LLM — the full policy library is never stuffed into a single call.
 
 ```bash
-npm test   # chạy toàn bộ unit test — không tốn API, không cần terminal thật
+npm test   # runs the full unit test suite — no API calls, no real terminal needed
 ```
 
 ## Roadmap
 
-**Đã có:** secret scan + LLM policy check (Security Policy, Coding Convention), CLI local, git
-pre-push hook tương tác, cache theo diff hash, RAG-lite liên file, sinh prompt gợi ý sửa lỗi.
+| Feature | Status | Details |
+|---|---|---|
+| Deterministic secret scan | Done | Regex-based, free, always runs |
+| LLM policy check | Done | Security Policy, Coding Convention categories |
+| Policy as Code | Done | Markdown + YAML frontmatter, scope-routed via glob |
+| Prompt-as-a-Fix | Done | Model generates a fix-request prompt, never a direct patch |
+| Interactive pre-push git hook | Done | Y/n in a real terminal, fail-open in CI/scripts |
+| SHA-256 diff-hash caching | Done | LRU of the last 20 PASS hashes, survives branch switching |
+| Inter-file RAG-lite context | Done | TypeScript/JavaScript, Python, C/C++, Go |
+| CI / GitHub Action gate | Planned | Required-check integration with a git-versioned baseline |
+| Jira integration | Planned | Link policy violations to tracked issues |
+| Architecture Rules category | Planned | Dependency-direction rules (e.g. "module A must not import module B") |
+| Git Workflow category | Planned | Branch naming, commit message, merge strategy policies |
+| Testing Standards category | Planned | Coverage and test-quality policies |
+| Dependency Rules category | Planned | Allowed/forbidden package policies |
+| Business Requirements category | Planned | Domain-specific rule policies |
 
-**Đang lên kế hoạch:** CI/GitHub Action gate, tích hợp Jira, và các category còn lại
-(Architecture Rules, Git Workflow, Testing Standards, Dependency Rules, Business Requirements).
+## Contributing
 
-## Đóng góp
+AI Dev Guardian is still at the MVP stage — feedback, bug reports, and pull requests are all welcome.
 
-AI Dev Guardian vẫn đang ở giai đoạn MVP — mọi ý kiến, bug report hay Pull Request đều được
-chào đón.
+- Found a bug? Open an issue.
+- Have a feature idea? Propose it, no need to ask first.
+- Want to contribute code? Fork, branch, and send a PR.
 
-- Tìm thấy lỗi? Mở một Issue.
-- Có ý tưởng tính năng? Cứ mạnh dạn đề xuất.
-- Muốn code cùng? Fork, tạo branch, và gửi PR — không cần xin phép trước.
-
-Nếu dự án này giúp ích cho bạn, hãy để lại một sao — đó là động lực lớn nhất để mình tiếp tục
-phát triển nó.
+If this project is useful to you, a star helps a lot — it's the biggest motivation to keep building it.
 
 <div align="center">
 
