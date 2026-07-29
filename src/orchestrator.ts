@@ -5,6 +5,8 @@ import { loadPolicies } from "./policy/loader";
 import { routePolicies } from "./policy/router";
 import { scanForSecrets } from "./checks/secretScan";
 import { checkPoliciesWithLLM } from "./checks/llmPolicyCheck";
+import { checkCircularDependencies } from "./checks/architectureCheck";
+import { checkWithSemgrep } from "./checks/semgrepCheck";
 import { hashDiffText, readCache, writeCache } from "./cache";
 import type { CheckReport, Violation } from "./report/types";
 
@@ -15,6 +17,8 @@ export interface OrchestratorDeps {
   loadPolicies: typeof loadPolicies;
   scanForSecrets: typeof scanForSecrets;
   checkPoliciesWithLLM: typeof checkPoliciesWithLLM;
+  checkCircularDependencies: typeof checkCircularDependencies;
+  checkWithSemgrep: typeof checkWithSemgrep;
   readCache: typeof readCache;
   writeCache: typeof writeCache;
 }
@@ -44,6 +48,8 @@ export async function runGuardianCheck(
   const _loadPolicies = deps.loadPolicies ?? loadPolicies;
   const _scanForSecrets = deps.scanForSecrets ?? scanForSecrets;
   const _checkPoliciesWithLLM = deps.checkPoliciesWithLLM ?? checkPoliciesWithLLM;
+  const _checkCircularDependencies = deps.checkCircularDependencies ?? checkCircularDependencies;
+  const _checkWithSemgrep = deps.checkWithSemgrep ?? checkWithSemgrep;
   const _readCache = deps.readCache ?? readCache;
   const _writeCache = deps.writeCache ?? writeCache;
 
@@ -64,12 +70,19 @@ export async function runGuardianCheck(
     return _checkPoliciesWithLLM(filteredDiff, matchedPolicies);
   };
 
-  const [secretViolations, llmViolations] = await Promise.all([
+  const [secretViolations, llmViolations, architectureViolations, semgrepViolations] = await Promise.all([
     Promise.resolve(_scanForSecrets(filteredDiff)),
     runLLMCheck(),
+    _checkCircularDependencies(filteredDiff),
+    _checkWithSemgrep(filteredDiff),
   ]);
 
-  const violations: Violation[] = [...secretViolations, ...llmViolations];
+  const violations: Violation[] = [
+    ...secretViolations,
+    ...llmViolations,
+    ...architectureViolations,
+    ...semgrepViolations,
+  ];
   const verdict = violations.some((v) => BLOCKING_SEVERITIES.has(v.riskLevel)) ? "BLOCK" : "PASS";
 
   // Only cache a clean result — a BLOCK must always be re-scanned after a fix.

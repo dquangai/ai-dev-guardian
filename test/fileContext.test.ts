@@ -61,6 +61,13 @@ describe("readSatelliteFiles", () => {
   it("trả về [] cho ngôn ngữ không được hỗ trợ (vd .rs)", () => {
     expect(readSatelliteFiles("main.rs", 'use crate::foo;', CWD)).toEqual([]);
   });
+
+  it("resolve re-export ('export { X } from \"./a\"' và 'export type { X } from \"./b\"') — case regex tay cũ bỏ sót", () => {
+    const content = readFileContextSafe("reexport.ts", CWD);
+    const satellites = readSatelliteFiles("reexport.ts", content, CWD);
+
+    expect(satellites.map((s) => s.importPath).sort()).toEqual(["./a", "./b"]);
+  });
 });
 
 describe("readSatelliteFiles — Python", () => {
