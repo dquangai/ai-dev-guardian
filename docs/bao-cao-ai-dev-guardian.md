@@ -6,22 +6,33 @@
 
 ---
 
-## 1. Bài toán
+## 1. Bài toán: Tam giác thất bại của các công cụ Code Review hiện nay
 
-Ba lớp bảo vệ chất lượng code hiện tại đều có lỗ hổng riêng:
+Hiện tại, các engineering team phải đối mặt với "tam giác đánh đổi" không thể dung hòa từ 3 lớp
+bảo vệ truyền thống — nâng cấp một lớp không giải quyết được điểm yếu của 2 lớp còn lại:
 
-- **Code review thủ công** phụ thuộc vào việc có người rảnh, có đủ context, và không bỏ sót —
-  không mở rộng được khi team lớn lên hay tốc độ release tăng.
-- **Linter truyền thống** chỉ bắt được lỗi cú pháp/style đã định nghĩa cứng từ trước — mù hoàn
-  toàn trước các luật *nghiệp vụ* riêng của từng team (ví dụ: "không hardcode secret", "không tạo
-  circular dependency giữa các module").
-- **AI review thế hệ đầu** giải quyết được vấn đề "hiểu ngữ nghĩa", nhưng mang theo rủi ro mới:
-  **hallucination**. Một model có thể tự tin khẳng định một hàm 24 dòng "dài hơn 50 dòng" và
-  chặn push — sai hoàn toàn nhưng trông y hệt một cảnh báo đúng.
+**1. Human Code Review (thủ công)** — Phụ thuộc hoàn toàn vào băng thông và sự tập trung của
+reviewer. Khi team mở rộng hoặc nhịp độ release tăng, review thủ công trở thành "nút thắt cổ chai"
+(bottleneck) làm chậm tiến độ, hoặc bị làm qua loa dẫn đến sót lỗi nghiệp vụ nghiêm trọng.
 
-Hệ quả thực tế: team hoặc **bỏ qua** cảnh báo AI vì quá nhiều false positive, hoặc tệ hơn — để AI
-**tự động vá code**, chấp nhận rủi ro một bản patch sai âm thầm lọt vào codebase mà không ai
-review.
+**2. Static Analysis / Linter truyền thống (Deterministic)** — Bắt lỗi cú pháp rất tốt nhưng hoàn
+toàn "mù" trước context và logic nghiệp vụ riêng của từng dự án. Bên cạnh đó, việc cấu hình luật
+rất phức tạp (phải học các ngôn ngữ DSL/Rego hoặc viết file YAML rườm rà).
+
+**3. AI Reviewer thế hệ đầu (Post-push / Pull Request Bots)** — mắc cùng lúc 3 lỗi cấu trúc:
+
+- *Sai vị trí (Wrong Gate)* — Hầu hết chạy ở tầng CI/CD hoặc PR Bot trên GitHub/GitLab. Dev phải
+  chờ push code lên mới nhận phản hồi, gây ngắt quãng luồng làm việc (context switching) và tốn
+  chi phí CI/Compute không cần thiết.
+- *Thảm họa Hallucination* — Ảo giác của LLM khiến nó tự tin cảnh báo sai (false positive) — ví
+  dụ: đếm sai số dòng code, bắt lỗi không tồn tại. Hệ quả là dev bị kiệt sức vì cảnh báo rác (alert
+  fatigue) và dần bỏ qua mọi gợi ý của AI.
+- *Rủi ro Auto-fix âm thầm* — Nhiều công cụ cố tình tự động sửa code (auto-patch). Một bản patch
+  sai do AI sinh ra nếu lọt qua review sẽ âm thầm đưa bug nghiêm trọng vào sản phẩm.
+
+Đây chính là khoảng trống mà AI Dev Guardian được thiết kế để lấp đầy: chặn đúng chỗ (trước push,
+không phải sau), hiểu đúng ngữ cảnh (Policy-as-Code, không phải DSL cứng), và không tự ý sửa code
+thay con người.
 
 ## 2. Giải pháp
 
@@ -39,6 +50,21 @@ Nguyên lý thiết kế cốt lõi:
 - **Không tự động vá code** — mọi vi phạm chỉ đi kèm một `promptToFix` sẵn sàng copy-paste vào AI
   assistant của chính dev — quyết định sửa thế nào vẫn luôn thuộc về con người.
 - **Một verdict duy nhất** — `PASS` hoặc `BLOCK`, không có vùng xám.
+
+### So sánh với các công cụ hiện có
+
+| Tiêu chí | Human Review (thủ công) | Static Analysis (ESLint, SonarQube...) | AI PR Bot thế hệ đầu (CodeRabbit, Copilot Review...) | **AI Dev Guardian** |
+|---|---|---|---|---|
+| Thời điểm chạy | Sau khi mở PR, phụ thuộc lịch reviewer | IDE/CI | Sau khi push — tầng CI/CD hoặc PR bot | **Trước khi push** — git hook cục bộ |
+| Hiểu logic nghiệp vụ riêng | Có, nhưng cảm tính, không nhất quán | Không — chỉ bắt cú pháp/style | Có phần, nhưng không cho định nghĩa Policy-as-Code riêng | **Có** — Policy-as-Code bằng Markdown |
+| Cấu hình luật | Không cấu hình được | Phức tạp — cần học DSL/Rego hoặc YAML rườm rà | Thường giới hạn qua UI/prompt cố định | 1 file Markdown + YAML frontmatter, viết như giải thích cho đồng nghiệp |
+| Chống Hallucination | N/A (con người vẫn có thể sai/sót) | N/A (deterministic, không dùng LLM) | Thường 1 lượt LLM, không công khai cơ chế xác minh độc lập | **5 lớp**: grounding, CoT, self-consistency, AI-as-Judge, RAG-lite |
+| Auto-fix code | Không | Có (`--fix`) nhưng chỉ cho rule cứng, an toàn | Một số tự động đề xuất/commit fix — rủi ro patch sai âm thầm | **Không bao giờ** — chỉ sinh `promptToFix` |
+| Chi phí vận hành | Thời gian reviewer (khó định lượng, luôn tốn) | Miễn phí | Thuê bao theo seat, phổ biến ~10-20 USD/dev/tháng | Trả theo token thực tế + cache — ~$3-4/dev/tháng (mục 8) |
+| Nút thắt khi team scale | Có — bottleneck rõ rệt | Không | Không, nhưng cộng dồn chi phí CI/compute | Không — chạy song song, cache tái sử dụng |
+
+*Đặc điểm của các công cụ bên thứ ba trong bảng trên phản ánh xu hướng chung của nhóm sản phẩm,
+không phải benchmark đo trực tiếp trên phiên bản mới nhất của từng công cụ.*
 
 ## 3. Tính năng & Công nghệ lõi
 
