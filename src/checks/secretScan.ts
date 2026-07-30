@@ -1,5 +1,6 @@
 import type { DiffResult } from "../git/diff";
 import type { Violation } from "../report/types";
+import { buildPromptToFix } from "../report/promptToFix";
 
 interface SecretRule {
   name: string;
@@ -57,13 +58,29 @@ export function scanForSecrets(diff: DiffResult): Violation[] {
       const match = rule.pattern.exec(line);
       if (!match) continue;
 
+      const policyViolated = "Security Policy — không hardcode secret/API key trong source code";
+      const errorWhat = `Phát hiện ${rule.name} trong ${file}: ${mask(match[0])}`;
+      const why =
+        "Secret bị commit vào lịch sử git sẽ lộ vĩnh viễn, kể cả khi xoá ở commit sau — bất kỳ ai clone repo đều đọc được.";
+      const howToFix =
+        "Chuyển giá trị này sang biến môi trường hoặc secret manager, revoke/rotate secret đã lộ ngay lập tức.";
+
       violations.push({
-        errorWhat: `Phát hiện ${rule.name} trong ${file}: ${mask(match[0])}`,
-        policyViolated: "Security Policy — không hardcode secret/API key trong source code",
+        errorWhat,
+        policyViolated,
         riskLevel: "critical",
-        why: "Secret bị commit vào lịch sử git sẽ lộ vĩnh viễn, kể cả khi xoá ở commit sau — bất kỳ ai clone repo đều đọc được.",
-        howToFix: "Chuyển giá trị này sang biến môi trường hoặc secret manager, revoke/rotate secret đã lộ ngay lập tức.",
-        promptToFix: `Hãy giúp tôi tìm và ẩn an toàn đoạn ${rule.name} trong file này bằng biến môi trường (environment variables).`,
+        why,
+        howToFix,
+        location: file,
+        promptToFix: buildPromptToFix({
+          location: file,
+          policyName: policyViolated,
+          riskLevel: "critical",
+          errorWhat,
+          why,
+          howToFix,
+          extraRequirement: "Remind me to rotate/revoke this secret.",
+        }),
         source: "secret-scan",
       });
     }

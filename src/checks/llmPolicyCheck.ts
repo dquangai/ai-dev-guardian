@@ -4,6 +4,7 @@ import type { Policy } from "../policy/types";
 import { routePolicies } from "../policy/router";
 import type { Violation } from "../report/types";
 import { resolveLLMClient, resolveJudgeClient } from "./llm/resolveClient";
+import { buildPromptToFix } from "../report/promptToFix";
 import { readFileContextSafe, readSatelliteFiles, type SatelliteFile } from "./llm/fileContext";
 import { annotateForLLM } from "./llm/annotate";
 import type { RawViolation } from "./llm/types";
@@ -105,10 +106,7 @@ ${fileDiffText}
 \`\`\`
 
 Gọi tool report_violations với danh sách vi phạm tìm được (mảng rỗng nếu diff tuân thủ đầy đủ).
-Với mỗi vi phạm, "policyId" PHẢI là một trong các id đã liệt kê ở trên. Với mỗi vi phạm, "promptToFix"
-PHẢI là một prompt tiếng Việt theo đúng mẫu: "Xin chào, trong file [tên file], tôi đã vi phạm luật
-[tên luật] do [lỗi cụ thể]. Hãy giúp tôi sửa đoạn code này theo hướng [cách sửa] mà không làm ảnh
-hưởng đến logic hiện tại." — KHÔNG tự sinh code sửa lỗi, chỉ sinh prompt nhờ vả.`;
+Với mỗi vi phạm, "policyId" PHẢI là một trong các id đã liệt kê ở trên.`;
 }
 
 /**
@@ -261,15 +259,24 @@ export async function checkPoliciesWithLLM(
           );
           continue;
         }
+        const policyViolated = `${policy.category} (${policy.id})`;
         survivors.push({
           raw: v,
           violation: {
             errorWhat: v.errorWhat,
-            policyViolated: `${policy.category} (${policy.id})`,
+            policyViolated,
             riskLevel: v.riskLevel,
             why: v.why,
             howToFix: v.howToFix,
-            promptToFix: v.promptToFix,
+            location: file,
+            promptToFix: buildPromptToFix({
+              location: file,
+              policyName: policyViolated,
+              riskLevel: v.riskLevel,
+              errorWhat: v.errorWhat,
+              why: v.why,
+              howToFix: v.howToFix,
+            }),
             source: "llm-policy-check" as const,
           },
         });
