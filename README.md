@@ -2,7 +2,6 @@
 
 # AI Dev Guardian
 
-[![npm version](https://img.shields.io/npm/v/ai-dev-guardian.svg)](https://www.npmjs.com/package/ai-dev-guardian)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
@@ -19,6 +18,10 @@ project's own **Project Policy**. It is not a linter and not a thin LLM wrapper:
 scoped to the current diff, every LLM claim is cross-checked against the real diff text before
 being trusted, and the tool never writes code on your behalf — it only ever proposes a
 copy-paste-ready fix prompt.
+
+<div align="center">
+<img src="docs/demo-output.png" alt="guardian check --staged output: a BLOCK verdict with two CRITICAL violations found by the secret scanner, each in its own bordered box with a policy explanation and a ready-to-paste fix prompt." width="620">
+</div>
 
 ## Install
 
