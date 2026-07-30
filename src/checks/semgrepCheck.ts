@@ -5,6 +5,7 @@ import path from "node:path";
 import type { DiffResult } from "../git/diff";
 import type { Violation } from "../report/types";
 import { addedLineNumbers } from "../git/diffLines";
+import { buildPromptToFix } from "../report/promptToFix";
 
 const execFileAsync = promisify(execFileCb);
 
@@ -107,13 +108,21 @@ export async function checkWithSemgrep(
     const addedLines = addedLineNumbers(diff.diffText, finding.path);
     if (!addedLines.has(finding.start.line)) continue;
 
+    const location = `${finding.path}:${finding.start.line}`;
+    const policyViolated = `Semgrep Security Rule (${finding.check_id})`;
+    const errorWhat = `Semgrep rule "${finding.check_id}" phát hiện tại ${location}`;
+    const riskLevel = severityToRiskLevel(finding.extra.severity);
+    const why = finding.extra.message;
+    const howToFix = "Xem lại đoạn code được Semgrep đánh dấu và áp dụng khuyến nghị của rule tương ứng.";
+
     violations.push({
-      errorWhat: `Semgrep rule "${finding.check_id}" phát hiện tại ${finding.path}:${finding.start.line}`,
-      policyViolated: `Semgrep Security Rule (${finding.check_id})`,
-      riskLevel: severityToRiskLevel(finding.extra.severity),
-      why: finding.extra.message,
-      howToFix: "Xem lại đoạn code được Semgrep đánh dấu và áp dụng khuyến nghị của rule tương ứng.",
-      promptToFix: `Hãy giúp tôi sửa vi phạm Semgrep rule "${finding.check_id}" tại ${finding.path}:${finding.start.line}. Mô tả lỗi: ${finding.extra.message}. Sửa mà không làm ảnh hưởng đến logic hiện tại.`,
+      errorWhat,
+      policyViolated,
+      riskLevel,
+      why,
+      howToFix,
+      location,
+      promptToFix: buildPromptToFix({ location, policyName: policyViolated, riskLevel, errorWhat, why, howToFix }),
       source: "semgrep-check",
     });
   }

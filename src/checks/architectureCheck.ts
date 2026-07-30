@@ -3,6 +3,7 @@ import path from "node:path";
 import madge from "madge";
 import type { DiffResult } from "../git/diff";
 import type { Violation } from "../report/types";
+import { buildPromptToFix } from "../report/promptToFix";
 
 const TS_JS_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 
@@ -57,13 +58,29 @@ export async function checkCircularDependencies(
     const posixChain = chain.map(toPosix);
     if (!posixChain.some((file) => changedFiles.has(file))) continue;
 
+    const location = formatChain(posixChain);
+    const policyViolated = "Architecture Policy — không được có circular dependency giữa các module";
+    const errorWhat = `Phát hiện circular dependency liên quan tới thay đổi trong diff: ${location}`;
+    const why =
+      "Circular dependency khiến các module không thể test/refactor độc lập, dễ gây lỗi thứ tự khởi tạo (init order) khó debug, và là dấu hiệu ranh giới trách nhiệm giữa các module chưa rõ ràng.";
+    const howToFix =
+      "Tách phần logic dùng chung của các module trong vòng lặp ra một module mới mà cả hai cùng phụ thuộc, hoặc đảo một chiều phụ thuộc bằng interface/dependency injection.";
+
     violations.push({
-      errorWhat: `Phát hiện circular dependency liên quan tới thay đổi trong diff: ${formatChain(posixChain)}`,
-      policyViolated: "Architecture Policy — không được có circular dependency giữa các module",
+      errorWhat,
+      policyViolated,
       riskLevel: "medium",
-      why: "Circular dependency khiến các module không thể test/refactor độc lập, dễ gây lỗi thứ tự khởi tạo (init order) khó debug, và là dấu hiệu ranh giới trách nhiệm giữa các module chưa rõ ràng.",
-      howToFix: "Tách phần logic dùng chung của các module trong vòng lặp ra một module mới mà cả hai cùng phụ thuộc, hoặc đảo một chiều phụ thuộc bằng interface/dependency injection.",
-      promptToFix: `Hãy giúp tôi phá vỡ circular dependency giữa các file sau: ${posixChain.join(", ")}. Gợi ý cách tách logic dùng chung hoặc đảo chiều phụ thuộc mà không làm ảnh hưởng đến logic hiện tại.`,
+      why,
+      howToFix,
+      location,
+      promptToFix: buildPromptToFix({
+        location,
+        policyName: policyViolated,
+        riskLevel: "medium",
+        errorWhat,
+        why,
+        howToFix,
+      }),
       source: "architecture-check",
     });
   }

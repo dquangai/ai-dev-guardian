@@ -128,9 +128,6 @@ describe("checkPoliciesWithLLM", () => {
         riskLevel: "low",
         why: "kém an toàn",
         howToFix: "đổi type",
-        promptToFix:
-          'Xin chào, trong file "x.ts", tôi đã vi phạm luật Coding Convention do dùng any. ' +
-          "Hãy giúp tôi sửa đoạn code này theo hướng đổi type mà không làm ảnh hưởng đến logic hiện tại.",
         evidenceSnippet: "b",
       },
     ]);
@@ -148,7 +145,9 @@ describe("checkPoliciesWithLLM", () => {
     expect(violations).toHaveLength(1);
     expect(violations[0].policyViolated).toBe("Coding Convention (conv.md)");
     expect(violations[0].source).toBe("llm-policy-check");
-    expect(violations[0].promptToFix).toContain('trong file "x.ts"');
+    expect(violations[0].location).toBe("x.ts");
+    expect(violations[0].promptToFix).toContain("`x.ts`");
+    expect(violations[0].promptToFix).toContain("Coding Convention (conv.md)");
   });
 
   it("loại bỏ violation nếu model trả về policyId không nằm trong danh sách đã cho", async () => {
@@ -161,7 +160,6 @@ describe("checkPoliciesWithLLM", () => {
         riskLevel: "high",
         why: "vì",
         howToFix: "sửa",
-        promptToFix: "prompt bất kỳ",
         evidenceSnippet: "b",
       },
     ]);
@@ -192,7 +190,6 @@ describe("checkPoliciesWithLLM", () => {
         riskLevel: "medium",
         why: "vì",
         howToFix: "sửa",
-        promptToFix: "prompt bất kỳ",
         evidenceSnippet: "dòng này không hề tồn tại trong diff",
       },
     ]);
@@ -223,7 +220,6 @@ describe("checkPoliciesWithLLM", () => {
         riskLevel: "low",
         why: "vì",
         howToFix: "sửa",
-        promptToFix: "prompt bất kỳ",
         evidenceSnippet: "// Fail-safe: any madge error (missing tsconfig, unparseable project, ...)",
       },
     ]);
@@ -261,7 +257,6 @@ describe("checkPoliciesWithLLM", () => {
         riskLevel: "low",
         why: "vì",
         howToFix: "sửa",
-        promptToFix: "prompt bất kỳ",
         evidenceSnippet: "const x: any = 1;",
       },
     ]);
@@ -300,7 +295,6 @@ describe("checkPoliciesWithLLM", () => {
         riskLevel: "critical",
         why: "lộ secret",
         howToFix: "dùng biến môi trường",
-        promptToFix: "prompt bất kỳ",
         evidenceSnippet: "b",
       };
     }
@@ -370,7 +364,6 @@ describe("checkPoliciesWithLLM", () => {
         riskLevel: "low",
         why: "vì",
         howToFix: "sửa",
-        promptToFix: "prompt bất kỳ",
         evidenceSnippet: "b",
         ...overrides,
       };

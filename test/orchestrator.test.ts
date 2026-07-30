@@ -28,7 +28,8 @@ function violation(overrides: Partial<Violation>): Violation {
     riskLevel: "medium",
     why: "vì",
     howToFix: "sửa",
-    promptToFix: null,
+    location: "file.ts",
+    promptToFix: "prompt",
     source: "secret-scan",
     ...overrides,
   };

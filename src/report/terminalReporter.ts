@@ -83,6 +83,27 @@ function fieldLines(label: string, text: string, width: number, accent?: (text: 
   });
 }
 
+/**
+ * promptToFix là một khối nhiều dòng có cấu trúc riêng (bullet, list đánh số
+ * — xem report/promptToFix.ts) nên KHÔNG dùng fieldLines (nó gộp toàn bộ
+ * text thành 1 đoạn rồi wrap lại, sẽ phá mất cấu trúc dòng gốc). Thay vào đó
+ * giữ nguyên từng dòng gốc, chỉ wrap riêng lẻ dòng nào bị dài quá khung.
+ */
+function promptFieldLines(promptToFix: string, width: number): string[] {
+  const indent = 2;
+  const lines: string[] = [chalk.dim("💬 prompt gợi ý sửa lỗi:")];
+  for (const rawLine of promptToFix.split("\n")) {
+    if (rawLine === "") {
+      lines.push("");
+      continue;
+    }
+    for (const wrapped of wrapText(rawLine, width - indent - 2)) {
+      lines.push(`${" ".repeat(indent)}${chalk.cyan(wrapped)}`);
+    }
+  }
+  return lines;
+}
+
 function renderViolationBox(v: Violation, index: number, width: number): string {
   const color = riskColor(v.riskLevel);
   const icon = riskIcon(v.riskLevel);
@@ -95,11 +116,7 @@ function renderViolationBox(v: Violation, index: number, width: number): string 
   lines.push(...fieldLines("vì sao  ", v.why, width));
   lines.push(...fieldLines("cách sửa", v.howToFix, width));
   lines.push(null);
-  lines.push(
-    ...(v.promptToFix
-      ? fieldLines("💬 prompt", v.promptToFix, width, chalk.cyan)
-      : fieldLines("💬 prompt", "(không có gợi ý)", width, chalk.dim)),
-  );
+  lines.push(...promptFieldLines(v.promptToFix, width));
 
   return drawBox(title, color, lines, width);
 }
