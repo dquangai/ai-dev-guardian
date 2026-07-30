@@ -60,26 +60,15 @@ policy check. Exit code `1` on `BLOCK` (any violation at `medium` severity or ab
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    A["git push"] --> B{Pre-push Hook}
-    B -->|Confirm Y/n| C["Guardian CLI"]
-    C --> D["Get diff, drop test/"]
-    D --> E["Secret Scan (regex)"]
-    D --> M["Circular Dependency<br/>Check (madge)"]
-    D --> S["Semgrep<br/>(optional, if installed)"]
-    D --> F{Diff hash matches a<br/>recent PASS?}
-    F -->|Yes| G["Skip the LLM call"]
-    F -->|No| H["RAG-lite: read related files"]
-    H --> I["LLM Reasoning (Claude / GPT)<br/>+ evidence grounding<br/>+ self-consistency on critical"]
-    E --> J{Merge into Verdict}
-    M --> J
-    S --> J
-    G --> J
-    I --> J
-    J -->|PASS| K["Allow Push + update cache"]
-    J -->|BLOCK| L["Block Push + print fix prompt"]
-```
+<div align="center">
+<img src="docs/system-flow.svg" alt="AI Dev Guardian system flow: CLI/Entrypoint reads the diff, Core Engine/Orchestrator routes policies and checks the diff-hash cache, fans out to the Checkers layer (Secret scan, Architecture, Semgrep, LLM + judge — cache hit bypasses only the LLM branch), fans back in to the Verdict Aggregator, then Reporter builds the fix prompt and renders the terminal output." width="520">
+</div>
+
+Layered top-down, matching the app's own lifecycle: **CLI/Entrypoint** reads the diff → **Core
+Engine/Orchestrator** routes the applicable policies and checks the diff-hash cache → fans out to
+the **Checkers layer** (all 4 run concurrently; a cache hit bypasses only the `LLM + judge`
+branch, never the 3 deterministic ones) → fans back into the **Verdict Aggregator** → **Reporter**
+builds the fix prompt and renders the terminal output.
 
 `runGuardianCheck` (`src/orchestrator.ts`) runs all 4 checks concurrently via `Promise.all`, then
 merges every `Violation[]` into one report. Every collaborator — `loadPolicies`,
