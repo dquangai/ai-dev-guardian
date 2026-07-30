@@ -79,18 +79,62 @@ không phải benchmark đo trực tiếp trên phiên bản mới nhất của 
 | An toàn | Prompt-as-a-Fix | Không tự sinh code vá lỗi — chỉ sinh prompt nhờ AI khác sửa, 1 template chuẩn dùng chung |
 | Vận hành | Interactive Git Hook | `guardian install-hook`, hỏi `Y/n` khi có TTY, fail-open khi chạy trong CI |
 
-**5 lớp khiên chống ảo giác LLM:**
+### 5 lớp khiên chống ảo giác LLM — chi tiết kỹ thuật (phần lõi của dự án)
 
-1. **Grounding theo schema** — `policyId` bị ràng buộc bằng `enum` đúng danh sách policy đã nạp
-   cho file đó; model không thể trích dẫn một luật không tồn tại.
-2. **Reasoning-first** — field `reasoning` khai báo *đầu tiên* trong schema, bắt buộc model suy
-   luận trước khi kết luận.
-3. **Grounded Evidence** — `evidenceSnippet` phải là dòng trích dẫn **y hệt** trong diff thật;
-   dòng comment-only bị loại khỏi tập bằng chứng hợp lệ.
-4. **Self-consistency** — mọi phát hiện `critical` phải được xác nhận lại ở lượt gọi thứ 2 với
-   cùng prompt; không khớp `policyId` cả 2 lần → bị loại.
-5. **AI-as-a-Judge** — mọi vi phạm sống sót được một model thứ 2 tự đếm lại/suy luận lại từ code
-   thật, độc lập với model đầu tiên.
+Đây là phần kỹ thuật quan trọng nhất của AI Dev Guardian. Thay vì tin tưởng mù quáng vào một lượt
+gọi LLM duy nhất, mỗi vi phạm phải **sống sót qua 5 lớp kiểm tra độc lập, xếp chồng lên nhau** —
+mỗi lớp chặn đúng một *loại* lỗi khác nhau mà LLM có thể mắc phải. Bỏ bất kỳ lớp nào cũng để lọt
+một kiểu hallucination cụ thể đã được quan sát thấy trong thực tế khi xây dựng dự án này.
+
+**Lớp 1 — Grounding theo schema (chống bịa policy).** `policyId` model trả về bị ràng buộc bằng
+`enum` trong JSON Schema (`buildViolationsSchema()`, `src/checks/llm/types.ts`), chỉ chứa đúng
+danh sách id của các policy đã thực sự được nạp cho file đang xét (qua `routePolicies()`). Cơ chế
+structured tool-calling khiến model **không thể** trả về một giá trị nằm ngoài enum này — response
+sai sẽ bị chặn ở tầng API trước khi tới được code của Guardian. `policyViolated` hiển thị cho dev
+cuối cùng luôn được Guardian tự ghép lại từ policy thật (`policy.category (${policy.id})`), không
+bao giờ lấy nguyên văn lời model.
+
+**Lớp 2 — Reasoning-first (buộc suy luận trước khi kết luận).** Field `reasoning` được khai báo
+**đầu tiên** trong JSON Schema — trước cả `errorWhat`, `policyId`, `riskLevel`. Với cơ chế sinh
+token tuần tự của structured output, thứ tự field trong schema quyết định thứ tự model buộc phải
+điền: (1) đoạn code này thực sự làm gì, (2) policy yêu cầu gì, (3) có thực sự mâu thuẫn hay chỉ
+*giống bề ngoài* — trước khi được phép chốt verdict. Đây là chain-of-thought có cấu trúc bắt buộc
+bởi schema, không phải một câu "hãy suy nghĩ từng bước" chung chung trong prompt.
+
+**Lớp 3 — Grounded Evidence (chống bịa bằng chứng).** `evidenceSnippet` phải là (các) dòng trích
+dẫn **y hệt** tồn tại trong diff thật — hàm `isEvidenceGrounded()` (`llmPolicyCheck.ts`) tách từng
+dòng, trim, và bắt buộc mỗi dòng phải xuất hiện verbatim trong nội dung diff thật; dòng nào chỉ
+nằm trong comment bị loại khỏi tập bằng chứng hợp lệ. Lớp này chặn đúng case đã xảy ra thật: model
+trích dẫn *đúng* dòng JSDoc `// Fail-safe: any madge error...` làm bằng chứng cho việc "code dùng
+kiểu `any`" — trích dẫn có thật (grounding lớp 3 vẫn pass), nhưng dòng đó chỉ là văn xuôi mô tả,
+không phải code thực thi kiểu `any`. Vì vậy Guardian còn AST-annotate nội dung file trước khi gửi
+cho model: mọi comment/string được bọc tag `<comment>...</comment>` / `<string>...</string>`, và
+prompt yêu cầu model không bao giờ tính nội dung trong `<comment>` là code đang thực thi.
+
+**Lớp 4 — Self-consistency (xác nhận lại phát hiện critical).** `critical` là mức độ duy nhất tự
+nó chặn được push, nên phải chịu một bài kiểm tra khắt khe hơn: khi lượt gọi đầu tiên phát hiện
+bất kỳ vi phạm `critical` nào, `checkPoliciesWithLLM` gọi lại **y hệt prompt đó lần thứ 2** trên
+cùng file, và chỉ giữ vi phạm nếu `policyId` xuất hiện ở **cả hai** lượt. Model bất đồng với chính
+nó giữa 2 lần hỏi độc lập bị xem là false positive và bị loại. Cái giá chỉ là 1 lượt gọi thêm — và
+chỉ tốn khi push thực sự chứa phát hiện critical, không phải mọi lần push.
+
+**Lớp 5 — AI-as-a-Judge (phúc thẩm độc lập).** Lớp cuối, áp dụng cho **mọi** vi phạm sống sót
+(không chỉ critical): một model thứ hai — độc lập, được đóng khung câu hỏi khác hẳn qua
+`buildJudgePrompt()` — nhận lại đúng file/diff thật và được yêu cầu **tự đếm lại/tự suy luận lại**
+từng claim từ đầu, không được tin lại reasoning gốc hay số liệu model đầu đã đưa ra. Đây là lớp
+duy nhất bắt được lỗi mà grounding (lớp 3) không thể: model trích dẫn **đúng** một đoạn code thật
+nhưng khẳng định **sai** một điều gì đó về nó. Case đã xảy ra thật: một hàm 24 dòng bị model đầu
+khẳng định "dài hơn 50 dòng" và chặn push 3 lần liên tiếp — judge đếm lại đúng 24 dòng và lật
+verdict từ `BLOCK` sang `PASS`. Judge dùng model rẻ hơn (`claude-haiku-4-5` / `gpt-4.1-mini`), chỉ
+tốn 1 lượt gọi thêm mỗi **file** có vi phạm (không phải mỗi vi phạm), và **fail-open**: lỗi mạng
+hay thiếu key ở judge không bao giờ làm mất đi một vi phạm hợp lệ — nó chỉ có thể *loại bỏ* false
+positive, không bao giờ làm Guardian kém tin cậy hơn trước khi có lớp này.
+
+**Vì sao phải xếp chồng cả 5 lớp, không dùng 1 lớp là đủ:** mỗi lớp chặn một loại lỗi khác nhau —
+lớp 1 chặn bịa policy, lớp 2 ép suy luận có cấu trúc, lớp 3 chặn bịa bằng chứng, lớp 4 chặn bất
+nhất ở mức nghiêm trọng nhất, lớp 5 chặn "trích dẫn thật nhưng suy luận sai" mà 4 lớp trước không
+thể phát hiện. Đây chính là điều tách AI Dev Guardian ra khỏi một "AI reviewer" thông thường chỉ
+gọi LLM một lần rồi tin nguyên văn kết quả.
 
 ## 4. Kiến trúc hệ thống đã triển khai
 
