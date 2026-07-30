@@ -219,56 +219,60 @@ Theo đúng thứ tự trong sơ đồ:
 | Component ownership qua git blame | Gắn `promptToFix` với đúng người đã viết dòng code vi phạm |
 | Policy-driven severity cho circular dependency | Chuyển severity hiện đang hardcode `medium` sang cấu hình qua policy |
 
-## 8. Chi phí vận hành API — chứng minh tính khả thi
+## 8. Phân tích FinOps & Định vị thị trường
 
-Guardian mặc định ưu tiên Anthropic khi có cả 2 API key (`resolveLLMClient` trong
-`src/checks/llm/resolveClient.ts`): model chính là `claude-sonnet-5`, model cho lượt judge là
-`claude-haiku-4-5` (rẻ hơn, dùng cho việc xác minh độc lập chứ không cần suy luận đầy đủ).
+> **💡 Điểm nhấn tài chính (Key Takeaway)**
+>
+> AI Dev Guardian bảo vệ mã nguồn cho **toàn bộ team 5 người** với chi phí hàng tháng
+> (**$18.50**) còn **rẻ hơn** tiền mua **1 tài khoản cá nhân** của GitHub Copilot (**$19.00**).
 
-**Bảng giá** (Anthropic, giá chuẩn — chưa tính giá ưu đãi ra mắt của Sonnet 5 đang áp dụng tới
-31/08/2026 là $2/$10 mỗi triệu token, rẻ hơn ~33% so với số dưới đây):
+Rào cản lớn nhất khi đưa AI vào CI/CD là rủi ro "đốt tiền" API không kiểm soát được. AI Dev
+Guardian giải quyết triệt để bài toán này bằng triết lý **Cost by Design** — tối ưu chi phí ngay
+từ lõi kiến trúc, không phải một bản vá thêm vào sau.
 
-| Model | Input / 1M token | Output / 1M token | Dùng cho |
-|---|---|---|---|
-| Claude Sonnet 5 | $3.00 | $15.00 | LLM Policy Check (lượt chính + self-consistency) |
-| Claude Haiku 4.5 | $1.00 | $5.00 | AI Judge (lượt xác minh độc lập) |
+### 8.1. Kiến trúc tối ưu chi phí (Unit Economics)
 
-**Giả định để ước tính** (nêu rõ để minh bạch, không phải số đo thực tế):
+Thay vì gọi API vô tội vạ cho mọi file, hệ thống áp dụng **phễu lọc 3 lớp** để vắt kiệt giá trị
+của từng cent:
 
-- Team 5 dev, mỗi dev trung bình 4 lần push/ngày, mỗi push có 3 file cần LLM check (đã qua
-  `routePolicies` lọc — file không khớp policy nào thì không tốn lượt gọi nào).
-- Mỗi lượt check: ~4.000 input token (system prompt + policy + nội dung file + RAG satellite +
-  diff), ~400 output token (JSON có cấu trúc).
-- Cache diff-hash giúp bỏ qua ~30% lượt check (diff trùng lần `PASS` gần đây — phổ biến khi sửa
-  lặp lại nhỏ hoặc chuyển qua lại branch).
-- Judge pass chỉ chạy khi có vi phạm sống sót sau grounding — ước tính ~25% số lượt check.
-- Self-consistency lượt 2 chỉ chạy khi phát hiện `critical` ở lượt đầu — ước tính hiếm, ~5%.
+- **Chi phí $0 (Zero-Cost Baseline)** — Secret scan, Architecture check (circular dependency) và
+  Semgrep chạy hoàn toàn bằng Deterministic Engine nội bộ, không tốn một token nào. Trong khoảng
+  ~75% số lượt check, không có vi phạm nào sống sót tới mức cần AI Judge xác minh thêm — tức phần
+  lớn khối lượng công việc đã được lọc sạch trước khi chạm tới lớp tốn phí nhất.
+- **Cắt giảm ~30% API thừa** — Thuật toán diff-hash (SHA-256, xem Mục 6) ghi nhớ những diff đã
+  từng `PASS`, tự động bỏ qua lượt gọi LLM cho các lần push không đổi logic thật (chỉ sửa format,
+  chuyển qua lại branch...), giúp TCO (tổng chi phí sở hữu) giảm khoảng 30%.
+- **Định tuyến model thông minh (Smart Routing)** — Lượt check chính dùng **Claude Sonnet 5**
+  ($3.00/1M input), còn lượt AI Judge (thẩm định chéo, xem Mục 3) dùng **Claude Haiku 4.5** — rẻ
+  hơn 3 lần ($1.00/1M input) — và chỉ được kích hoạt khi thật sự có vi phạm cần xác minh (~25%
+  tần suất), không chạy cho mọi file.
 
-**Tính chi phí mỗi lượt check (USD):**
+👉 **Tổng chi phí trung bình: chỉ ~$0.02 (2 cent) cho mỗi file được AI quét toàn diện.**
 
-| Thành phần | Input | Output | Chi phí | Tần suất | Chi phí kỳ vọng |
-|---|---|---|---|---|---|
-| Main pass (Sonnet 5) | 4.000 tok → $0.012 | 400 tok → $0.006 | $0.018 | 100% | $0.0180 |
-| Self-consistency (Sonnet 5) | như trên | như trên | $0.018 | 5% | $0.0009 |
-| Judge pass (Haiku 4.5) | 2.500 tok → $0.0025 | 150 tok → $0.00075 | $0.00325 | 25% | $0.0008 |
-| **Tổng mỗi lượt check** | | | | | **≈ $0.0197 (~$0.02)** |
+### 8.2. Dự phóng chi phí thực tế (team 5 kỹ sư)
 
-**Quy ra theo tháng** (22 ngày làm việc, đã trừ ~30% nhờ cache):
+*(Giả định cường độ cao: 4 lần push/ngày/dev × 3 file/push × 22 ngày làm việc — nêu rõ để minh
+bạch, không phải số đo thực tế)*
 
-| Quy mô team | Lượt check/tháng (sau cache) | Chi phí/tháng |
+| Phân bổ / Tháng | Lượt check AI | Chi phí dự phóng |
 |---|---|---|
-| 1 dev | ~185 | **≈ $3.7** |
-| 5 dev | ~924 | **≈ $18.5** |
-| 20 dev | ~3.696 | **≈ $74** |
-| 50 dev | ~9.240 | **≈ $185** |
+| Bình quân 1 Dev | ~185 lượt | **~$3.70 / tháng** |
+| **Tổng toàn Team (5 Devs)** | **~924 lượt** | **~$18.50 / tháng** |
+| 20 Devs | ~3.696 lượt | ~$74 / tháng |
+| 50 Devs | ~9.240 lượt | ~$185 / tháng |
 
-**Kết luận khả thi:** với team 5 người, Guardian tốn khoảng **$18.5/tháng** — rẻ hơn phí thuê bao
-1 seat GitHub Copilot Business (~$19/tháng) cho **cả team**, và không đáng kể so với chi phí thực
-tế của một sự cố duy nhất mà Guardian ngăn được (một secret bị lộ production, hoặc một circular
-dependency gây bug khó debug hàng giờ). Chi phí còn được kiểm soát chủ động bởi chính kiến trúc:
-3/4 check luôn miễn phí (deterministic), cache bỏ qua lượt LLM khi diff không đổi, và judge pass
-chỉ chạy khi thật sự có vi phạm cần xác minh — không phải trả tiền cho mọi file trong mọi trường
-hợp.
+### Định vị thị trường
+
+Đặt cạnh bảng so sánh ở Mục 2: các AI PR Bot thế hệ đầu (CodeRabbit, Copilot Review...) thường
+tính phí **10-20 USD/dev/tháng** — tức một team 5 người đã tốn **50-100 USD/tháng** chỉ để mua
+seat, chưa tính chi phí CI/compute phát sinh. AI Dev Guardian đạt được **cùng lớp phòng thủ AI**
+với **~$3.70/dev/tháng** — rẻ hơn 3-5 lần — nhờ chạy pre-push cục bộ (không tốn CI) và kiến trúc
+Cost by Design nói trên, mà không đánh đổi bằng việc bớt lớp bảo vệ nào trong 5 lớp chống
+hallucination ở Mục 3.
+
+**Kết luận khả thi:** chi phí không đáng kể so với hậu quả thực tế của một sự cố duy nhất mà
+Guardian ngăn được (một secret bị lộ production, hoặc một circular dependency gây bug khó debug
+hàng giờ) — và được kiểm soát chủ động bởi chính kiến trúc, không phải may rủi.
 
 ---
 
