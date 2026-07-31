@@ -61,4 +61,16 @@ describe("loadPolicies", () => {
     const c = policies.find((p) => p.id === "sample-c.policy.md");
     expect(c?.rules.some((r) => r.forbid.length === 0)).toBe(false);
   });
+
+  it("parse `dependencyAllowlist` thành mảng string", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const a = policies.find((p) => p.id === "sample-a.policy.md");
+    expect(a?.dependencyAllowlist).toEqual(["chalk", "@scope/*"]);
+  });
+
+  it("policy không có `dependencyAllowlist` trong frontmatter có dependencyAllowlist = []", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const b = policies.find((p) => p.id === "sample-b.policy.md");
+    expect(b?.dependencyAllowlist).toEqual([]);
+  });
 });

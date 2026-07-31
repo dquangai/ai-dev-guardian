@@ -7,6 +7,7 @@ import { scanForSecrets } from "./checks/secretScan";
 import { checkPoliciesWithLLM } from "./checks/llmPolicyCheck";
 import { checkCircularDependencies } from "./checks/architectureCheck";
 import { checkArchitectureRules } from "./checks/architectureRulesCheck";
+import { checkDependencyRules } from "./checks/dependencyRulesCheck";
 import { checkWithSemgrep } from "./checks/semgrepCheck";
 import { hashDiffText, readCache, writeCache } from "./cache";
 import type { CheckReport, Violation } from "./report/types";
@@ -20,6 +21,7 @@ export interface OrchestratorDeps {
   checkPoliciesWithLLM: typeof checkPoliciesWithLLM;
   checkCircularDependencies: typeof checkCircularDependencies;
   checkArchitectureRules: typeof checkArchitectureRules;
+  checkDependencyRules: typeof checkDependencyRules;
   checkWithSemgrep: typeof checkWithSemgrep;
   readCache: typeof readCache;
   writeCache: typeof writeCache;
@@ -52,6 +54,7 @@ export async function runGuardianCheck(
   const _checkPoliciesWithLLM = deps.checkPoliciesWithLLM ?? checkPoliciesWithLLM;
   const _checkCircularDependencies = deps.checkCircularDependencies ?? checkCircularDependencies;
   const _checkArchitectureRules = deps.checkArchitectureRules ?? checkArchitectureRules;
+  const _checkDependencyRules = deps.checkDependencyRules ?? checkDependencyRules;
   const _checkWithSemgrep = deps.checkWithSemgrep ?? checkWithSemgrep;
   const _readCache = deps.readCache ?? readCache;
   const _writeCache = deps.writeCache ?? writeCache;
@@ -73,20 +76,28 @@ export async function runGuardianCheck(
     return _checkPoliciesWithLLM(filteredDiff, matchedPolicies);
   };
 
-  const [secretViolations, llmViolations, circularViolations, architectureRuleViolations, semgrepViolations] =
-    await Promise.all([
-      Promise.resolve(_scanForSecrets(filteredDiff)),
-      runLLMCheck(),
-      _checkCircularDependencies(filteredDiff, matchedPolicies),
-      _checkArchitectureRules(filteredDiff, matchedPolicies),
-      _checkWithSemgrep(filteredDiff),
-    ]);
+  const [
+    secretViolations,
+    llmViolations,
+    circularViolations,
+    architectureRuleViolations,
+    dependencyRuleViolations,
+    semgrepViolations,
+  ] = await Promise.all([
+    Promise.resolve(_scanForSecrets(filteredDiff)),
+    runLLMCheck(),
+    _checkCircularDependencies(filteredDiff, matchedPolicies),
+    _checkArchitectureRules(filteredDiff, matchedPolicies),
+    Promise.resolve(_checkDependencyRules(filteredDiff, matchedPolicies)),
+    _checkWithSemgrep(filteredDiff),
+  ]);
 
   const violations: Violation[] = [
     ...secretViolations,
     ...llmViolations,
     ...circularViolations,
     ...architectureRuleViolations,
+    ...dependencyRuleViolations,
     ...semgrepViolations,
   ];
   const verdict = violations.some((v) => BLOCKING_SEVERITIES.has(v.riskLevel)) ? "BLOCK" : "PASS";

@@ -20,6 +20,7 @@ function policyWithRule(overrides: Partial<Policy> = {}): Policy {
     tags: [],
     body: "body",
     rules: [{ from: ["from-layer/**"], forbid: ["forbidden-layer/**"] }],
+    dependencyAllowlist: [],
     ...overrides,
   };
 }

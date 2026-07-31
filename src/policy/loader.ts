@@ -42,6 +42,7 @@ function parsePolicyFile(filePath: string, id: string): Policy {
     tags: toStringArray(data.tags),
     body: content.trim(),
     rules: parseRules(data.rules),
+    dependencyAllowlist: toStringArray(data.dependencyAllowlist),
   };
 }
 
