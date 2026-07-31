@@ -1,0 +1,44 @@
+name: Guardian
+
+on:
+  pull_request:
+
+# pull-requests: write lets `guardian check --ci` post/update its report
+# comment on the PR via the default GITHUB_TOKEN.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  guardian-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so `origin/<base>...HEAD` can find a real merge-base —
+          # the default shallow clone only has the PR's own commits.
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Guardian check
+        run: node dist/cli.js check --ci
+        env:
+          # GITHUB_REPOSITORY/GITHUB_REF/GITHUB_BASE_REF are set automatically
+          # by Actions; GITHUB_TOKEN is not and must be forwarded explicitly.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: without either key, the LLM policy check fails open
+          # (skips itself) — secret-scan/architecture-check/semgrep still run.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
