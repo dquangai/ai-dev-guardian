@@ -16,6 +16,7 @@ function makePolicy(overrides: Partial<Policy>): Policy {
     tags: [],
     body: "body",
     rules: [],
+    dependencyAllowlist: [],
     ...overrides,
   };
 }

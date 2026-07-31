@@ -20,6 +20,7 @@ function architecturePolicy(overrides: Partial<Policy> = {}): Policy {
     tags: [],
     body: "body",
     rules: [{ from: ["**"], forbid: ["nothing/**"] }],
+    dependencyAllowlist: [],
     ...overrides,
   };
 }

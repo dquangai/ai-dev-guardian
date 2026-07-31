@@ -23,4 +23,10 @@ export interface Policy {
   body: string;
   /** Architecture import rules this policy defines; [] if it defines none. */
   rules: ArchitectureRule[];
+  /**
+   * Glob patterns for package names allowed as new dependencies (e.g.
+   * "@anthropic-ai/*"); [] if this policy defines no dependency allowlist.
+   * See checks/dependencyRulesCheck.ts.
+   */
+  dependencyAllowlist: string[];
 }

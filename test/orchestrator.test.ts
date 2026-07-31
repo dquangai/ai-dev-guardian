@@ -157,6 +157,34 @@ describe("runGuardianCheck", () => {
     expect(report.violations).toHaveLength(2);
   });
 
+  it("trả BLOCK khi dependency rules check phát hiện dependency mới chưa được duyệt", async () => {
+    const depViolation = violation({ riskLevel: "medium", source: "dependency-rules-check" });
+    const report = await runGuardianCheck(EMPTY_DIFF, {
+      loadPolicies: () => [],
+      scanForSecrets: () => [],
+      checkPoliciesWithLLM: async () => [],
+      checkDependencyRules: () => [depViolation],
+      ...NO_CACHE,
+    });
+    expect(report.verdict).toBe("BLOCK");
+    expect(report.violations).toEqual([depViolation]);
+  });
+
+  it("gộp vi phạm từ architecture-rules check và dependency-rules check", async () => {
+    const ruleViolation = violation({ source: "architecture-rules-check", riskLevel: "high" });
+    const depViolation = violation({ source: "dependency-rules-check", riskLevel: "medium" });
+    const report = await runGuardianCheck(EMPTY_DIFF, {
+      loadPolicies: () => [],
+      scanForSecrets: () => [],
+      checkPoliciesWithLLM: async () => [],
+      checkArchitectureRules: async () => [ruleViolation],
+      checkDependencyRules: () => [depViolation],
+      ...NO_CACHE,
+    });
+    expect(report.verdict).toBe("BLOCK");
+    expect(report.violations).toHaveLength(2);
+  });
+
   it("truyền matchedPolicies (đã route theo scope) cho cả checkCircularDependencies và checkArchitectureRules", async () => {
     const archPolicy: Policy = {
       id: "architecture.md",
@@ -166,6 +194,7 @@ describe("runGuardianCheck", () => {
       tags: [],
       body: "body",
       rules: [{ from: ["src/**"], forbid: ["src/forbidden/**"] }],
+      dependencyAllowlist: [],
     };
     const otherScopePolicy: Policy = {
       id: "docs.md",
@@ -175,6 +204,7 @@ describe("runGuardianCheck", () => {
       tags: [],
       body: "body",
       rules: [],
+      dependencyAllowlist: [],
     };
     const diff: DiffResult = { diffText: "", changedFiles: ["src/a.ts"] };
     const checkCircularDependencies = vi.fn(async () => []);
@@ -194,6 +224,42 @@ describe("runGuardianCheck", () => {
     expect(checkArchitectureRules).toHaveBeenCalledWith(diff, [archPolicy]);
   });
 
+  it("truyền matchedPolicies (đã route theo scope package.json) cho checkDependencyRules", async () => {
+    const depPolicy: Policy = {
+      id: "dependency.md",
+      category: "Dependency",
+      scope: ["package.json"],
+      severity: "medium",
+      tags: [],
+      body: "body",
+      rules: [],
+      dependencyAllowlist: ["chalk"],
+    };
+    const otherScopePolicy: Policy = {
+      id: "docs.md",
+      category: "Docs",
+      scope: ["docs/**/*.md"],
+      severity: "low",
+      tags: [],
+      body: "body",
+      rules: [],
+      dependencyAllowlist: [],
+    };
+    const diff: DiffResult = { diffText: "", changedFiles: ["package.json"] };
+    const checkDependencyRules = vi.fn(() => []);
+
+    await runGuardianCheck(diff, {
+      loadPolicies: () => [depPolicy, otherScopePolicy],
+      scanForSecrets: () => [],
+      checkPoliciesWithLLM: async () => [],
+      checkDependencyRules,
+      ...NO_CACHE,
+      checkWithSemgrep: async () => [],
+    });
+
+    expect(checkDependencyRules).toHaveBeenCalledWith(diff, [depPolicy]);
+  });
+
   it("chỉ route các policy có scope khớp changedFiles tới checkPoliciesWithLLM", async () => {
     const matched: Policy = {
       id: "match.md",
@@ -203,6 +269,7 @@ describe("runGuardianCheck", () => {
       tags: [],
       body: "body",
       rules: [],
+      dependencyAllowlist: [],
     };
     const unmatched: Policy = {
       id: "nomatch.md",
@@ -212,6 +279,7 @@ describe("runGuardianCheck", () => {
       tags: [],
       body: "body",
       rules: [],
+      dependencyAllowlist: [],
     };
     const checkPoliciesWithLLM = vi.fn(async () => []);
 
