@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 import "dotenv/config";
 import { Command } from "commander";
-import { getStagedDiff, getPushRangeDiff } from "./git/diff";
+import { getStagedDiff, getPushRangeDiff, getPullRequestDiff } from "./git/diff";
 import { runGuardianCheck } from "./orchestrator";
 import { printReport } from "./report/terminalReporter";
+import { renderMarkdownReport } from "./report/markdownReporter";
+import { readGitHubContext } from "./ci/githubContext";
+import { postOrUpdateComment } from "./ci/githubComment";
 import { installPrePushHook } from "./hooks/installHook";
 import { confirmOnTTY } from "./ttyConfirm";
 // Test tính năng cache
@@ -15,6 +18,15 @@ function readStdin(): Promise<string> {
     process.stdin.on("end", () => resolve(data));
     process.stdin.on("error", reject);
   });
+}
+
+/** GITHUB_BASE_REF ("main") — set by Actions only on the `pull_request` event; needs an `origin/` prefix to be a valid ref in the CI checkout. */
+function resolveCiBaseRef(): string {
+  const base = process.env.GITHUB_BASE_REF;
+  if (!base) {
+    throw new Error("Thiếu GITHUB_BASE_REF — --ci chỉ dùng được trong job được trigger bởi event pull_request.");
+  }
+  return `origin/${base}`;
 }
 
 const program = new Command();
@@ -31,8 +43,16 @@ program
     "pre-push hook của Git; dùng --staged để kiểm tra tay các thay đổi đã staged trước khi commit."
   )
   .option("--staged", "Kiểm tra diff của các thay đổi đã staged (index vs HEAD) thay vì đọc stdin")
-  .action(async (options: { staged?: boolean }) => {
-    if (!options.staged) {
+  .option(
+    "--ci",
+    "Chạy trong GitHub Actions: diff PR (origin/<base>...HEAD) và post/update kết quả làm comment trên PR"
+  )
+  .action(async (options: { staged?: boolean; ci?: boolean }) => {
+    // Validate CI wiring (GITHUB_TOKEN/GITHUB_REPOSITORY/GITHUB_REF) before
+    // spending time/tokens on the check — a broken workflow should fail fast.
+    const ciContext = options.ci ? readGitHubContext() : undefined;
+
+    if (!options.staged && !options.ci) {
       const proceed = await confirmOnTTY(
         "Bạn có muốn chạy AI Dev Guardian để kiểm tra code trước khi push không? (Y/n): "
       );
@@ -43,9 +63,19 @@ program
       }
     }
 
-    const diff = options.staged ? await getStagedDiff() : await getPushRangeDiff(await readStdin());
+    const diff = options.ci
+      ? await getPullRequestDiff(resolveCiBaseRef())
+      : options.staged
+        ? await getStagedDiff()
+        : await getPushRangeDiff(await readStdin());
+
     const report = await runGuardianCheck(diff);
     printReport(report);
+
+    if (ciContext) {
+      await postOrUpdateComment(ciContext, renderMarkdownReport(report));
+    }
+
     process.exitCode = report.verdict === "BLOCK" ? 1 : 0;
   });
 

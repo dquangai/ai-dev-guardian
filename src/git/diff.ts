@@ -60,3 +60,17 @@ export async function getPushRangeDiff(
   }
   return diffBetween(g, `${EMPTY_TREE_SHA}..HEAD`);
 }
+
+/**
+ * Diff for a pull request: everything on `headRef` since it diverged from
+ * `baseRef`, using triple-dot (merge-base) semantics so commits landed on
+ * base after the branch point don't show up as PR changes. Requires the
+ * caller's checkout to have both refs reachable (CI: `fetch-depth: 0`).
+ */
+export async function getPullRequestDiff(
+  baseRef: string,
+  headRef: string = "HEAD",
+  cwd: string = process.cwd()
+): Promise<DiffResult> {
+  return diffBetween(git(cwd), `${baseRef}...${headRef}`);
+}
