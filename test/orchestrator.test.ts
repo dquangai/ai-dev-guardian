@@ -18,6 +18,7 @@ const NO_CACHE = { readCache: (): GuardianCache | null => null, writeCache: (): 
 // this machine having semgrep installed.
 const NO_ARCH = {
   checkCircularDependencies: async (): Promise<Violation[]> => [],
+  checkArchitectureRules: async (): Promise<Violation[]> => [],
   checkWithSemgrep: async (): Promise<Violation[]> => [],
 };
 
@@ -128,6 +129,71 @@ describe("runGuardianCheck", () => {
     expect(report.violations).toHaveLength(3);
   });
 
+  it("trả BLOCK khi architecture rules check phát hiện import bị cấm", async () => {
+    const ruleViolation = violation({ riskLevel: "high", source: "architecture-rules-check" });
+    const report = await runGuardianCheck(EMPTY_DIFF, {
+      loadPolicies: () => [],
+      scanForSecrets: () => [],
+      checkPoliciesWithLLM: async () => [],
+      checkArchitectureRules: async () => [ruleViolation],
+      ...NO_CACHE,
+    });
+    expect(report.verdict).toBe("BLOCK");
+    expect(report.violations).toEqual([ruleViolation]);
+  });
+
+  it("gộp vi phạm từ cả circular-dependency check và architecture-rules check", async () => {
+    const cyclic = violation({ source: "architecture-check", riskLevel: "medium" });
+    const ruleViolation = violation({ source: "architecture-rules-check", riskLevel: "high" });
+    const report = await runGuardianCheck(EMPTY_DIFF, {
+      loadPolicies: () => [],
+      scanForSecrets: () => [],
+      checkPoliciesWithLLM: async () => [],
+      checkCircularDependencies: async () => [cyclic],
+      checkArchitectureRules: async () => [ruleViolation],
+      ...NO_CACHE,
+    });
+    expect(report.verdict).toBe("BLOCK");
+    expect(report.violations).toHaveLength(2);
+  });
+
+  it("truyền matchedPolicies (đã route theo scope) cho cả checkCircularDependencies và checkArchitectureRules", async () => {
+    const archPolicy: Policy = {
+      id: "architecture.md",
+      category: "Architecture",
+      scope: ["src/**/*.ts"],
+      severity: "high",
+      tags: [],
+      body: "body",
+      rules: [{ from: ["src/**"], forbid: ["src/forbidden/**"] }],
+    };
+    const otherScopePolicy: Policy = {
+      id: "docs.md",
+      category: "Docs",
+      scope: ["docs/**/*.md"],
+      severity: "low",
+      tags: [],
+      body: "body",
+      rules: [],
+    };
+    const diff: DiffResult = { diffText: "", changedFiles: ["src/a.ts"] };
+    const checkCircularDependencies = vi.fn(async () => []);
+    const checkArchitectureRules = vi.fn(async () => []);
+
+    await runGuardianCheck(diff, {
+      loadPolicies: () => [archPolicy, otherScopePolicy],
+      scanForSecrets: () => [],
+      checkPoliciesWithLLM: async () => [],
+      checkCircularDependencies,
+      checkArchitectureRules,
+      ...NO_CACHE,
+      checkWithSemgrep: async () => [],
+    });
+
+    expect(checkCircularDependencies).toHaveBeenCalledWith(diff, [archPolicy]);
+    expect(checkArchitectureRules).toHaveBeenCalledWith(diff, [archPolicy]);
+  });
+
   it("chỉ route các policy có scope khớp changedFiles tới checkPoliciesWithLLM", async () => {
     const matched: Policy = {
       id: "match.md",
@@ -136,6 +202,7 @@ describe("runGuardianCheck", () => {
       severity: "medium",
       tags: [],
       body: "body",
+      rules: [],
     };
     const unmatched: Policy = {
       id: "nomatch.md",
@@ -144,6 +211,7 @@ describe("runGuardianCheck", () => {
       severity: "medium",
       tags: [],
       body: "body",
+      rules: [],
     };
     const checkPoliciesWithLLM = vi.fn(async () => []);
 

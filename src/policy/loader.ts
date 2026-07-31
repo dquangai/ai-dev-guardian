@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
-import type { Policy, Severity } from "./types";
+import type { ArchitectureRule, Policy, Severity } from "./types";
 
 const VALID_SEVERITIES: Severity[] = ["low", "medium", "high", "critical"];
 
@@ -11,6 +11,20 @@ function toStringArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String);
   if (typeof value === "string") return [value];
   return [];
+}
+
+/** Parses frontmatter `rules:` into ArchitectureRule[], dropping entries missing `from`/`forbid`. */
+function parseRules(value: unknown): ArchitectureRule[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
+    .map((entry) => ({
+      from: toStringArray(entry.from),
+      forbid: toStringArray(entry.forbid),
+      description: typeof entry.description === "string" ? entry.description : undefined,
+    }))
+    .filter((rule) => rule.from.length > 0 && rule.forbid.length > 0);
 }
 
 function parsePolicyFile(filePath: string, id: string): Policy {
@@ -27,6 +41,7 @@ function parsePolicyFile(filePath: string, id: string): Policy {
     severity,
     tags: toStringArray(data.tags),
     body: content.trim(),
+    rules: parseRules(data.rules),
   };
 }
 

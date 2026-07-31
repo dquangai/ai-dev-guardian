@@ -1,21 +1,23 @@
-import fs from "node:fs";
 import path from "node:path";
-import madge from "madge";
 import type { DiffResult } from "../git/diff";
+import type { Policy, Severity } from "../policy/types";
 import type { Violation } from "../report/types";
 import { buildPromptToFix } from "../report/promptToFix";
-
-const TS_JS_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
-
-const MADGE_FILE_EXTENSIONS = ["js", "jsx", "ts", "tsx", "mjs", "cjs"];
-const MADGE_EXCLUDE = [/(^|[\\/])(node_modules|dist|\.git|coverage)([\\/]|$)/];
-
-function toPosix(p: string): string {
-  return p.split(path.sep).join("/").replace(/^\.\//, "");
-}
+import { TS_JS_EXTENSIONS, buildMadgeInstance, toPosix } from "./madgeInstance";
 
 function formatChain(chain: string[]): string {
   return [...chain, chain[0]].join(" → ");
+}
+
+/**
+ * Severity for circular-dependency violations comes from the first loaded
+ * policy that defines architecture `rules` (i.e. the project's architecture
+ * policy, see .guardian/policies/architecture.policy.md) — policy-driven
+ * instead of hardcoded. Falls back to "medium" if no such policy is loaded,
+ * so this check still works standalone (e.g. in tests that pass no policies).
+ */
+function resolveSeverity(policies: Policy[]): Severity {
+  return policies.find((p) => p.rules.length > 0)?.severity ?? "medium";
 }
 
 /**
@@ -33,24 +35,17 @@ function formatChain(chain: string[]): string {
  */
 export async function checkCircularDependencies(
   diff: DiffResult,
+  policies: Policy[] = [],
   cwd: string = process.cwd()
 ): Promise<Violation[]> {
   const hasTsJsChange = diff.changedFiles.some((file) => TS_JS_EXTENSIONS.has(path.extname(file)));
   if (!hasTsJsChange) return [];
 
-  let chains: string[][];
-  try {
-    const tsconfigPath = path.join(cwd, "tsconfig.json");
-    const instance = await madge(cwd, {
-      fileExtensions: MADGE_FILE_EXTENSIONS,
-      excludeRegExp: MADGE_EXCLUDE,
-      tsConfig: fs.existsSync(tsconfigPath) ? tsconfigPath : undefined,
-    });
-    chains = instance.circular();
-  } catch {
-    return [];
-  }
+  const instance = await buildMadgeInstance(cwd);
+  if (!instance) return [];
+  const chains = instance.circular();
 
+  const severity = resolveSeverity(policies);
   const changedFiles = new Set(diff.changedFiles.map(toPosix));
   const violations: Violation[] = [];
 
@@ -69,14 +64,14 @@ export async function checkCircularDependencies(
     violations.push({
       errorWhat,
       policyViolated,
-      riskLevel: "medium",
+      riskLevel: severity,
       why,
       howToFix,
       location,
       promptToFix: buildPromptToFix({
         location,
         policyName: policyViolated,
-        riskLevel: "medium",
+        riskLevel: severity,
         errorWhat,
         why,
         howToFix,
