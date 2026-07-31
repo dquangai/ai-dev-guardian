@@ -38,4 +38,27 @@ describe("loadPolicies", () => {
     const ids = loadPolicies(FIXTURES_DIR).map((p) => p.id);
     expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
   });
+
+  it("policy không có `rules` trong frontmatter có rules = []", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const a = policies.find((p) => p.id === "sample-a.policy.md");
+    expect(a?.rules).toEqual([]);
+  });
+
+  it("parse `rules` thành ArchitectureRule[], bọc from/forbid string thành mảng", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const c = policies.find((p) => p.id === "sample-c.policy.md");
+    expect(c?.rules).toHaveLength(1);
+    expect(c?.rules[0]).toEqual({
+      from: ["src/policy/**"],
+      forbid: ["src/checks/**"],
+      description: "Policy layer không được phụ thuộc ngược lên checks layer.",
+    });
+  });
+
+  it("loại bỏ rule thiếu `from` hoặc `forbid` khỏi danh sách rules", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const c = policies.find((p) => p.id === "sample-c.policy.md");
+    expect(c?.rules.some((r) => r.forbid.length === 0)).toBe(false);
+  });
 });

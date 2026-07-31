@@ -15,6 +15,7 @@ function makePolicy(overrides: Partial<Policy>): Policy {
     severity: "medium",
     tags: [],
     body: "body",
+    rules: [],
     ...overrides,
   };
 }
