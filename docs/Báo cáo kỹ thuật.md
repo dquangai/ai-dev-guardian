@@ -2,7 +2,7 @@
 
 ### AI Engineering Governance Agent — Người gác cổng chất lượng code trước mỗi lần `git push`
 
-*Phiên bản: MVP · Ngày cập nhật: 30/07/2026*
+*Phiên bản: MVP · Ngày cập nhật: 31/07/2026*
 
 ---
 
@@ -71,13 +71,15 @@ không phải benchmark đo trực tiếp trên phiên bản mới nhất của 
 | Nhóm | Tính năng | Công nghệ lõi |
 |---|---|---|
 | Kiểm tra xác định | Secret Scan | Regex trên các dòng diff mới thêm (`+`) |
-| Kiểm tra xác định | Architecture Check | `madge` — phát hiện circular dependency, chỉ báo cáo cycle liên quan tới diff |
+| Kiểm tra xác định | Architecture Check | `madge` — phát hiện circular dependency, chỉ báo cáo cycle liên quan tới diff; severity đọc từ policy sở hữu `rules`, không hardcode |
+| Kiểm tra xác định | Architecture Rules | Rule `from`/`forbid` khai báo trong frontmatter policy, đối chiếu bằng `micromatch` trên dependency graph của `madge` — chặn import trái layer |
 | Kiểm tra xác định | Semgrep Check (tuỳ chọn) | Binary `semgrep`, ruleset `p/security-audit`, lọc theo dòng diff thật đã thêm |
 | Kiểm tra ngữ nghĩa | LLM Policy Check | Anthropic Claude / OpenAI GPT, 1 lần gọi/file, chỉ kèm policy đúng scope |
 | Ngữ cảnh | RAG-lite | Đọc thêm tối đa 3 file vệ tinh được import trực tiếp — TS/JS, Python, C/C++, Go |
 | Hiệu năng | Diff-hash caching | SHA-256, LRU 20 hash `PASS` gần nhất, lưu tại `.git/guardian_cache.json` |
 | An toàn | Prompt-as-a-Fix | Không tự sinh code vá lỗi — chỉ sinh prompt nhờ AI khác sửa, 1 template chuẩn dùng chung |
 | Vận hành | Interactive Git Hook | `guardian install-hook`, hỏi `Y/n` khi có TTY, fail-open khi chạy trong CI |
+| Vận hành | CI Gate (`--ci`) | GitHub Actions (`pull_request`), diff `origin/<base>...HEAD`, post/update comment Markdown trên PR qua GitHub REST API |
 
 ### 5 lớp khiên chống ảo giác LLM — chi tiết kỹ thuật (phần lõi của dự án)
 
@@ -204,20 +206,20 @@ Theo đúng thứ tự trong sơ đồ:
 | Circular dependency detection (madge) | ✅ Done |
 | Semgrep integration (tuỳ chọn) | ✅ Done |
 | Interactive pre-push git hook | ✅ Done |
+| CI / GitHub Action gate (`--ci`, diff PR, comment tự động lên PR) | ✅ Done |
+| Architecture Rules (`from`/`forbid` trong policy, chặn import trái layer) | ✅ Done |
+| Policy-driven severity cho circular dependency (không còn hardcode `medium`) | ✅ Done |
 
 ### Đang chờ / Kế hoạch
 
 | Tính năng | Mô tả |
 |---|---|
-| CI / GitHub Action gate | Chạy Guardian trực tiếp trên PR, comment kết quả tự động |
-| Architecture Rules policy category | Luật hướng phụ thuộc giữa layer, kiểm tra xác định, không cần LLM |
 | Git Workflow policy category | Luật đặt tên branch, format commit message |
 | Testing Standards policy category | Luật yêu cầu file test tương ứng khi thêm code mới |
 | Dependency Rules policy category | Chặn dependency mới không nằm trong danh sách được duyệt |
 | Business Requirements policy category | Gắn thay đổi code với yêu cầu sản phẩm (cơ chế cụ thể còn TBD) |
 | Jira integration | Tự động gắn violation vào ticket theo dõi |
 | Component ownership qua git blame | Gắn `promptToFix` với đúng người đã viết dòng code vi phạm |
-| Policy-driven severity cho circular dependency | Chuyển severity hiện đang hardcode `medium` sang cấu hình qua policy |
 
 ## 8. Phân tích FinOps & Định vị thị trường
 
@@ -276,4 +278,4 @@ hàng giờ) — và được kiểm soát chủ động bởi chính kiến tr�
 
 ---
 
-*Tài liệu tổng hợp từ `README.md` và trạng thái code thật của dự án tại thời điểm 30/07/2026.*
+*Tài liệu tổng hợp từ `README.md` và trạng thái code thật của dự án tại thời điểm 31/07/2026.*
