@@ -5,7 +5,7 @@ import { astGrepLangFor, detectLanguage } from "./fileContext";
 // is the inner content only and is nested inside these, so wrapping it too
 // would double-tag the same text.
 const ANNOTATED_KINDS = ["comment", "string", "template_string"];
-
+apikey
 interface AnnotationTarget {
   tag: "comment" | "string";
   start: number;
