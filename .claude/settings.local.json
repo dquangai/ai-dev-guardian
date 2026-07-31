@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Artifact"
+      "Artifact",
+      "Bash(npx tsc *)",
+      "Bash(timeout 60 npx --yes @marp-team/marp-cli@latest docs/pitch-deck.md -o /tmp/claude-1001/-home-quangdm10-dev-ai-dev-guardian/e2efc641-e76d-4fdd-95dd-d7f627b8f707/scratchpad/pitch-deck-check.pdf)"
     ]
   }
 }
