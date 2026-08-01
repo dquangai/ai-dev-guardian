@@ -5,6 +5,7 @@ import { loadPolicies } from "./policy/loader";
 import { routePolicies } from "./policy/router";
 import { scanForSecrets } from "./checks/secretScan";
 import { checkPoliciesWithLLM } from "./checks/llmPolicyCheck";
+import { resolveLLMClient } from "./checks/llm/resolveClient";
 import { checkCircularDependencies } from "./checks/architectureCheck";
 import { checkArchitectureRules } from "./checks/architectureRulesCheck";
 import { checkDependencyRules } from "./checks/dependencyRulesCheck";
@@ -25,6 +26,7 @@ export interface OrchestratorDeps {
   checkWithSemgrep: typeof checkWithSemgrep;
   readCache: typeof readCache;
   writeCache: typeof writeCache;
+  resolveLLMClient: typeof resolveLLMClient;
 }
 
 /**
@@ -58,6 +60,7 @@ export async function runGuardianCheck(
   const _checkWithSemgrep = deps.checkWithSemgrep ?? checkWithSemgrep;
   const _readCache = deps.readCache ?? readCache;
   const _writeCache = deps.writeCache ?? writeCache;
+  const _resolveLLMClient = deps.resolveLLMClient ?? resolveLLMClient;
 
   const filteredDiff = excludeIgnoredFiles(diff);
   const allPolicies = _loadPolicies();
@@ -102,8 +105,16 @@ export async function runGuardianCheck(
   ];
   const verdict = violations.some((v) => BLOCKING_SEVERITIES.has(v.riskLevel)) ? "BLOCK" : "PASS";
 
+  // A PASS is only safe to cache if the LLM check genuinely ran this time (or
+  // was validly skipped because an earlier real run already cached this exact
+  // diff as clean). If it ran neither — no provider configured, and this diff
+  // was never checked before — caching it as PASS would hide any real
+  // violation from every future run of this same diff, permanently, even
+  // after a valid API key is added.
+  const llmCheckSkippedForMissingProvider = !cacheHit && _resolveLLMClient() === null;
+
   // Only cache a clean result — a BLOCK must always be re-scanned after a fix.
-  if (verdict === "PASS") {
+  if (verdict === "PASS" && !llmCheckSkippedForMissingProvider) {
     _writeCache(diffHash);
   }
 

@@ -4,12 +4,21 @@ import type { DiffResult } from "../src/git/diff";
 import type { Violation } from "../src/report/types";
 import type { Policy } from "../src/policy/types";
 import { hashDiffText, type GuardianCache } from "../src/cache";
+import type { ResolvedLLMClient } from "../src/checks/llm/resolveClient";
 
 const EMPTY_DIFF: DiffResult = { diffText: "", changedFiles: [] };
 
 // Disables caching by default — tests opt in explicitly where they exercise it.
 // Also keeps every test isolated from the real project's .git/guardian_cache.json.
 const NO_CACHE = { readCache: (): GuardianCache | null => null, writeCache: (): void => {} };
+
+// Stubs resolveLLMClient so cache-write tests don't depend on whether this
+// machine happens to have ANTHROPIC_API_KEY/OPENAI_API_KEY set — see the
+// "cache" describe block below for what these actually gate.
+const LLM_AVAILABLE = {
+  resolveLLMClient: (): ResolvedLLMClient | null => ({}) as ResolvedLLMClient,
+};
+const LLM_UNAVAILABLE = { resolveLLMClient: (): ResolvedLLMClient | null => null };
 
 // Stubs out the (real, madge-backed) architecture check and the (real,
 // semgrep-binary-backed) Semgrep check by default — without this, every test
@@ -416,7 +425,7 @@ describe("runGuardianCheck", () => {
       expect(checkPoliciesWithLLM).toHaveBeenCalledTimes(1);
     });
 
-    it("ghi cache với hash của diff khi verdict là PASS", async () => {
+    it("ghi cache với hash của diff khi verdict là PASS và LLM check thực sự đã chạy", async () => {
       const diff: DiffResult = { diffText: "clean diff", changedFiles: ["src/app.ts"] };
       const writeCache = vi.fn();
 
@@ -425,6 +434,7 @@ describe("runGuardianCheck", () => {
         scanForSecrets: () => [],
         checkPoliciesWithLLM: async () => [],
         ...NO_ARCH,
+        ...LLM_AVAILABLE,
         readCache: () => null,
         writeCache,
       });
@@ -444,12 +454,53 @@ describe("runGuardianCheck", () => {
         scanForSecrets: () => [critical],
         checkPoliciesWithLLM: async () => [],
         ...NO_ARCH,
+        ...LLM_AVAILABLE,
         readCache: () => null,
         writeCache,
       });
 
       expect(report.verdict).toBe("BLOCK");
       expect(writeCache).not.toHaveBeenCalled();
+    });
+
+    it("KHÔNG ghi cache khi verdict là PASS nhưng LLM check bị bỏ qua vì thiếu API key (không có cache trước đó)", async () => {
+      // Regression test: trước fix, orchestrator cache PASS ngay cả khi
+      // checkPoliciesWithLLM chưa từng thực sự chạy (thiếu provider) — khiến
+      // một diff có vi phạm thật bị coi là "đã sạch" vĩnh viễn kể cả sau khi
+      // cấu hình đúng API key, vì hash diff đã nằm trong cache.
+      const diff: DiffResult = { diffText: "diff chưa từng được LLM chấm", changedFiles: ["src/app.ts"] };
+      const writeCache = vi.fn();
+
+      const report = await runGuardianCheck(diff, {
+        loadPolicies: () => [],
+        scanForSecrets: () => [],
+        checkPoliciesWithLLM: async () => [],
+        ...NO_ARCH,
+        ...LLM_UNAVAILABLE,
+        readCache: () => null,
+        writeCache,
+      });
+
+      expect(report.verdict).toBe("PASS");
+      expect(writeCache).not.toHaveBeenCalled();
+    });
+
+    it("vẫn ghi cache khi verdict PASS và cacheHit true, dù không có provider (kết quả PASS đến từ lần quét thật trước đó)", async () => {
+      const diff: DiffResult = { diffText: "diff đã từng PASS thật", changedFiles: ["src/app.ts"] };
+      const writeCache = vi.fn();
+
+      const report = await runGuardianCheck(diff, {
+        loadPolicies: () => [],
+        scanForSecrets: () => [],
+        checkPoliciesWithLLM: async () => [],
+        ...NO_ARCH,
+        ...LLM_UNAVAILABLE,
+        readCache: () => ({ passedDiffHashes: [hashDiffText(diff.diffText)] }),
+        writeCache,
+      });
+
+      expect(report.verdict).toBe("PASS");
+      expect(writeCache).toHaveBeenCalledTimes(1);
     });
   });
 });
