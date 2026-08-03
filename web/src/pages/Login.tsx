@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { DEMO_USERS } from '../lib/demoUsers'
 import { defaultRouteForRole, pageAllowedForRole } from '../lib/navigation'
 import type { Role } from '../lib/rbac'
 
@@ -113,8 +112,10 @@ export function Login() {
         </div>
 
         <p className="mt-5 text-center text-[11px] text-gray-400">
-          Demo password for the form above: <code className="rounded bg-gray-100 px-1 py-0.5">{DEMO_USERS.admin.email}</code>{' '}
-          / <code className="rounded bg-gray-100 px-1 py-0.5">guardian123</code> (any demo email works)
+          The form above needs <code className="rounded bg-gray-100 px-1 py-0.5">VITE_DEMO_PASSWORD</code> set in{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5">web/.env</code> (see{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5">web/.env.example</code>) — any demo email above works
+          with it. The buttons below need no password.
         </p>
       </div>
     </div>

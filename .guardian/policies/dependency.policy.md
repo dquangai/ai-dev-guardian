@@ -9,7 +9,10 @@ dependencyAllowlist:
   - "@types/*"
   - chalk
   - commander
+  - concurrently
+  - cors
   - dotenv
+  - express
   - gray-matter
   - madge
   - micromatch

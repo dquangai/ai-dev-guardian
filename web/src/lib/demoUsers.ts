@@ -40,7 +40,12 @@ export const DEMO_USERS: Record<Role, DemoUser> = {
   },
 }
 
-export const DEMO_PASSWORD = 'guardian123'
+/**
+ * Sourced from VITE_DEMO_PASSWORD (web/.env, gitignored — see web/.env.example) rather than a
+ * literal here, so no credential-shaped value ever sits in committed source. Undefined until a
+ * dev sets it locally; the demo-role quick-login buttons don't need it at all.
+ */
+export const DEMO_PASSWORD: string | undefined = import.meta.env.VITE_DEMO_PASSWORD
 
 export function findDemoUserByEmail(email: string): DemoUser | null {
   const normalized = email.trim().toLowerCase()

@@ -6,6 +6,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { requirePermission } from "../authMiddleware";
 import { listAuditHistory, recordAudit } from "../store/auditStore";
+import { parseBoundedInt } from "../validation";
+
+const MAX_HISTORY_PAGE = 200;
 
 export const auditRouter = Router();
 
@@ -27,7 +30,8 @@ auditRouter.post("/run", requirePermission("audit:run"), async (req, res) => {
 });
 
 auditRouter.get("/history", requirePermission("audit:view"), (req, res) => {
-  const limit = req.query.limit ? Number(req.query.limit) : undefined;
+  const limit =
+    req.query.limit === undefined ? undefined : parseBoundedInt(req.query.limit, MAX_HISTORY_PAGE, MAX_HISTORY_PAGE);
   res.json(listAuditHistory(limit));
 });
 

@@ -10,6 +10,9 @@ import {
   submitChangeRequest,
   writePolicyFile,
 } from "../store/policyStore";
+import { isSafeId, parseEnumQuery } from "../validation";
+
+const CHANGE_REQUEST_STATUSES = ["pending", "approved", "rejected"] as const;
 
 export const policiesRouter = Router();
 
@@ -18,11 +21,15 @@ policiesRouter.get("/", requirePermission("policy:view"), (_req, res) => {
 });
 
 policiesRouter.get("/requests", requirePermission("policy:view"), (req, res) => {
-  const status = req.query.status as "pending" | "approved" | "rejected" | undefined;
+  const status = parseEnumQuery(req.query.status, CHANGE_REQUEST_STATUSES);
   res.json(listChangeRequests(status));
 });
 
 policiesRouter.get("/:id", requirePermission("policy:view"), (req, res) => {
+  if (!isSafeId(req.params.id)) {
+    res.status(400).json({ error: "bad_request", message: "Invalid policy id." });
+    return;
+  }
   const policy = getPolicy(req.params.id);
   if (!policy) {
     res.status(404).json({ error: "not_found", message: `Policy "${req.params.id}" not found.` });
@@ -38,7 +45,7 @@ function submitOrApply(action: "create" | "update") {
   return (req: import("express").Request, res: import("express").Response) => {
     const id = req.params.id ?? req.body.id;
     const content = req.body.content as string | undefined;
-    if (!id || typeof content !== "string") {
+    if (!isSafeId(id) || typeof content !== "string") {
       res.status(400).json({ error: "bad_request", message: "id and content are required." });
       return;
     }
@@ -74,6 +81,10 @@ policiesRouter.put("/:id", submitOrApply("update"));
 
 policiesRouter.delete("/:id", (req, res) => {
   const id = req.params.id;
+  if (!isSafeId(id)) {
+    res.status(400).json({ error: "bad_request", message: "Invalid policy id." });
+    return;
+  }
   if (hasPermission(req.role, "policy:edit-direct")) {
     deletePolicyFile(id);
     res.json({ status: "applied" });
@@ -91,6 +102,10 @@ policiesRouter.delete("/:id", (req, res) => {
 });
 
 policiesRouter.post("/requests/:id/approve", requirePermission("policy:approve"), (req, res) => {
+  if (!isSafeId(req.params.id)) {
+    res.status(400).json({ error: "bad_request", message: "Invalid request id." });
+    return;
+  }
   try {
     const request = resolveChangeRequest(req.params.id, "approved", req.userId, req.body?.note);
     res.json(request);
@@ -100,6 +115,10 @@ policiesRouter.post("/requests/:id/approve", requirePermission("policy:approve")
 });
 
 policiesRouter.post("/requests/:id/reject", requirePermission("policy:approve"), (req, res) => {
+  if (!isSafeId(req.params.id)) {
+    res.status(400).json({ error: "bad_request", message: "Invalid request id." });
+    return;
+  }
   try {
     const request = resolveChangeRequest(req.params.id, "rejected", req.userId, req.body?.note);
     res.json(request);
