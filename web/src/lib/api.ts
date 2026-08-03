@@ -9,8 +9,11 @@ export class ApiError extends Error {
   }
 }
 
-let currentRole: Role = 'admin'
-let currentUser = 'admin@local'
+// Least-privilege placeholders until AuthContext calls setApiIdentity() after a real login —
+// every route these could hit is behind ProtectedRoute, so they're never actually used to
+// authorize anything; kept low-privilege anyway rather than defaulting to 'admin'.
+let currentRole: Role = 'developer'
+let currentUser = 'anonymous'
 
 /** Called by AuthContext whenever the logged-in user changes. */
 export function setApiIdentity(role: Role, userId: string): void {

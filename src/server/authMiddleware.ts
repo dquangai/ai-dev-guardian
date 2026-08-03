@@ -11,6 +11,9 @@ declare global {
   }
 }
 
+// Deliberately the least-privileged role in the RBAC matrix (see rbac.ts) — falling back here on
+// a missing/invalid x-guardian-role header is a fail-closed default, not privilege escalation:
+// an unrecognized caller gets fewer permissions than any real role, never more.
 const DEFAULT_ROLE: Role = "developer";
 
 /** Reads the caller's asserted role/identity from headers set by the frontend's role switcher. */

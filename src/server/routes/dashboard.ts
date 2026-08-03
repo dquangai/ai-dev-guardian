@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { computeDashboardSummary, listAuditHistory } from "../store/auditStore";
 import { listPolicies } from "../store/policyStore";
+import { parseBoundedInt } from "../validation";
+
+const MAX_RECENT_ACTIVITY = 50;
 
 export const dashboardRouter = Router();
 
@@ -42,6 +45,6 @@ dashboardRouter.get("/subsystems", (_req, res) => {
 });
 
 dashboardRouter.get("/recent-activity", (req, res) => {
-  const limit = Number(req.query.limit) || 4;
+  const limit = parseBoundedInt(req.query.limit, 4, MAX_RECENT_ACTIVITY);
   res.json(listAuditHistory(limit));
 });
