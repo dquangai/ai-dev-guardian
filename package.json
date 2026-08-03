@@ -1,27 +1,42 @@
 {
   "name": "ai-dev-guardian",
   "version": "0.1.0",
-  "description": "AI Engineering Governance Agent — kiểm soát tuân thủ code trước khi push/merge.",
+  "description": "AI Dev Guardian — pre-push code governance CLI, API server, and web dashboard",
+  "main": "dist/cli.js",
   "license": "MIT",
   "author": "DoanQuang",
-  "type": "commonjs",
   "bin": {
     "guardian": "dist/cli.js"
   },
+  "files": [
+    "dist",
+    "web/dist"
+  ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "dev": "tsx src/cli.ts",
-    "test": "vitest run"
+    "build": "tsc",
+    "build:all": "npm run build && npm run web:build",
+    "prepublishOnly": "npm run build:all",
+    "test": "vitest run",
+    "cli": "tsx src/cli.ts",
+    "server:dev": "tsx src/server/index.ts",
+    "server:start": "node dist/server/index.js",
+    "web:install": "npm --prefix web install",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build",
+    "dev": "concurrently -n server,web -c blue,green \"npm:server:dev\" \"npm:web:dev\"",
+    "dashboard": "npm run build:all && node dist/cli.js dashboard"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
     "@ast-grep/napi": "^0.45.0",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.4.2",
+    "express": "^4.21.2",
     "gray-matter": "^4.0.3",
     "madge": "^8.0.0",
     "micromatch": "^4.0.8",
@@ -29,8 +44,11 @@
     "simple-git": "^3.27.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/micromatch": "^4.0.9",
     "@types/node": "^22.10.2",
+    "concurrently": "^9.1.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

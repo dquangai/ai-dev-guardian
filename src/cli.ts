@@ -9,6 +9,7 @@ import { readGitHubContext } from "./ci/githubContext";
 import { postOrUpdateComment } from "./ci/githubComment";
 import { installPrePushHook } from "./hooks/installHook";
 import { confirmOnTTY } from "./ttyConfirm";
+import { startServer } from "./server/index";
 // Test tính năng cache
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -90,6 +91,16 @@ program
       console.error(`[guardian] ${error instanceof Error ? error.message : error}`);
       process.exitCode = 1;
     }
+  });
+
+program
+  .command("dashboard")
+  .description(
+    "Khởi động AI Dev Guardian Dashboard (API + giao diện quản lý policy/audit) cho project hiện tại."
+  )
+  .option("-p, --port <number>", "Cổng chạy dashboard", (value) => parseInt(value, 10))
+  .action((options: { port?: number }) => {
+    startServer(options.port);
   });
 
 program.parseAsync(process.argv).catch((error) => {
