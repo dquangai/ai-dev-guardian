@@ -8,14 +8,24 @@ interface UseApiResult<T> {
   refetch: () => void
 }
 
+interface UseApiOptions {
+  /** Skip fetching entirely while false — e.g. a role that can't see a given nav badge shouldn't call its endpoint. */
+  enabled?: boolean
+}
+
 /** Fetches `path` on mount and whenever `deps` change; re-runs on demand via refetch(). */
-export function useApi<T>(path: string, deps: unknown[] = []): UseApiResult<T> {
+export function useApi<T>(path: string, deps: unknown[] = [], options: UseApiOptions = {}): UseApiResult<T> {
+  const enabled = options.enabled ?? true
   const [data, setData] = useState<T | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(enabled)
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
   const load = useCallback(() => {
+    if (!enabled) {
+      setLoading(false)
+      return
+    }
     let cancelled = false
     setLoading(true)
     setError(null)
@@ -33,7 +43,7 @@ export function useApi<T>(path: string, deps: unknown[] = []): UseApiResult<T> {
     return () => {
       cancelled = true
     }
-  }, [path, tick]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [path, tick, enabled]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => load(), [load, ...deps]) // eslint-disable-line react-hooks/exhaustive-deps
 

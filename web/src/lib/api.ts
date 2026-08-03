@@ -12,7 +12,7 @@ export class ApiError extends Error {
 let currentRole: Role = 'admin'
 let currentUser = 'admin@local'
 
-/** Called by RoleContext whenever the demo role switcher changes. */
+/** Called by AuthContext whenever the logged-in user changes. */
 export function setApiIdentity(role: Role, userId: string): void {
   currentRole = role
   currentUser = userId

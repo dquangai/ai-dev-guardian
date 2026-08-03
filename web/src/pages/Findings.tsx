@@ -6,15 +6,24 @@ import type { AuditRecord, BypassRequest, Violation } from '../lib/types'
 import { Panel } from '../components/ui/Panel'
 import { ViolationList } from '../components/ui/ViolationList'
 import { StatusPill } from '../components/ui/StatusPill'
-import { useRole } from '../context/RoleContext'
+import { useAuth } from '../context/AuthContext'
 
 export function Findings() {
-  const { can } = useRole()
+  const { user, can } = useAuth()
   const { data: history } = useApi<AuditRecord[]>('/audit/history')
   const { data: bypassRequests, refetch } = useApi<BypassRequest[]>('/bypass-requests')
   const [busyId, setBusyId] = useState<string | null>(null)
 
-  const allViolations: Violation[] = (history ?? []).flatMap((r) => r.violations)
+  // A developer only sees their own audit runs/requests — Admin, Senior Dev, and
+  // Auditor keep the full picture, since oversight/approval needs visibility across the team.
+  const isDeveloper = user?.role === 'developer'
+
+  const visibleHistory = isDeveloper ? (history ?? []).filter((r) => r.triggeredBy === user?.id) : (history ?? [])
+  const allViolations: Violation[] = visibleHistory.flatMap((r) => r.violations)
+
+  const visibleBypassRequests = isDeveloper
+    ? (bypassRequests ?? []).filter((r) => r.requestedBy === user?.id)
+    : (bypassRequests ?? [])
 
   async function decide(id: string, decision: 'approve' | 'reject') {
     setBusyId(id)
@@ -31,7 +40,7 @@ export function Findings() {
   return (
     <div className="space-y-6">
       <Panel
-        title="All Findings"
+        title={isDeveloper ? 'My Findings' : 'All Findings'}
         icon={<AlertTriangle size={16} className="text-amber-500" />}
         action={<span className="text-xs text-gray-400">{allViolations.length} total</span>}
       >
@@ -39,15 +48,17 @@ export function Findings() {
       </Panel>
 
       <Panel
-        title="Bypass Requests"
+        title={isDeveloper ? 'My Bypass Requests' : 'Bypass Requests'}
         icon={<ShieldQuestion size={16} className="text-gray-400" />}
-        action={<span className="text-xs text-gray-400">{bypassRequests?.length ?? 0} total</span>}
+        action={<span className="text-xs text-gray-400">{visibleBypassRequests.length} total</span>}
       >
         <div className="space-y-2">
-          {bypassRequests?.length === 0 && (
-            <p className="py-6 text-center text-sm text-gray-400">No bypass requests yet.</p>
+          {visibleBypassRequests.length === 0 && (
+            <p className="py-6 text-center text-sm text-gray-400">
+              {isDeveloper ? "You haven't submitted any bypass requests yet." : 'No bypass requests yet.'}
+            </p>
           )}
-          {bypassRequests?.map((req) => (
+          {visibleBypassRequests.map((req) => (
             <div key={req.id} className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
               <div className="flex items-start justify-between gap-3">
                 <div>

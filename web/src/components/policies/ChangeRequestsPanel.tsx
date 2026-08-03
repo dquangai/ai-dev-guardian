@@ -4,7 +4,7 @@ import { api, ApiError } from '../../lib/api'
 import type { PolicyChangeRequest } from '../../lib/types'
 import { Panel } from '../ui/Panel'
 import { StatusPill } from '../ui/StatusPill'
-import { useRole } from '../../context/RoleContext'
+import { useAuth } from '../../context/AuthContext'
 
 export function ChangeRequestsPanel({
   requests,
@@ -13,7 +13,7 @@ export function ChangeRequestsPanel({
   requests: PolicyChangeRequest[]
   onResolved: () => void
 }) {
-  const { can } = useRole()
+  const { can } = useAuth()
   const [busyId, setBusyId] = useState<string | null>(null)
 
   async function decide(id: string, decision: 'approve' | 'reject') {

@@ -14,44 +14,41 @@ import {
 import { NavLink } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import type { SystemDiagnostics } from '../../lib/types'
+import { useAuth } from '../../context/AuthContext'
+import { NAV_BY_ROLE, type NavItem } from '../../lib/navigation'
 
-interface NavItem {
-  to: string
-  label: string
-  icon: React.ReactNode
-  badge?: number
+const ICONS: Record<NavItem['icon'], React.ReactNode> = {
+  overview: <LayoutDashboard size={18} />,
+  'code-audit': <Shield size={18} />,
+  findings: <AlertTriangle size={18} />,
+  policies: <FileText size={18} />,
+  'audit-history': <History size={18} />,
+  'audit-cache': <Database size={18} />,
+  diagnostics: <Activity size={18} />,
+  'engine-config': <Settings size={18} />,
 }
 
 export function Sidebar() {
+  const { user } = useAuth()
+  const items = user ? NAV_BY_ROLE[user.role] : []
+  const hasItem = (to: string) => items.some((i) => i.to === to)
+
   const { data: diagnostics } = useApi<SystemDiagnostics>('/system/diagnostics')
-  const { data: policies } = useApi<{ length: number }[]>('/policies')
-  const { data: history } = useApi<unknown[]>('/audit/history')
-  const { data: cache } = useApi<{ passedDiffHashes: string[] }>('/audit/cache')
+  const { data: policies } = useApi<{ length: number }[]>('/policies', [], { enabled: hasItem('/policies') })
+  const { data: history } = useApi<{ verdict: string }[]>('/audit/history', [], {
+    enabled: hasItem('/findings') || hasItem('/audit-history'),
+  })
+  const { data: cache } = useApi<{ passedDiffHashes: string[] }>('/audit/cache', [], {
+    enabled: hasItem('/audit-cache'),
+  })
 
-  const openFindingsCount = Array.isArray(history)
-    ? history.filter((r) => (r as { verdict?: string }).verdict === 'BLOCK').length
-    : undefined
-
-  const items: NavItem[] = [
-    { to: '/', label: 'Overview', icon: <LayoutDashboard size={18} /> },
-    { to: '/code-audit', label: 'Code Audit', icon: <Shield size={18} /> },
-    { to: '/findings', label: 'Findings', icon: <AlertTriangle size={18} />, badge: openFindingsCount },
-    { to: '/policies', label: 'Policies', icon: <FileText size={18} />, badge: policies?.length },
-    {
-      to: '/audit-history',
-      label: 'Audit History',
-      icon: <History size={18} />,
-      badge: Array.isArray(history) ? history.length : undefined,
-    },
-    {
-      to: '/audit-cache',
-      label: 'Audit Cache',
-      icon: <Database size={18} />,
-      badge: cache?.passedDiffHashes.length,
-    },
-    { to: '/diagnostics', label: 'System Diagnostics', icon: <Activity size={18} /> },
-    { to: '/engine-config', label: 'AI Engine Config', icon: <Settings size={18} /> },
-  ]
+  const badgeFor = (to: string): number | undefined => {
+    if (to === '/findings') return history?.filter((r) => r.verdict === 'BLOCK').length
+    if (to === '/policies') return policies?.length
+    if (to === '/audit-history') return history?.length
+    if (to === '/audit-cache') return cache?.passedDiffHashes.length
+    return undefined
+  }
 
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-gray-200 bg-white">
@@ -71,36 +68,39 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
-        {items.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span className="flex items-center gap-3">
-                  <span className={isActive ? 'text-blue-600' : 'text-gray-400'}>{item.icon}</span>
-                  {item.label}
-                </span>
-                {item.badge !== undefined && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {item.badge}
+        {items.map((item) => {
+          const badge = badgeFor(item.to)
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span className="flex items-center gap-3">
+                    <span className={isActive ? 'text-blue-600' : 'text-gray-400'}>{ICONS[item.icon]}</span>
+                    {item.label}
                   </span>
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
+                  {badge !== undefined && (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                </>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
 
       <div className="m-3 space-y-3 rounded-xl bg-gray-50 p-4 text-sm">

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
 import type { Policy } from '../../lib/types'
-import { useRole } from '../../context/RoleContext'
+import { useAuth } from '../../context/AuthContext'
 
 const NEW_POLICY_TEMPLATE = `---
 category: Uncategorized
@@ -25,7 +25,7 @@ interface Props {
 }
 
 export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }: Props) {
-  const { can } = useRole()
+  const { can } = useAuth()
   const [id, setId] = useState('')
   const [raw, setRaw] = useState('')
   const [status, setStatus] = useState<string | null>(null)

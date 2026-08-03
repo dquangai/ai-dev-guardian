@@ -5,10 +5,10 @@ import type { Policy, PolicyChangeRequest } from '../lib/types'
 import { StatusPill, severityVariant } from '../components/ui/StatusPill'
 import { PolicyEditor } from '../components/policies/PolicyEditor'
 import { ChangeRequestsPanel } from '../components/policies/ChangeRequestsPanel'
-import { useRole } from '../context/RoleContext'
+import { useAuth } from '../context/AuthContext'
 
 export function Policies() {
-  const { can } = useRole()
+  const { can } = useAuth()
   const { data: policies, refetch: refetchPolicies } = useApi<Policy[]>('/policies')
   const { data: requests, refetch: refetchRequests } = useApi<PolicyChangeRequest[]>('/policies/requests')
   const [selectedId, setSelectedId] = useState<string | null>(null)
