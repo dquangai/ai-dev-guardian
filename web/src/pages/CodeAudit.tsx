@@ -5,11 +5,11 @@ import type { AuditRecord } from '../lib/types'
 import { Panel } from '../components/ui/Panel'
 import { ViolationList } from '../components/ui/ViolationList'
 import { StatusPill, verdictVariant } from '../components/ui/StatusPill'
-import { useRole } from '../context/RoleContext'
+import { useAuth } from '../context/AuthContext'
 import { RequestBypassForm } from '../components/RequestBypassForm'
 
 export function CodeAudit() {
-  const { can } = useRole()
+  const { can } = useAuth()
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<AuditRecord | null>(null)
   const [error, setError] = useState<string | null>(null)

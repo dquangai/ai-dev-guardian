@@ -1,8 +1,10 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { useAuth } from '../../context/AuthContext'
+import { NAV_BY_ROLE } from '../../lib/navigation'
 
-const TITLES: Record<string, string> = {
+const FALLBACK_TITLES: Record<string, string> = {
   '/': 'Executive Dashboard',
   '/code-audit': 'Code Audit',
   '/findings': 'Findings',
@@ -16,7 +18,12 @@ const TITLES: Record<string, string> = {
 export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const title = TITLES[location.pathname] ?? 'AI Dev Guardian'
+  const { user } = useAuth()
+
+  // Header title follows the role's own nav label (e.g. "My Findings" for a developer)
+  // rather than a fixed page name, so it doesn't contradict what the sidebar just called it.
+  const roleNavItem = user ? NAV_BY_ROLE[user.role].find((item) => item.to === location.pathname) : undefined
+  const title = roleNavItem?.label ?? FALLBACK_TITLES[location.pathname] ?? 'AI Dev Guardian'
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-50">

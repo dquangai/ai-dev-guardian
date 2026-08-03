@@ -4,7 +4,7 @@ import { useApi } from '../lib/useApi'
 import { api, ApiError } from '../lib/api'
 import type { EngineConfig as EngineConfigData, EngineDiagnostics } from '../lib/types'
 import { Panel } from '../components/ui/Panel'
-import { useRole } from '../context/RoleContext'
+import { useAuth } from '../context/AuthContext'
 
 interface ConfigResponse {
   config: EngineConfigData
@@ -12,7 +12,7 @@ interface ConfigResponse {
 }
 
 export function EngineConfig() {
-  const { can } = useRole()
+  const { can } = useAuth()
   const { data, refetch } = useApi<ConfigResponse>('/engine-config')
   const [form, setForm] = useState<EngineConfigData>({})
   const [status, setStatus] = useState<string | null>(null)

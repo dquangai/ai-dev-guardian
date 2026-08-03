@@ -2,10 +2,10 @@ import { Database, Trash2 } from 'lucide-react'
 import { useApi } from '../lib/useApi'
 import { api, ApiError } from '../lib/api'
 import { Panel } from '../components/ui/Panel'
-import { useRole } from '../context/RoleContext'
+import { useAuth } from '../context/AuthContext'
 
 export function AuditCache() {
-  const { can } = useRole()
+  const { can } = useAuth()
   const { data, refetch, loading } = useApi<{ passedDiffHashes: string[] }>('/audit/cache')
 
   async function clear() {
