@@ -27,9 +27,29 @@ copy-paste-ready fix prompt.
 
 ```bash
 npm install
-npm run build
-npm link   # exposes the `guardian` command globally; or run `node dist/cli.js` directly
+npm run build:all   # compiles the CLI/server (dist/) and builds the dashboard UI (web/dist)
+npm link             # exposes the `guardian` command globally from this checkout
 ```
+
+### Using it in another project (before this is published to a registry)
+
+`ai-dev-guardian` isn't on an npm registry yet, so [`npm link`](https://docs.npmjs.com/cli/v10/commands/npm-link)
+is the fastest way to gate a *real* project with it today, without waiting on a publish decision:
+
+```bash
+# in this repo, once:
+npm run build:all && npm link
+
+# in the project you actually want to gate:
+npm link ai-dev-guardian
+npx guardian install-hook
+npx guardian dashboard
+```
+
+`npm link` symlinks to this repo's `dist/`, not `src/` — re-run `npm run build:all` here after any
+source change, linked projects won't see it otherwise. On Windows, creating the symlink may need
+Developer Mode enabled or an elevated terminal (`EPERM` otherwise). To undo: `npm unlink
+ai-dev-guardian` in the linked project, then `npm unlink` in this repo.
 
 ## Quick Start
 
@@ -42,6 +62,9 @@ guardian check --staged
 
 # 3. Install the pre-push hook — every `git push` prompts and runs `guardian check`
 guardian install-hook
+
+# 4. Optional: manage policies/audits from a web dashboard instead of the terminal
+guardian dashboard   # serves API + UI on one port — see Web Dashboard below
 ```
 
 Programmatic usage is the same entry point the CLI calls (`src/orchestrator.ts`):
@@ -252,6 +275,56 @@ policy's `scope` globs (a `scope: []` policy applies globally) — so the full p
 never stuffed into a single LLM call, and each file's prompt only carries the rules that could
 possibly apply to it.
 
+## Web Dashboard
+
+A React + Vite + Tailwind dashboard (`web/`) backed by an Express API (`src/server/`), for a Dev
+Team Lead who wants to manage policies and review audit history without reading terminal output.
+
+```bash
+npm run dev            # dev mode: API on :4000 (plain tsx, no watch — see note in package.json)
+                        # + Vite dev server on :5173 (proxies /api to :4000)
+# or, once web/dist exists (npm run web:build, or automatically via prepublishOnly):
+guardian dashboard      # API + built UI on one port, single command
+```
+
+### RBAC
+
+Four roles, one permission matrix (`src/server/rbac.ts`, mirrored read-only in
+`web/src/lib/rbac.ts` for the frontend to gate buttons — but every permission is re-checked
+server-side in `authMiddleware.ts`'s `requirePermission()`, never only hidden in the UI):
+
+| Role | Can |
+|---|---|
+| **Admin / Team Lead** | Edit/delete policies directly, approve policy change requests and bypass requests, run audits, edit engine config |
+| **Senior Developer** | Propose policy changes (needs Admin approval), run audits, request bypasses |
+| **Developer** | Run audits, request bypasses, read-only on policies |
+| **Auditor** | Read-only everywhere, but approves/rejects bypass requests — a deliberate separation from who approves policy changes |
+
+There is no login system yet — identity is asserted via an `x-guardian-role` header, set by a
+role switcher in the dashboard header. This is fine for a local/single-machine tool; it is not a
+substitute for real auth if the dashboard is ever exposed beyond localhost.
+
+### Policy approval workflow
+
+A role without `policy:edit-direct` submitting a create/update/delete gets a pending
+`PolicyChangeRequest` (`.guardian/policy-requests.json`, gitignored runtime state) instead of
+touching disk immediately. An Admin/Team Lead approves (writes/deletes the real
+`.guardian/policies/*.md` file) or rejects it — see `src/server/store/policyStore.ts`.
+
+### Bypass requests
+
+When an audit run `BLOCK`s, any role can submit a reason for a merge bypass; Admin or Auditor
+resolves it (`src/server/store/bypassStore.ts`). This is a record for accountability, not an
+override mechanism — approving a bypass request doesn't change the git hook's exit code; a human
+still has to decide to push past a `BLOCK` themselves.
+
+### Audit history
+
+Unlike the CLI (which prints a report and forgets it), every dashboard-triggered
+`POST /api/audit/run` persists its `CheckReport` to `.guardian/audit-history.json` (gitignored,
+capped at 200 runs, `src/server/store/auditStore.ts`) — this is what backs the Overview KPIs and
+the Audit History page. `guardian check` from the terminal is unaffected and still stateless.
+
 ## Caching
 
 `hashDiffText()` SHA-256-hashes the (test-file-excluded) diff text. `writeCache()`
@@ -302,11 +375,16 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | Circular dependency detection | madge-backed, TS/JS only, scoped to cycles the current diff's `changedFiles` actually touch |
 | Optional Semgrep integration | `p/security-audit` ruleset by default (`GUARDIAN_SEMGREP_CONFIG` overridable), findings filtered to added diff lines |
 | Interactive pre-push git hook | `Y/n` in a real TTY, fail-open (always runs) in CI/non-interactive scripts |
+| Web dashboard | React/Vite/Tailwind UI + Express API (`web/`, `src/server/`) for managing policies and reviewing audit history without the terminal |
+| RBAC + approval workflows | 4-role permission matrix, policy change requests, and bypass-request review — see [Web Dashboard](#web-dashboard) |
+| Single-command dashboard launch | `guardian dashboard` serves the built UI and the API on one port, once `web/dist` exists |
 
 ### Planned
 
 | Feature | What it would look like |
 |---|---|
+| **Publish to a registry** | `ai-dev-guardian` isn't installable via `npm install` from any registry yet — only `npm link` from a local checkout (see [Using it in another project](#using-it-in-another-project-before-this-is-published-to-a-registry)). Needs a decision on public npm vs. a private registry before other projects can adopt it without cloning this repo |
+| **Real auth for the dashboard** | Replace the `x-guardian-role` demo header/role-switcher with actual sessions if the dashboard is ever run somewhere other than localhost |
 | **CI / GitHub Action gate** | A `guardian-action` that runs `runGuardianCheck` against a PR's diff and posts a comment, plus a git-versioned baseline artifact (mirroring the diff-hash cache but shared across a team instead of local `.git/`) so PRs don't re-pay for a diff a teammate already got `PASS`'d elsewhere |
 | **Architecture Rules policy category** | Policy-driven dependency-direction rules beyond circular-dependency detection — e.g. `forbid: ["src/core/** -> src/cli/**"]` in policy frontmatter, checked deterministically by reusing the same local-import extraction RAG-lite already does, no LLM call needed |
 | **Git Workflow policy category** | Branch naming, commit message format, merge-strategy rules — deterministic, checked against `diff`/git metadata rather than file content |
