@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
 
   /* Redefine blue palette to Vingroup Premium Red theme colors */
@@ -20,6 +20,7 @@
 
 body {
   margin: 0;
+  font-family: var(--font-sans);
   background-color: #F8F9FA;
   color: #0F172A;
 }
@@ -99,9 +100,39 @@ body {
   animation: spin-slow 40s linear infinite;
 }
 
+/* Live Code Architecture Node Graph "solar system" orbit — see components/ui/ArchitectureGraphWidget.tsx.
+   Two-part trick: the spoke line just rotates around the sun; the planet at its far end runs the
+   opposite rotation on the same clock so its icon/label stay upright while it revolves. */
+@keyframes orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-orbit-spoke {
+  animation: orbit-spin var(--orbit-duration, 26s) linear infinite;
+  animation-delay: var(--orbit-delay, 0s);
+}
+
+@keyframes orbit-counter-spin {
+  from { transform: translateX(var(--orbit-radius)) rotate(0deg); }
+  to { transform: translateX(var(--orbit-radius)) rotate(-360deg); }
+}
+.animate-orbit-counter {
+  animation: orbit-counter-spin var(--orbit-duration, 26s) linear infinite;
+  animation-delay: var(--orbit-delay, 0s);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in-up,
-  .animate-spin-slow {
+  .animate-spin-slow,
+  .animate-orbit-spoke,
+  .animate-orbit-counter {
     animation: none;
+  }
+  /* Freeze each planet at its evenly-spaced angle instead of collapsing every node to 0deg. */
+  .animate-orbit-spoke {
+    transform: rotate(var(--orbit-static-angle, 0deg));
+  }
+  .animate-orbit-counter {
+    transform: translateX(var(--orbit-radius)) rotate(calc(-1 * var(--orbit-static-angle, 0deg)));
   }
 }

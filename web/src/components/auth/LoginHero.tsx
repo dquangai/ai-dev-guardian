@@ -1,4 +1,4 @@
-import { Shield, Sparkles, Terminal, ShieldCheck } from 'lucide-react'
+import { Shield, Sparkles, Terminal } from 'lucide-react'
 
 const ACTIVE_LOGS = [
   { time: '10:06:50', action: 'policy.check: secret-scan', status: 'PASSED', color: 'text-emerald-300' },
@@ -17,9 +17,6 @@ export function LoginHero() {
       {/* Header (Vingroup Style corporate branding) */}
       <div className="relative z-10 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 border border-white/20 shadow-inner">
-            <ShieldCheck className="text-white" size={20} />
-          </div>
           <div>
             <span className="block text-xs font-bold tracking-[0.2em] text-white">VINSMART FUTURE</span>
             <span className="block text-[8px] font-medium tracking-[0.1em] text-white/70 uppercase">AI Security Division</span>
