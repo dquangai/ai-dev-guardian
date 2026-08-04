@@ -20,7 +20,7 @@ being trusted, and the tool never writes code on your behalf — it only ever pr
 copy-paste-ready fix prompt.
 
 <div align="center">
-<img src="docs/demo-output.png" alt="guardian check --staged output: a BLOCK verdict with two CRITICAL violations found by the secret scanner, each in its own bordered box with a policy explanation and a ready-to-paste fix prompt." width="620">
+<img src="docs/img/demo-output.png" alt="guardian check --staged output: a BLOCK verdict with two CRITICAL violations found by the secret scanner, each in its own bordered box with a policy explanation and a ready-to-paste fix prompt." width="620">
 </div>
 
 ## Install
