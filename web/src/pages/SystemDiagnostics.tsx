@@ -35,7 +35,7 @@ export function SystemDiagnostics() {
         <Row label="Cache file present" value={data?.cacheFileExists ? 'Yes' : 'No'} />
       </Panel>
 
-      <Panel title="Gemini / LLM Engine" icon={<Activity size={16} className="text-gray-400" />} className="lg:col-span-2">
+      <Panel title="AI Engine" icon={<Activity size={16} className="text-gray-400" />} className="lg:col-span-2">
         <Row
           label="Active provider"
           value={

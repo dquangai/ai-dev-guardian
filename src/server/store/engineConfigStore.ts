@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_POLICY_DIR } from "../../policy/loader";
+import { DEFAULT_ANTHROPIC_MODEL } from "../../checks/llm/anthropicClient";
+import { DEFAULT_OPENAI_MODEL } from "../../checks/llm/openaiClient";
+import { DEFAULT_ANTHROPIC_JUDGE_MODEL, DEFAULT_OPENAI_JUDGE_MODEL } from "../../checks/llm/resolveClient";
 
 /** Non-secret overrides only — API keys stay in .env and are never read/written here. */
 export interface EngineConfig {
@@ -67,12 +70,18 @@ export function readEngineDiagnostics(): EngineDiagnostics {
           ? "openai"
           : null;
 
+  // Mirrors resolveClient.ts's own fallback so diagnostics show the model that will
+  // actually be called, not just "unset" when no override is configured.
+  const defaultLlmModel = provider === "anthropic" ? DEFAULT_ANTHROPIC_MODEL : provider === "openai" ? DEFAULT_OPENAI_MODEL : null;
+  const defaultJudgeModel =
+    provider === "anthropic" ? DEFAULT_ANTHROPIC_JUDGE_MODEL : provider === "openai" ? DEFAULT_OPENAI_JUDGE_MODEL : null;
+
   return {
     provider,
     hasAnthropicKey,
     hasOpenAIKey,
-    effectiveLlmModel: process.env.GUARDIAN_LLM_MODEL?.trim() || null,
-    effectiveJudgeModel: process.env.GUARDIAN_JUDGE_MODEL?.trim() || null,
+    effectiveLlmModel: process.env.GUARDIAN_LLM_MODEL?.trim() || defaultLlmModel,
+    effectiveJudgeModel: process.env.GUARDIAN_JUDGE_MODEL?.trim() || defaultJudgeModel,
     effectiveSemgrepConfig: process.env.GUARDIAN_SEMGREP_CONFIG?.trim() || "p/security-audit",
   };
 }

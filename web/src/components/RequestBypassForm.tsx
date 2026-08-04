@@ -43,7 +43,7 @@ export function RequestBypassForm({ auditId }: { auditId?: string }) {
       <button
         onClick={submit}
         disabled={!reason.trim() || submitting}
-        className="rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+        className="rounded-full bg-[#9E0B10] px-4 py-2 text-xs font-semibold text-white hover:bg-[#80070B] disabled:cursor-not-allowed disabled:bg-gray-300"
       >
         {submitting ? 'Submitting…' : 'Submit Bypass Request'}
       </button>

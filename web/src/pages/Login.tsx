@@ -59,7 +59,7 @@ export function Login() {
       {/* Right Form Panel */}
       <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-[#FAFAFA] bg-[radial-gradient(#e5e7eb_1.2px,transparent_1.2px)] [background-size:24px_24px] px-6 py-12">
         <div className="w-full max-w-md">
-          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgba(158,11,16,0.06)] transition-all duration-300">
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgba(158,11,16,0.06)]">
             {/* Logo & Headline */}
             <div className="mb-6 flex flex-col items-center text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#9E0B10]/5 border border-[#9E0B10]/15 shadow-sm">
@@ -92,7 +92,7 @@ export function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="admin@guardian.dev"
-                    className="w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-4 text-sm text-gray-800 placeholder-gray-400 transition-colors focus:border-[#9E0B10] focus:outline-none focus:ring-2 focus:ring-red-100"
+                    className="w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-4 text-sm text-gray-800 placeholder-gray-400 focus:border-[#9E0B10] focus:outline-none focus:ring-2 focus:ring-red-100"
                   />
                 </div>
               </div>
@@ -106,13 +106,13 @@ export function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-10 text-sm text-gray-800 placeholder-gray-400 transition-colors focus:border-[#9E0B10] focus:outline-none focus:ring-2 focus:ring-red-100"
+                    className="w-full rounded-lg border border-gray-200 py-2.5 pl-10 pr-10 text-sm text-gray-800 placeholder-gray-400 focus:border-[#9E0B10] focus:outline-none focus:ring-2 focus:ring-red-100"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -140,7 +140,7 @@ export function Login() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full transform rounded-lg bg-[#9E0B10] py-2.5 text-sm font-semibold text-white shadow-md shadow-red-950/10 hover:bg-[#80070B] hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-60 disabled:pointer-events-none"
+                className="w-full rounded-lg bg-[#9E0B10] py-2.5 text-sm font-semibold text-white shadow-md shadow-red-950/10 hover:bg-[#80070B] disabled:opacity-60 disabled:pointer-events-none"
               >
                 {submitting ? 'Đang xác thực…' : 'Đăng nhập'}
               </button>
@@ -156,7 +156,7 @@ export function Login() {
               type="button"
               disabled
               title="Azua ID single sign-on chưa kết nối"
-              className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50/20 py-2.5 text-sm font-semibold text-[#9E0B10]/60 transition-all"
+              className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50/20 py-2.5 text-sm font-semibold text-[#9E0B10]/60"
             >
               <ShieldCheck size={16} />
               Đăng nhập qua Azua ID

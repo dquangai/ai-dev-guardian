@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { Play, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
-import type { AuditRecord } from '../lib/types'
+import { useApi } from '../lib/useApi'
+import type { AuditRecord, SystemDiagnostics } from '../lib/types'
 import { Panel } from '../components/ui/Panel'
 import { ViolationList } from '../components/ui/ViolationList'
 import { StatusPill, verdictVariant } from '../components/ui/StatusPill'
 import { useAuth } from '../context/AuthContext'
 import { RequestBypassForm } from '../components/RequestBypassForm'
+import { engineShortName } from '../lib/engineLabel'
 
 export function CodeAudit() {
   const { can } = useAuth()
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<AuditRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const { data: diagnostics } = useApi<SystemDiagnostics>('/system/diagnostics')
 
   async function runAudit() {
     setRunning(true)
@@ -33,7 +36,7 @@ export function CodeAudit() {
         <p className="text-sm text-gray-500">
           Runs the same checks as <code className="rounded bg-gray-100 px-1 py-0.5">guardian check --staged</code>
           {' '}against your currently staged changes: secret scanning, architecture/circular-dependency
-          analysis, Semgrep, and Gemini policy reasoning.
+          analysis, Semgrep, and {engineShortName(diagnostics?.llm)} policy reasoning.
         </p>
         <button
           onClick={runAudit}

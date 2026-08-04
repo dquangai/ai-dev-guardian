@@ -27,7 +27,7 @@ export function AppLayout() {
   const title = roleNavItem?.label ?? FALLBACK_TITLES[location.pathname] ?? 'AI Dev Guardian'
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F8F9FA] text-slate-900 font-sans">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header title={title} onRefresh={() => navigate(0)} />
