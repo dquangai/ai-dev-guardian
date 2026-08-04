@@ -1,14 +1,15 @@
 import {
   Activity,
   AlertTriangle,
-  Database,
+  ClipboardCheck,
+  FilePlus2,
   FileText,
   GitBranch,
-  History,
   LayoutDashboard,
   Settings,
   Shield,
   ShieldCheck,
+  ShieldQuestion,
   Sparkles,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
@@ -19,11 +20,12 @@ import { NAV_BY_ROLE, type NavItem } from '../../lib/navigation'
 
 const ICONS: Record<NavItem['icon'], React.ReactNode> = {
   overview: <LayoutDashboard size={18} />,
-  'code-audit': <Shield size={18} />,
   findings: <AlertTriangle size={18} />,
   policies: <FileText size={18} />,
-  'audit-history': <History size={18} />,
-  'audit-cache': <Database size={18} />,
+  'propose-policy': <FilePlus2 size={18} />,
+  'policy-approvals': <ClipboardCheck size={18} />,
+  'bypass-approvals': <ShieldQuestion size={18} />,
+  'code-audit': <Shield size={18} />,
   diagnostics: <Activity size={18} />,
   'engine-config': <Settings size={18} />,
 }
@@ -36,17 +38,20 @@ export function Sidebar() {
   const { data: diagnostics } = useApi<SystemDiagnostics>('/system/diagnostics')
   const { data: policies } = useApi<{ length: number }[]>('/policies', [], { enabled: hasItem('/policies') })
   const { data: history } = useApi<{ verdict: string }[]>('/audit/history', [], {
-    enabled: hasItem('/findings') || hasItem('/audit-history'),
+    enabled: hasItem('/findings'),
   })
-  const { data: cache } = useApi<{ passedDiffHashes: string[] }>('/audit/cache', [], {
-    enabled: hasItem('/audit-cache'),
+  const { data: policyRequests } = useApi<{ length: number }[]>('/policies/requests?status=pending', [], {
+    enabled: hasItem('/policy-approvals'),
+  })
+  const { data: bypassRequests } = useApi<{ length: number }[]>('/bypass-requests?status=pending', [], {
+    enabled: hasItem('/bypass-approvals'),
   })
 
   const badgeFor = (to: string): number | undefined => {
     if (to === '/findings') return history?.filter((r) => r.verdict === 'BLOCK').length
     if (to === '/policies') return policies?.length
-    if (to === '/audit-history') return history?.length
-    if (to === '/audit-cache') return cache?.passedDiffHashes.length
+    if (to === '/policy-approvals') return policyRequests?.length
+    if (to === '/bypass-approvals') return bypassRequests?.length
     return undefined
   }
 
@@ -87,7 +92,7 @@ export function Sidebar() {
                     <span className={isActive ? 'text-blue-600' : 'text-gray-400'}>{ICONS[item.icon]}</span>
                     {item.label}
                   </span>
-                  {badge !== undefined && (
+                  {badge !== undefined && badge > 0 && (
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                         isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'

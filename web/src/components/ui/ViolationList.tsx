@@ -1,7 +1,14 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Clipboard } from 'lucide-react'
 import type { Violation } from '../../lib/types'
 import { StatusPill, severityVariant } from './StatusPill'
+import { useToast } from '../../context/ToastContext'
+
+/** Short, copy-paste-ready prompt for an AI coding assistant — distinct from the fuller
+ * `violation.promptToFix` (which the LLM itself generated) shown in the expanded detail. */
+function buildCompactFixPrompt(violation: Violation): string {
+  return `Fix violation of "${violation.policyViolated}" (${violation.riskLevel}) in \`${violation.location}\`: - Issue: ${violation.errorWhat} - Fix: ${violation.howToFix}`
+}
 
 export function ViolationList({ violations }: { violations: Violation[] }) {
   if (violations.length === 0) {
@@ -18,13 +25,20 @@ export function ViolationList({ violations }: { violations: Violation[] }) {
 
 function ViolationRow({ violation }: { violation: Violation }) {
   const [open, setOpen] = useState(false)
+  const { showToast } = useToast()
+
+  function copyPrompt(text: string) {
+    navigator.clipboard.writeText(text)
+    showToast('Prompt copied to clipboard!')
+  }
+
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-      >
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
           {open ? (
             <ChevronDown size={14} className="shrink-0 text-gray-400" />
           ) : (
@@ -34,12 +48,20 @@ function ViolationRow({ violation }: { violation: Violation }) {
             <div className="truncate text-sm font-medium text-gray-900">{violation.errorWhat}</div>
             <div className="truncate text-xs text-gray-500">{violation.location}</div>
           </div>
-        </div>
+        </button>
         <div className="flex shrink-0 items-center gap-2">
           <StatusPill variant={severityVariant(violation.riskLevel)}>{violation.riskLevel}</StatusPill>
-          <span className="hidden text-xs text-gray-400 sm:inline">{violation.source}</span>
+          <span className="hidden text-xs text-gray-400 lg:inline">{violation.source}</span>
+          <button
+            onClick={() => copyPrompt(buildCompactFixPrompt(violation))}
+            title="Copy AI Fix Prompt"
+            className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+          >
+            <Clipboard size={12} />
+            <span className="hidden sm:inline">Copy AI Fix Prompt</span>
+          </button>
         </div>
-      </button>
+      </div>
       {open && (
         <div className="space-y-3 border-t border-gray-200 px-4 py-3 text-sm">
           <div>
@@ -56,9 +78,9 @@ function ViolationRow({ violation }: { violation: Violation }) {
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <div className="text-xs font-semibold uppercase text-gray-400">Prompt to fix</div>
+              <div className="text-xs font-semibold uppercase text-gray-400">Full prompt to fix</div>
               <button
-                onClick={() => navigator.clipboard.writeText(violation.promptToFix)}
+                onClick={() => copyPrompt(violation.promptToFix)}
                 className="text-xs font-medium text-blue-600 hover:underline"
               >
                 Copy

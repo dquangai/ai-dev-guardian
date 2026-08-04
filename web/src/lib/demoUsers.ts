@@ -32,12 +32,6 @@ export const DEMO_USERS: Record<Role, DemoUser> = {
     email: 'dev@guardian.dev',
     role: 'developer',
   },
-  auditor: {
-    id: 'auditor-1',
-    name: 'Casey Nguyen',
-    email: 'auditor@guardian.dev',
-    role: 'auditor',
-  },
 }
 
 /**

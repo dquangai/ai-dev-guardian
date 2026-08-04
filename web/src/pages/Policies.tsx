@@ -1,16 +1,14 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useApi } from '../lib/useApi'
-import type { Policy, PolicyChangeRequest } from '../lib/types'
+import type { Policy } from '../lib/types'
 import { StatusPill, severityVariant } from '../components/ui/StatusPill'
 import { PolicyEditor } from '../components/policies/PolicyEditor'
-import { ChangeRequestsPanel } from '../components/policies/ChangeRequestsPanel'
 import { useAuth } from '../context/AuthContext'
 
 export function Policies() {
   const { can } = useAuth()
   const { data: policies, refetch: refetchPolicies } = useApi<Policy[]>('/policies')
-  const { data: requests, refetch: refetchRequests } = useApi<PolicyChangeRequest[]>('/policies/requests')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creatingNew, setCreatingNew] = useState(false)
 
@@ -18,7 +16,6 @@ export function Policies() {
 
   function refreshAll() {
     refetchPolicies()
-    refetchRequests()
     setCreatingNew(false)
   }
 
@@ -30,7 +27,7 @@ export function Policies() {
             <h2 className="text-sm font-semibold text-gray-900">
               Policies ({policies?.length ?? 0})
             </h2>
-            {(can('policy:edit-direct') || can('policy:propose')) && (
+            {can('policy:edit-direct') && (
               <button
                 onClick={() => {
                   setCreatingNew(true)
@@ -84,8 +81,6 @@ export function Policies() {
           />
         </div>
       </div>
-
-      <ChangeRequestsPanel requests={requests ?? []} onResolved={refreshAll} />
     </div>
   )
 }

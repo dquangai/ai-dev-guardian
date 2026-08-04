@@ -6,10 +6,9 @@ import { defaultRouteForRole, pageAllowedForRole } from '../lib/navigation'
 import type { Role } from '../lib/rbac'
 
 const DEMO_BUTTONS: { role: Role; label: string; className: string }[] = [
-  { role: 'admin', label: 'Log in as Dev Team Lead (Admin)', className: 'bg-blue-600 hover:bg-blue-700' },
-  { role: 'senior-dev', label: 'Log in as Senior Dev', className: 'bg-emerald-600 hover:bg-emerald-700' },
-  { role: 'developer', label: 'Log in as Developer', className: 'bg-amber-500 hover:bg-amber-600' },
-  { role: 'auditor', label: 'Log in as Security Auditor', className: 'bg-violet-600 hover:bg-violet-700' },
+  { role: 'admin', label: '👑 Login as ADMIN / LEAD', className: 'bg-blue-600 hover:bg-blue-700' },
+  { role: 'senior-dev', label: '⭐ Login as SENIOR DEV', className: 'bg-emerald-600 hover:bg-emerald-700' },
+  { role: 'developer', label: '💻 Login as DEV', className: 'bg-amber-500 hover:bg-amber-600' },
 ]
 
 export function Login() {

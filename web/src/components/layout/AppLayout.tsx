@@ -9,8 +9,9 @@ const FALLBACK_TITLES: Record<string, string> = {
   '/code-audit': 'Code Audit',
   '/findings': 'Findings',
   '/policies': 'Policy Management',
-  '/audit-history': 'Audit History',
-  '/audit-cache': 'Audit Cache',
+  '/policies/propose': 'Propose New Policy',
+  '/policy-approvals': 'Policy Approvals Hub',
+  '/bypass-approvals': 'Bypass Approvals Hub',
   '/diagnostics': 'System Diagnostics',
   '/engine-config': 'AI Engine Config',
 }
