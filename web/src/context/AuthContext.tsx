@@ -20,7 +20,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 /**
- * A session persisted by an older build (e.g. the now-removed "auditor" role) must never reach
+ * A session persisted by an older build (e.g. a role later renamed or removed) must never reach
  * the rest of the app as a live `user` — every role-keyed lookup (NAV_BY_ROLE, ROLE_LABELS, ...)
  * assumes `Role` is exhaustive and throws on an unknown key, which would otherwise white-screen
  * the whole dashboard for anyone who logged in before a role was renamed/removed.

@@ -32,7 +32,7 @@ function App() {
           <Route
             index
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev']}>
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'auditor']}>
                 <Overview />
               </ProtectedRoute>
             }
@@ -40,7 +40,7 @@ function App() {
           <Route
             path="findings"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer']}>
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer', 'auditor']}>
                 <Findings />
               </ProtectedRoute>
             }
@@ -48,7 +48,7 @@ function App() {
           <Route
             path="policies"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer']}>
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer', 'auditor']}>
                 <Policies />
               </ProtectedRoute>
             }
@@ -64,7 +64,7 @@ function App() {
           <Route
             path="policy-approvals"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev']}>
                 <PolicyApprovals />
               </ProtectedRoute>
             }
@@ -72,7 +72,7 @@ function App() {
           <Route
             path="bypass-approvals"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev']}>
                 <BypassApprovals />
               </ProtectedRoute>
             }
@@ -88,7 +88,7 @@ function App() {
           <Route
             path="diagnostics"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev']}>
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'auditor']}>
                 <SystemDiagnostics />
               </ProtectedRoute>
             }
@@ -96,7 +96,7 @@ function App() {
           <Route
             path="engine-config"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'auditor']}>
                 <EngineConfig />
               </ProtectedRoute>
             }

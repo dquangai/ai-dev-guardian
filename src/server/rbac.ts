@@ -5,15 +5,15 @@
  * flow). Every route handler must go through requireRole()/hasPermission()
  * rather than trusting req.role directly, so the policy stays in one place.
  *
- * Three tiers, each a strict subset of the next in scope of oversight:
- * Developer runs audits on their own code; Senior Dev drafts policy and
- * reviews team-wide findings but can't approve anything; Admin/Lead is the
- * only role that approves policy changes, approves bypasses, and configures
- * the engine.
+ * Four tiers: Developer runs audits on their own code; Senior Dev/Lead drafts
+ * policy, reviews team-wide findings, and approves policy changes and bypass
+ * requests; Admin additionally edits policy directly and configures the
+ * engine; Auditor is read-only oversight across the board — no approve, no
+ * edit, no run.
  */
-export type Role = "admin" | "senior-dev" | "developer";
+export type Role = "admin" | "senior-dev" | "developer" | "auditor";
 
-export const ROLES: Role[] = ["admin", "senior-dev", "developer"];
+export const ROLES: Role[] = ["admin", "senior-dev", "developer", "auditor"];
 
 export type Permission =
   | "policy:view"
@@ -39,8 +39,15 @@ const PERMISSIONS: Record<Role, Permission[]> = {
     "engine-config:view",
     "engine-config:edit",
   ],
-  "senior-dev": ["policy:view", "policy:propose", "audit:view"],
+  "senior-dev": [
+    "policy:view",
+    "policy:propose",
+    "policy:approve",
+    "audit:view",
+    "bypass:approve",
+  ],
   developer: ["policy:view", "audit:run", "audit:view", "bypass:request"],
+  auditor: ["policy:view", "audit:view", "engine-config:view"],
 };
 
 export function hasPermission(role: Role, permission: Permission): boolean {
@@ -52,9 +59,10 @@ export function isValidRole(value: unknown): value is Role {
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
-  admin: "Admin / Lead",
-  "senior-dev": "Senior Dev",
+  admin: "Admin",
+  "senior-dev": "Senior Dev-Lead",
   developer: "Dev",
+  auditor: "Auditor",
 };
 
 export function permissionsForRole(role: Role): Permission[] {
