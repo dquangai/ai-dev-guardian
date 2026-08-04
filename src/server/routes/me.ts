@@ -5,8 +5,10 @@ export const meRouter = Router();
 
 meRouter.get("/", (req, res) => {
   res.json({
+    id: req.userId,
     role: req.role,
-    userId: req.userId,
+    name: req.userName,
+    email: req.userEmail,
     label: ROLE_LABELS[req.role],
     permissions: permissionsForRole(req.role),
   });

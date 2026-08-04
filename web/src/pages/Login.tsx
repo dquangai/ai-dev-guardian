@@ -25,6 +25,7 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -33,11 +34,30 @@ export function Login() {
     navigate(target, { replace: true })
   }, [user, location.state, navigate])
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    const ok = loginWithCredentials(email, password, remember)
-    if (!ok) setError('Email hoặc mật khẩu không đúng — thử một trong các nút demo bên dưới.')
+    setSubmitting(true)
+    try {
+      const ok = await loginWithCredentials(email, password, remember)
+      if (!ok) setError('Email hoặc mật khẩu không đúng — thử một trong các nút demo bên dưới.')
+    } catch {
+      setError('Không kết nối được tới server — thử lại sau.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDemoLogin(role: Role) {
+    setError(null)
+    setSubmitting(true)
+    try {
+      await loginAsDemo(role)
+    } catch {
+      setError('Không kết nối được tới server — thử lại sau.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -91,9 +111,10 @@ export function Login() {
 
           <button
             type="submit"
-            className="w-full rounded-full bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+            disabled={submitting}
+            className="w-full rounded-full bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-60"
           >
-            Log in
+            {submitting ? 'Đang đăng nhập…' : 'Log in'}
           </button>
         </form>
 
@@ -107,8 +128,9 @@ export function Login() {
           {DEMO_BUTTONS.map((btn) => (
             <button
               key={btn.role}
-              onClick={() => loginAsDemo(btn.role)}
-              className={`w-full rounded-full px-4 py-2.5 text-sm font-semibold text-white ${btn.className}`}
+              onClick={() => handleDemoLogin(btn.role)}
+              disabled={submitting}
+              className={`w-full rounded-full px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${btn.className}`}
             >
               {btn.label}
             </button>
@@ -116,10 +138,10 @@ export function Login() {
         </div>
 
         <p className="mt-5 text-center text-[11px] text-gray-400">
-          The form above needs <code className="rounded bg-gray-100 px-1 py-0.5">VITE_DEMO_PASSWORD</code> set in{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5">web/.env</code> (see{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5">web/.env.example</code>) — any demo email above works
-          with it. The buttons below need no password.
+          The form above needs <code className="rounded bg-gray-100 px-1 py-0.5">GUARDIAN_DEMO_PASSWORD</code> set
+          in the server's <code className="rounded bg-gray-100 px-1 py-0.5">.env</code> (see{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5">.env.example</code>) — any demo email above works with
+          it. The buttons below need no password.
         </p>
       </div>
     </div>

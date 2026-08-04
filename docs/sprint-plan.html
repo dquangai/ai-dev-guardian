@@ -276,12 +276,12 @@
         <tr>
           <td>T-08</td>
           <td>Auth thật (session hoặc JWT) thay cơ chế header <code>x-guardian-role</code> tự nhận — server ký & verify token khi login, ngừng tin header client tự set</td>
-          <td><span class="badge status-todo">To Do</span></td>
+          <td><span class="badge status-done">Done</span></td>
           <td>8</td>
           <td><span class="priority-high">High</span></td>
-          <td>2026-08-05</td>
-          <td>2026-08-08</td>
-          <td>Lỗ hổng nghiêm trọng nhất hiện tại: bất kỳ ai <code>curl -H "x-guardian-role: admin"</code> là spoof được toàn bộ RBAC; mật khẩu demo hiện lộ trong bundle JS (<code>VITE_DEMO_PASSWORD</code>)</td>
+          <td>2026-08-04</td>
+          <td>2026-08-04</td>
+          <td>Chọn JWT (stateless, hợp với tool chạy local qua CLI). Secret sinh ngẫu nhiên mỗi lần khởi động server trừ khi set <code>GUARDIAN_JWT_SECRET</code> — restart server = phải đăng nhập lại, chấp nhận được cho tool local. Mật khẩu demo dời sang server-side (<code>GUARDIAN_DEMO_PASSWORD</code>), không còn lộ trong bundle JS. <code>x-guardian-role</code>/<code>x-guardian-user</code> không còn được server tin nữa — mọi route (trừ <code>/api/auth/*</code>, <code>/api/health</code>) yêu cầu <code>Authorization: Bearer</code> hợp lệ, 401 nếu thiếu/sai/hết hạn</td>
         </tr>
         <tr>
           <td>T-09</td>
@@ -337,7 +337,7 @@
     </table>
   </div>
 
-  <footer>Cập nhật lần cuối: 2026-08-04 · T-07 done · gap analysis dựa trên code thật (rbac.ts, authMiddleware.ts, policyStore.ts, bypass.ts)</footer>
+  <footer>Cập nhật lần cuối: 2026-08-04 · T-07, T-08 done · gap analysis dựa trên code thật (rbac.ts, authMiddleware.ts, policyStore.ts, bypass.ts)</footer>
 </div>
 </body>
 </html>
