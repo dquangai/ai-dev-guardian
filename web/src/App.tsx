@@ -18,7 +18,8 @@ import { EngineConfig } from './pages/EngineConfig'
  * route, since "/" itself is Forbidden for a Dev — a plain <Navigate to="/"> would bounce them
  * straight into a 403 instead of somewhere they can actually use. */
 function DefaultRedirect() {
-  const { user } = useAuth()
+  const { user, ready } = useAuth()
+  if (!ready) return null
   return <Navigate to={user ? defaultRouteForRole(user.role) : '/login'} replace />
 }
 

@@ -295,28 +295,34 @@ server-side in `authMiddleware.ts`'s `requirePermission()`, never only hidden in
 
 | Role | Can |
 |---|---|
-| **Admin / Team Lead** | Edit/delete policies directly, approve policy change requests and bypass requests, run audits, edit engine config |
-| **Senior Developer** | Propose policy changes (needs Admin approval), run audits, request bypasses |
+| **Admin** | Edit/delete policies directly, approve policy change requests, run audits, edit engine config |
+| **Senior Dev-Lead** | Propose policy changes, approve policy change requests and bypass requests |
 | **Developer** | Run audits, request bypasses, read-only on policies |
-| **Auditor** | Read-only everywhere, but approves/rejects bypass requests — a deliberate separation from who approves policy changes |
+| **Auditor** | Read-only everywhere — no approve, no edit, no run |
 
-There is no login system yet — identity is asserted via an `x-guardian-role` header, set by a
-role switcher in the dashboard header. This is fine for a local/single-machine tool; it is not a
-substitute for real auth if the dashboard is ever exposed beyond localhost.
+Login issues a signed JWT (`src/server/token.ts`), not a role the client asserts. `POST
+/api/auth/login` checks email + `GUARDIAN_DEMO_PASSWORD` (see `.env.example`) against the demo
+user directory in `src/server/users.ts` — the only user store this tool has, since it's meant to
+run locally alongside the CLI, not as a multi-tenant service. Every subsequent request carries
+that token as `Authorization: Bearer <token>`; `requireAuth()` in `authMiddleware.ts` verifies it
+and 401s on anything missing, malformed, expired, or tampered — there is no header the client can
+set to claim a role anymore. The signing secret is a random value generated at server boot unless
+`GUARDIAN_JWT_SECRET` is set, so by default every session ends on restart (log back in) rather
+than trusting a secret that was never explicitly configured.
 
 ### Policy approval workflow
 
 A role without `policy:edit-direct` submitting a create/update/delete gets a pending
 `PolicyChangeRequest` (`.guardian/policy-requests.json`, gitignored runtime state) instead of
-touching disk immediately. An Admin/Team Lead approves (writes/deletes the real
+touching disk immediately. Admin or Senior Dev-Lead approves (writes/deletes the real
 `.guardian/policies/*.md` file) or rejects it — see `src/server/store/policyStore.ts`.
 
 ### Bypass requests
 
-When an audit run `BLOCK`s, any role can submit a reason for a merge bypass; Admin or Auditor
-resolves it (`src/server/store/bypassStore.ts`). This is a record for accountability, not an
-override mechanism — approving a bypass request doesn't change the git hook's exit code; a human
-still has to decide to push past a `BLOCK` themselves.
+When an audit run `BLOCK`s, any role can submit a reason for a merge bypass; Admin or Senior
+Dev-Lead resolves it (`src/server/store/bypassStore.ts`). This is a record for accountability, not
+an override mechanism — approving a bypass request doesn't change the git hook's exit code; a
+human still has to decide to push past a `BLOCK` themselves.
 
 ### Audit history
 
@@ -378,13 +384,13 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | Web dashboard | React/Vite/Tailwind UI + Express API (`web/`, `src/server/`) for managing policies and reviewing audit history without the terminal |
 | RBAC + approval workflows | 4-role permission matrix, policy change requests, and bypass-request review — see [Web Dashboard](#web-dashboard) |
 | Single-command dashboard launch | `guardian dashboard` serves the built UI and the API on one port, once `web/dist` exists |
+| Real auth for the dashboard | Signed JWT sessions (`POST /api/auth/login`), verified server-side on every request — replaced the `x-guardian-role` header the client used to self-assert |
 
 ### Planned
 
 | Feature | What it would look like |
 |---|---|
 | **Publish to a registry** | `ai-dev-guardian` isn't installable via `npm install` from any registry yet — only `npm link` from a local checkout (see [Using it in another project](#using-it-in-another-project-before-this-is-published-to-a-registry)). Needs a decision on public npm vs. a private registry before other projects can adopt it without cloning this repo |
-| **Real auth for the dashboard** | Replace the `x-guardian-role` demo header/role-switcher with actual sessions if the dashboard is ever run somewhere other than localhost |
 | **CI / GitHub Action gate** | A `guardian-action` that runs `runGuardianCheck` against a PR's diff and posts a comment, plus a git-versioned baseline artifact (mirroring the diff-hash cache but shared across a team instead of local `.git/`) so PRs don't re-pay for a diff a teammate already got `PASS`'d elsewhere |
 | **Architecture Rules policy category** | Policy-driven dependency-direction rules beyond circular-dependency detection — e.g. `forbid: ["src/core/** -> src/cli/**"]` in policy frontmatter, checked deterministically by reusing the same local-import extraction RAG-lite already does, no LLM call needed |
 | **Git Workflow policy category** | Branch naming, commit message format, merge-strategy rules — deterministic, checked against `diff`/git metadata rather than file content |

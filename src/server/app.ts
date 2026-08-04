@@ -2,8 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import cors from "cors";
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
-import { attachIdentity } from "./authMiddleware";
+import { requireAuth } from "./authMiddleware";
 import { auditRouter } from "./routes/audit";
+import { authRouter } from "./routes/auth";
 import { bypassRouter } from "./routes/bypass";
 import { dashboardRouter } from "./routes/dashboard";
 import { engineConfigRouter } from "./routes/engineConfig";
@@ -16,9 +17,14 @@ export function createApp(): Express {
 
   app.use(cors());
   app.use(express.json());
-  app.use(attachIdentity);
 
+  // Public: health check and login itself obviously can't require a session token yet.
   app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+  app.use("/api/auth", authRouter);
+
+  // Everything past this point requires a verified Bearer token (see authMiddleware.ts).
+  app.use("/api", requireAuth);
+
   app.use("/api/me", meRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/policies", policiesRouter);

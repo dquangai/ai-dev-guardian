@@ -19,9 +19,14 @@ interface Props {
  * never a silent redirect, so a blocked user understands why, per the "friendly 403" requirement.
  */
 export function ProtectedRoute({ allowedRoles, requiredPermission, children }: Props) {
-  const { user, can } = useAuth()
+  const { user, can, ready } = useAuth()
   const location = useLocation()
 
+  // Checking a stored token against the server is now a network round-trip (see AuthContext) —
+  // wait for it rather than bouncing a logged-in user to /login while it's still in flight.
+  if (!ready) {
+    return null
+  }
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }

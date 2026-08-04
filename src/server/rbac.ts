@@ -1,9 +1,8 @@
 /**
- * RBAC model for the web dashboard. There is no login/session system — the
- * dashboard is an internal tool run alongside the CLI, so the caller's role
- * is asserted via the `x-guardian-role` header (set by the frontend's login
- * flow). Every route handler must go through requireRole()/hasPermission()
- * rather than trusting req.role directly, so the policy stays in one place.
+ * RBAC model for the web dashboard. The caller's role comes from a signed session token
+ * verified in requireAuth() (see authMiddleware.ts, token.ts) — never trust req.role without
+ * that verification step. Every route handler must go through requirePermission()/hasPermission()
+ * rather than branching on req.role directly, so the policy stays in one place.
  *
  * Four tiers: Developer runs audits on their own code; Senior Dev/Lead drafts
  * policy, reviews team-wide findings, and approves policy changes and bypass

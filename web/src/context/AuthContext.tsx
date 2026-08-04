@@ -1,95 +1,129 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { hasPermission, ROLES, ROLE_LABELS, type Permission, type Role } from '../lib/rbac'
-import { DEMO_PASSWORD, DEMO_USERS, findDemoUserByEmail, type DemoUser } from '../lib/demoUsers'
-import { setApiIdentity } from '../lib/api'
+import { hasPermission, ROLE_LABELS, type Permission, type Role } from '../lib/rbac'
+import { ApiError, api, setAuthToken, setUnauthorizedHandler } from '../lib/api'
 
-const SESSION_KEY = 'guardian.session'
+const TOKEN_KEY = 'guardian.token'
 
-export type AuthUser = DemoUser
+export interface AuthUser {
+  id: string
+  name: string
+  email: string
+  role: Role
+}
+
+interface MeResponse extends AuthUser {
+  label: string
+  permissions: Permission[]
+}
+
+interface LoginResponse {
+  token: string
+  user: MeResponse
+}
 
 interface AuthContextValue {
   user: AuthUser | null
   roleLabel: string | null
-  /** Validates against the demo user directory — see lib/demoUsers.ts for why this is mock-only. */
-  loginWithCredentials: (email: string, password: string, remember: boolean) => boolean
-  loginAsDemo: (role: Role) => void
+  /** False until the stored token (if any) has been checked against the server — consumers
+   * (ProtectedRoute) must wait for this before deciding to redirect to /login, since the check
+   * is now a network round-trip rather than a synchronous localStorage read. */
+  ready: boolean
+  loginWithCredentials: (email: string, password: string, remember: boolean) => Promise<boolean>
+  loginAsDemo: (role: Role) => Promise<void>
   logout: () => void
   can: (permission: Permission) => boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-/**
- * A session persisted by an older build (e.g. a role later renamed or removed) must never reach
- * the rest of the app as a live `user` — every role-keyed lookup (NAV_BY_ROLE, ROLE_LABELS, ...)
- * assumes `Role` is exhaustive and throws on an unknown key, which would otherwise white-screen
- * the whole dashboard for anyone who logged in before a role was renamed/removed.
- */
-function readStoredUser(): AuthUser | null {
-  const raw = localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY)
-  if (!raw) return null
-  try {
-    const parsed = JSON.parse(raw) as AuthUser
-    if (!(ROLES as string[]).includes(parsed.role)) {
-      localStorage.removeItem(SESSION_KEY)
-      sessionStorage.removeItem(SESSION_KEY)
-      return null
-    }
-    return parsed
-  } catch {
-    return null
+function readStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY)
+}
+
+function persistToken(token: string, remember: boolean): void {
+  if (remember) {
+    localStorage.setItem(TOKEN_KEY, token)
+    sessionStorage.removeItem(TOKEN_KEY)
+  } else {
+    sessionStorage.setItem(TOKEN_KEY, token)
+    localStorage.removeItem(TOKEN_KEY)
   }
 }
 
-function persistUser(user: AuthUser, remember: boolean): void {
-  const raw = JSON.stringify(user)
-  if (remember) {
-    localStorage.setItem(SESSION_KEY, raw)
-    sessionStorage.removeItem(SESSION_KEY)
-  } else {
-    sessionStorage.setItem(SESSION_KEY, raw)
-    localStorage.removeItem(SESSION_KEY)
-  }
+function clearStoredToken(): void {
+  localStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
+}
+
+function toAuthUser(me: MeResponse): AuthUser {
+  return { id: me.id, name: me.name, email: me.email, role: me.role }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(readStoredUser)
-
-  useEffect(() => {
-    if (user) setApiIdentity(user.role, user.id)
-  }, [user])
-
-  function loginWithCredentials(email: string, password: string, remember: boolean): boolean {
-    if (password !== DEMO_PASSWORD) return false
-    const match = findDemoUserByEmail(email)
-    if (!match) return false
-    persistUser(match, remember)
-    setUser(match)
-    return true
-  }
-
-  function loginAsDemo(role: Role): void {
-    const demoUser = DEMO_USERS[role]
-    persistUser(demoUser, true)
-    setUser(demoUser)
-  }
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [ready, setReady] = useState(false)
 
   function logout(): void {
-    localStorage.removeItem(SESSION_KEY)
-    sessionStorage.removeItem(SESSION_KEY)
+    clearStoredToken()
+    setAuthToken(null)
     setUser(null)
+  }
+
+  // Registered once: a 401 from any request (expired/invalid/revoked token) forces logout
+  // instead of leaving the app in a half-authenticated state.
+  useEffect(() => {
+    setUnauthorizedHandler(logout)
+    return () => setUnauthorizedHandler(null)
+  }, [])
+
+  useEffect(() => {
+    const token = readStoredToken()
+    if (!token) {
+      setReady(true)
+      return
+    }
+    setAuthToken(token)
+    api
+      .get<MeResponse>('/me')
+      .then((me) => setUser(toAuthUser(me)))
+      .catch(() => {
+        clearStoredToken()
+        setAuthToken(null)
+      })
+      .finally(() => setReady(true))
+  }, [])
+
+  async function loginWithCredentials(email: string, password: string, remember: boolean): Promise<boolean> {
+    try {
+      const res = await api.post<LoginResponse>('/auth/login', { email, password, rememberMe: remember })
+      persistToken(res.token, remember)
+      setAuthToken(res.token)
+      setUser(toAuthUser(res.user))
+      return true
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) return false
+      throw error
+    }
+  }
+
+  async function loginAsDemo(role: Role): Promise<void> {
+    const res = await api.post<LoginResponse>('/auth/demo-login', { role })
+    persistToken(res.token, true)
+    setAuthToken(res.token)
+    setUser(toAuthUser(res.user))
   }
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       roleLabel: user ? ROLE_LABELS[user.role] : null,
+      ready,
       loginWithCredentials,
       loginAsDemo,
       logout,
       can: (permission) => (user ? hasPermission(user.role, permission) : false),
     }),
-    [user]
+    [user, ready]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,5 +1,3 @@
-import type { Role } from './rbac'
-
 export class ApiError extends Error {
   status: number
 
@@ -9,16 +7,18 @@ export class ApiError extends Error {
   }
 }
 
-// Least-privilege placeholders until AuthContext calls setApiIdentity() after a real login —
-// every route these could hit is behind ProtectedRoute, so they're never actually used to
-// authorize anything; kept low-privilege anyway rather than defaulting to 'admin'.
-let currentRole: Role = 'developer'
-let currentUser = 'anonymous'
+let currentToken: string | null = null
+let onUnauthorized: (() => void) | null = null
 
-/** Called by AuthContext whenever the logged-in user changes. */
-export function setApiIdentity(role: Role, userId: string): void {
-  currentRole = role
-  currentUser = userId
+/** Called by AuthContext after login/logout/hydration so every request carries the current
+ * session token — and by AuthContext once, at startup, to learn about 401s (expired/invalid
+ * token) so it can force a logout instead of the app silently misbehaving. */
+export function setAuthToken(token: string | null): void {
+  currentToken = token
+}
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -26,8 +26,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       'Content-Type': 'application/json',
-      'x-guardian-role': currentRole,
-      'x-guardian-user': currentUser,
+      ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
       ...init?.headers,
     },
   })
@@ -35,6 +34,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const isJson = res.headers.get('content-type')?.includes('application/json')
   const body = isJson ? await res.json().catch(() => null) : null
 
+  if (res.status === 401) {
+    onUnauthorized?.()
+  }
   if (!res.ok) {
     throw new ApiError(res.status, body?.message ?? res.statusText)
   }

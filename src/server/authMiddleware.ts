@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-import { hasPermission, isValidRole, type Permission, type Role } from "./rbac";
+import { hasPermission, type Permission, type Role } from "./rbac";
+import { verifyToken } from "./token";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -7,20 +8,30 @@ declare global {
     interface Request {
       role: Role;
       userId: string;
+      userName: string;
+      userEmail: string;
     }
   }
 }
 
-// Deliberately the least-privileged role in the RBAC matrix (see rbac.ts) — falling back here on
-// a missing/invalid x-guardian-role header is a fail-closed default, not privilege escalation:
-// an unrecognized caller gets fewer permissions than any real role, never more.
-const DEFAULT_ROLE: Role = "developer";
+/** Verifies the caller's `Authorization: Bearer <token>` against the signed session issued at
+ * login (see routes/auth.ts). Fail-closed: no token, a malformed header, or a token that doesn't
+ * verify (wrong signature, expired, tampered) all 401 rather than falling back to any role —
+ * unlike the old `x-guardian-role` header, there is no client-set value left to trust here. */
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  const header = req.header("authorization") ?? "";
+  const [scheme, token] = header.split(" ");
+  const payload = scheme === "Bearer" && token ? verifyToken(token) : null;
 
-/** Reads the caller's asserted role/identity from headers set by the frontend's role switcher. */
-export function attachIdentity(req: Request, _res: Response, next: NextFunction): void {
-  const headerRole = req.header("x-guardian-role");
-  req.role = isValidRole(headerRole) ? headerRole : DEFAULT_ROLE;
-  req.userId = req.header("x-guardian-user") || `${req.role}@local`;
+  if (!payload) {
+    res.status(401).json({ error: "unauthorized", message: "Missing or invalid session token." });
+    return;
+  }
+
+  req.role = payload.role;
+  req.userId = payload.sub;
+  req.userName = payload.name;
+  req.userEmail = payload.email;
   next();
 }
 
