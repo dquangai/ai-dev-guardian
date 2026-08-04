@@ -1,16 +1,16 @@
 import { useState } from 'react'
-import { GitPullRequest } from 'lucide-react'
+import { ShieldQuestion } from 'lucide-react'
 import { api, ApiError } from '../../lib/api'
-import type { PolicyChangeRequest } from '../../lib/types'
+import type { BypassRequest } from '../../lib/types'
 import { Panel } from '../ui/Panel'
 import { StatusPill } from '../ui/StatusPill'
 import { useAuth } from '../../context/AuthContext'
 
-export function ChangeRequestsPanel({
+export function BypassRequestsPanel({
   requests,
   onResolved,
 }: {
-  requests: PolicyChangeRequest[]
+  requests: BypassRequest[]
   onResolved: () => void
 }) {
   const { can } = useAuth()
@@ -19,10 +19,10 @@ export function ChangeRequestsPanel({
   async function decide(id: string, decision: 'approve' | 'reject') {
     setBusyId(id)
     try {
-      await api.post(`/policies/requests/${id}/${decision}`)
+      await api.post(`/bypass-requests/${id}/${decision}`)
       onResolved()
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : `Failed to ${decision} change request.`)
+      alert(err instanceof ApiError ? err.message : `Failed to ${decision} request.`)
     } finally {
       setBusyId(null)
     }
@@ -30,28 +30,26 @@ export function ChangeRequestsPanel({
 
   return (
     <Panel
-      title="Policy Change Requests"
-      icon={<GitPullRequest size={16} className="text-gray-400" />}
+      title="Bypass Requests"
+      icon={<ShieldQuestion size={16} className="text-gray-400" />}
       action={<span className="text-xs text-gray-400">{requests.length} total</span>}
     >
       <div className="space-y-2">
         {requests.length === 0 && (
-          <p className="py-6 text-center text-sm text-gray-400">No change requests yet.</p>
+          <p className="py-6 text-center text-sm text-gray-400">No bypass requests yet.</p>
         )}
         {requests.map((req) => (
           <div key={req.id} className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-gray-800">
-                  {req.action.toUpperCase()} · {req.policyId}
-                </p>
+                <p className="text-sm text-gray-800">{req.reason}</p>
                 <p className="mt-1 text-xs text-gray-400">
-                  Submitted by {req.submittedBy} · {new Date(req.submittedAt).toLocaleString()}
+                  Requested by {req.requestedBy} · {new Date(req.requestedAt).toLocaleString()}
+                  {req.auditId ? ` · audit ${req.auditId}` : ''}
                 </p>
                 {req.reviewedBy && (
                   <p className="mt-1 text-xs text-gray-400">
-                    Reviewed by {req.reviewedBy}
-                    {req.reviewNote ? ` — ${req.reviewNote}` : ''}
+                    Reviewed by {req.reviewedBy} · {req.reviewNote}
                   </p>
                 )}
               </div>
@@ -59,9 +57,9 @@ export function ChangeRequestsPanel({
                 <StatusPill
                   variant={req.status === 'approved' ? 'green' : req.status === 'rejected' ? 'red' : 'amber'}
                 >
-                  {req.status === 'pending' ? 'Pending Approval' : req.status === 'approved' ? 'Active' : 'Rejected'}
+                  {req.status}
                 </StatusPill>
-                {req.status === 'pending' && can('policy:approve') && (
+                {req.status === 'pending' && can('bypass:approve') && (
                   <>
                     <button
                       onClick={() => decide(req.id, 'approve')}

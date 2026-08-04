@@ -2,16 +2,26 @@ import { Link } from 'react-router-dom'
 import { ShieldOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { defaultRouteForRole } from '../lib/navigation'
+import type { Role } from '../lib/rbac'
 
-export function Forbidden() {
+const SHORT_ROLE_LABEL: Record<Role, string> = {
+  admin: 'Admin',
+  'senior-dev': 'Senior Dev',
+  developer: 'Dev',
+}
+
+export function Forbidden({ requiredRoles }: { requiredRoles?: Role[] } = {}) {
   const { user, roleLabel } = useAuth()
+  const requiredLabel = requiredRoles?.map((r) => SHORT_ROLE_LABEL[r]).join(' or ')
 
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-gray-50 px-6 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-500">
         <ShieldOff size={28} />
       </div>
-      <h1 className="text-2xl font-semibold text-gray-900">403 — Access Restricted</h1>
+      <h1 className="text-2xl font-semibold text-gray-900">
+        403 Forbidden{requiredLabel ? ` — ${requiredLabel} Access Required` : ' — Access Restricted'}
+      </h1>
       <p className="max-w-md text-sm text-gray-500">
         {roleLabel ? (
           <>

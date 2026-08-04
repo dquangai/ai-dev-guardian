@@ -18,6 +18,7 @@ import type { AuditRecord, DashboardSummary, Subsystem } from '../lib/types'
 import { StatCard } from '../components/ui/StatCard'
 import { Panel } from '../components/ui/Panel'
 import { StatusPill, verdictVariant, type PillVariant } from '../components/ui/StatusPill'
+import { useAuth } from '../context/AuthContext'
 
 const SUBSYSTEM_ICON: Record<string, { icon: React.ReactNode; bg: string; pill: PillVariant }> = {
   'secret-scan': { icon: <Lock size={18} />, bg: 'bg-red-50 text-red-500', pill: 'green' },
@@ -28,6 +29,8 @@ const SUBSYSTEM_ICON: Record<string, { icon: React.ReactNode; bg: string; pill: 
 
 export function Overview() {
   const navigate = useNavigate()
+  const { can } = useAuth()
+  const canRunAudit = can('audit:run')
   const { data: summary } = useApi<DashboardSummary>('/dashboard/summary')
   const { data: subsystems } = useApi<Subsystem[]>('/dashboard/subsystems')
   const { data: recent } = useApi<AuditRecord[]>('/dashboard/recent-activity?limit=4')
@@ -50,10 +53,10 @@ export function Overview() {
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
             <button
-              onClick={() => navigate('/code-audit')}
+              onClick={() => navigate(canRunAudit ? '/code-audit' : '/findings')}
               className="flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
-              <Play size={15} fill="currentColor" /> Launch Code Audit
+              <Play size={15} fill="currentColor" /> {canRunAudit ? 'Launch Code Audit' : 'View Findings'}
             </button>
             <span className="text-xs text-gray-400">Deterministic Checks + Gemini AI</span>
           </div>
@@ -144,7 +147,7 @@ export function Overview() {
           icon={<Clock size={16} className="text-gray-400" />}
           action={
             <button
-              onClick={() => navigate('/audit-history')}
+              onClick={() => navigate('/findings')}
               className="text-xs font-medium text-blue-600 hover:underline"
             >
               View All ({recent?.length ?? 0})
@@ -153,9 +156,7 @@ export function Overview() {
         >
           <div className="space-y-3">
             {recent && recent.length === 0 && (
-              <p className="py-6 text-center text-sm text-gray-400">
-                No audits logged yet — run one from Code Audit.
-              </p>
+              <p className="py-6 text-center text-sm text-gray-400">No audits logged yet.</p>
             )}
             {recent?.map((r) => (
               <div key={r.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">

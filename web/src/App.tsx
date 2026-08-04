@@ -1,15 +1,26 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { useAuth } from './context/AuthContext'
+import { defaultRouteForRole } from './lib/navigation'
 import { Login } from './pages/Login'
 import { Overview } from './pages/Overview'
 import { CodeAudit } from './pages/CodeAudit'
 import { Findings } from './pages/Findings'
 import { Policies } from './pages/Policies'
-import { AuditHistory } from './pages/AuditHistory'
-import { AuditCache } from './pages/AuditCache'
+import { ProposePolicy } from './pages/ProposePolicy'
+import { PolicyApprovals } from './pages/PolicyApprovals'
+import { BypassApprovals } from './pages/BypassApprovals'
 import { SystemDiagnostics } from './pages/SystemDiagnostics'
 import { EngineConfig } from './pages/EngineConfig'
+
+/** Catch-all target: send an authenticated user to their own landing page rather than a fixed
+ * route, since "/" itself is Forbidden for a Dev — a plain <Navigate to="/"> would bounce them
+ * straight into a 403 instead of somewhere they can actually use. */
+function DefaultRedirect() {
+  const { user } = useAuth()
+  return <Navigate to={user ? defaultRouteForRole(user.role) : '/login'} replace />
+}
 
 function App() {
   return (
@@ -21,23 +32,15 @@ function App() {
           <Route
             index
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'auditor']}>
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev']}>
                 <Overview />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="code-audit"
-            element={
-              <ProtectedRoute requiredPermission="audit:run">
-                <CodeAudit />
               </ProtectedRoute>
             }
           />
           <Route
             path="findings"
             element={
-              <ProtectedRoute requiredPermission="audit:view">
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer']}>
                 <Findings />
               </ProtectedRoute>
             }
@@ -45,31 +48,47 @@ function App() {
           <Route
             path="policies"
             element={
-              <ProtectedRoute requiredPermission="policy:view">
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer']}>
                 <Policies />
               </ProtectedRoute>
             }
           />
           <Route
-            path="audit-history"
+            path="policies/propose"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'auditor']}>
-                <AuditHistory />
+              <ProtectedRoute allowedRoles={['senior-dev']}>
+                <ProposePolicy />
               </ProtectedRoute>
             }
           />
           <Route
-            path="audit-cache"
+            path="policy-approvals"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'auditor']}>
-                <AuditCache />
+              <ProtectedRoute allowedRoles={['admin']}>
+                <PolicyApprovals />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="bypass-approvals"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <BypassApprovals />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="code-audit"
+            element={
+              <ProtectedRoute allowedRoles={['developer']}>
+                <CodeAudit />
               </ProtectedRoute>
             }
           />
           <Route
             path="diagnostics"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev']}>
                 <SystemDiagnostics />
               </ProtectedRoute>
             }
@@ -85,7 +104,7 @@ function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<DefaultRedirect />} />
     </Routes>
   )
 }

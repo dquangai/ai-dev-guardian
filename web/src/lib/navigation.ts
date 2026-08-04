@@ -4,7 +4,16 @@ export interface NavItem {
   to: string
   label: string
   /** Distinct icon key from Sidebar's icon map — kept as a string so this file has no JSX/React import. */
-  icon: 'overview' | 'code-audit' | 'findings' | 'policies' | 'audit-history' | 'audit-cache' | 'diagnostics' | 'engine-config'
+  icon:
+    | 'overview'
+    | 'findings'
+    | 'policies'
+    | 'propose-policy'
+    | 'policy-approvals'
+    | 'bypass-approvals'
+    | 'code-audit'
+    | 'diagnostics'
+    | 'engine-config'
 }
 
 /**
@@ -15,32 +24,24 @@ export interface NavItem {
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   admin: [
     { to: '/', label: 'Overview', icon: 'overview' },
-    { to: '/code-audit', label: 'Code Audit', icon: 'code-audit' },
     { to: '/findings', label: 'Findings', icon: 'findings' },
     { to: '/policies', label: 'Policies', icon: 'policies' },
-    { to: '/audit-history', label: 'Audit History', icon: 'audit-history' },
-    { to: '/audit-cache', label: 'Audit Cache', icon: 'audit-cache' },
+    { to: '/policy-approvals', label: 'Policy Approvals Hub', icon: 'policy-approvals' },
+    { to: '/bypass-approvals', label: 'Bypass Approvals Hub', icon: 'bypass-approvals' },
     { to: '/diagnostics', label: 'System Diagnostics', icon: 'diagnostics' },
     { to: '/engine-config', label: 'AI Engine Config', icon: 'engine-config' },
   ],
   'senior-dev': [
     { to: '/', label: 'Overview', icon: 'overview' },
-    { to: '/code-audit', label: 'Code Audit', icon: 'code-audit' },
     { to: '/findings', label: 'Findings', icon: 'findings' },
-    { to: '/policies', label: 'Policies', icon: 'policies' },
-    { to: '/audit-history', label: 'Audit History', icon: 'audit-history' },
+    { to: '/policies', label: 'Active Policies', icon: 'policies' },
+    { to: '/policies/propose', label: 'Propose New Policy', icon: 'propose-policy' },
+    { to: '/diagnostics', label: 'System Diagnostics', icon: 'diagnostics' },
   ],
   developer: [
-    { to: '/code-audit', label: 'Code Audit', icon: 'code-audit' },
     { to: '/findings', label: 'My Findings', icon: 'findings' },
     { to: '/policies', label: 'Active Policies', icon: 'policies' },
-  ],
-  auditor: [
-    { to: '/', label: 'Overview', icon: 'overview' },
-    { to: '/findings', label: 'Findings', icon: 'findings' },
-    { to: '/audit-history', label: 'Audit History', icon: 'audit-history' },
-    { to: '/audit-cache', label: 'Audit Cache', icon: 'audit-cache' },
-    { to: '/policies', label: 'Active Policies', icon: 'policies' },
+    { to: '/code-audit', label: 'Code Audit', icon: 'code-audit' },
   ],
 }
 

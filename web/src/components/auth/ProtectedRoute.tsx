@@ -26,7 +26,7 @@ export function ProtectedRoute({ allowedRoles, requiredPermission, children }: P
     return <Navigate to="/login" state={{ from: location }} replace />
   }
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Forbidden />
+    return <Forbidden requiredRoles={allowedRoles} />
   }
   if (requiredPermission && !can(requiredPermission)) {
     return <Forbidden />

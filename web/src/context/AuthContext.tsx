@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { hasPermission, ROLE_LABELS, type Permission, type Role } from '../lib/rbac'
+import { hasPermission, ROLES, ROLE_LABELS, type Permission, type Role } from '../lib/rbac'
 import { DEMO_PASSWORD, DEMO_USERS, findDemoUserByEmail, type DemoUser } from '../lib/demoUsers'
 import { setApiIdentity } from '../lib/api'
 
@@ -19,11 +19,23 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+/**
+ * A session persisted by an older build (e.g. the now-removed "auditor" role) must never reach
+ * the rest of the app as a live `user` — every role-keyed lookup (NAV_BY_ROLE, ROLE_LABELS, ...)
+ * assumes `Role` is exhaustive and throws on an unknown key, which would otherwise white-screen
+ * the whole dashboard for anyone who logged in before a role was renamed/removed.
+ */
 function readStoredUser(): AuthUser | null {
   const raw = localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as AuthUser
+    const parsed = JSON.parse(raw) as AuthUser
+    if (!(ROLES as string[]).includes(parsed.role)) {
+      localStorage.removeItem(SESSION_KEY)
+      sessionStorage.removeItem(SESSION_KEY)
+      return null
+    }
+    return parsed
   } catch {
     return null
   }

@@ -66,8 +66,8 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
         : await api.put<{ status: string }>(`/policies/${id}`, { content: raw })
       setStatus(
         result.status === 'applied'
-          ? 'Saved directly to .guardian/policies.'
-          : 'Submitted for approval — a Team Lead/Admin must review it.'
+          ? 'Saved directly to .guardian/policies — now Active.'
+          : 'Submitted for Lead approval — status: Pending Approval.'
       )
       onSaved()
     } catch (err) {
