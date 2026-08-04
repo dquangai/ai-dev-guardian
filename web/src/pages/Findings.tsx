@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react'
+import { ShieldAlert } from 'lucide-react'
 import { useApi } from '../lib/useApi'
 import type { AuditRecord, Violation } from '../lib/types'
 import { Panel } from '../components/ui/Panel'
@@ -19,8 +19,8 @@ export function Findings() {
   return (
     <Panel
       title={isDeveloper ? 'My Findings' : 'Findings'}
-      icon={<AlertTriangle size={16} className="text-amber-500" />}
-      action={<span className="text-xs text-gray-400">{allViolations.length} total</span>}
+      icon={<ShieldAlert size={18} className="text-[#9E0B10]" />}
+      action={<span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">{allViolations.length} total</span>}
     >
       <ViolationList violations={allViolations} />
     </Panel>
