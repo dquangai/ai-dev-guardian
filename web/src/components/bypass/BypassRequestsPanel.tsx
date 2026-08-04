@@ -17,6 +17,10 @@ export function BypassRequestsPanel({
   const [busyId, setBusyId] = useState<string | null>(null)
 
   async function decide(id: string, decision: 'approve' | 'reject') {
+    if (!can('bypass:approve')) {
+      console.error(`Blocked unauthorized bypass ${decision} attempt for request ${id}`)
+      return
+    }
     setBusyId(id)
     try {
       await api.post(`/bypass-requests/${id}/${decision}`)
