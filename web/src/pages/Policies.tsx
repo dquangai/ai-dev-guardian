@@ -47,7 +47,7 @@ export function Policies() {
                   setSelectedId(p.id)
                   setCreatingNew(false)
                 }}
-                className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+                className={`w-full rounded-xl border px-4 py-3 text-left ${
                   selectedId === p.id ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white hover:bg-gray-50'
                 }`}
               >

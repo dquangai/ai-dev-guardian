@@ -1,7 +1,13 @@
 import { Router } from "express";
 import { computeDashboardSummary, listAuditHistory } from "../store/auditStore";
 import { listPolicies } from "../store/policyStore";
+import { readEngineDiagnostics } from "../store/engineConfigStore";
 import { parseBoundedInt } from "../validation";
+
+const PROVIDER_FULL_NAME: Record<"anthropic" | "openai", string> = {
+  anthropic: "Anthropic Claude",
+  openai: "OpenAI GPT",
+};
 
 const MAX_RECENT_ACTIVITY = 50;
 
@@ -16,6 +22,9 @@ dashboardRouter.get("/summary", (_req, res) => {
  * policies are loaded) actually changes as users edit .guardian/policies. */
 dashboardRouter.get("/subsystems", (_req, res) => {
   const policyCount = listPolicies().length;
+  const { provider, effectiveLlmModel } = readEngineDiagnostics();
+  const providerName = provider ? PROVIDER_FULL_NAME[provider] : null;
+
   res.json([
     {
       id: "secret-scan",
@@ -31,9 +40,11 @@ dashboardRouter.get("/subsystems", (_req, res) => {
     },
     {
       id: "llm-policy-check",
-      name: "Google Gemini 2.5 Flash LLM Judge",
-      description: "AI compliance reasoning & prompt-to-fix generation",
-      status: "AUTHORITATIVE",
+      name: providerName ? `${providerName} LLM Judge` : "LLM Judge (Not Configured)",
+      description: providerName
+        ? `AI compliance reasoning & prompt-to-fix generation${effectiveLlmModel ? ` — ${effectiveLlmModel}` : ""}`
+        : "No ANTHROPIC_API_KEY or OPENAI_API_KEY set — this check is skipped",
+      status: providerName ? "AUTHORITATIVE" : "DISABLED",
     },
     {
       id: "policy-router",

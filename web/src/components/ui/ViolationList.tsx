@@ -33,29 +33,29 @@ function ViolationRow({ violation }: { violation: Violation }) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50">
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+    <div className="rounded-xl border border-slate-200/80 bg-white hover:border-red-200/90 shadow-2xs">
+      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
         <button
           onClick={() => setOpen((o) => !o)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
           {open ? (
-            <ChevronDown size={14} className="shrink-0 text-gray-400" />
+            <ChevronDown size={14} className="shrink-0 text-slate-500" />
           ) : (
-            <ChevronRight size={14} className="shrink-0 text-gray-400" />
+            <ChevronRight size={14} className="shrink-0 text-slate-500" />
           )}
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-gray-900">{violation.errorWhat}</div>
-            <div className="truncate text-xs text-gray-500">{violation.location}</div>
+            <div className="truncate text-sm font-extrabold text-slate-900">{violation.errorWhat}</div>
+            <div className="truncate text-xs font-mono font-semibold text-slate-500">{violation.location}</div>
           </div>
         </button>
         <div className="flex shrink-0 items-center gap-2">
           <StatusPill variant={severityVariant(violation.riskLevel)}>{violation.riskLevel}</StatusPill>
-          <span className="hidden text-xs text-gray-400 lg:inline">{violation.source}</span>
+          <span className="hidden text-xs text-slate-500 lg:inline font-mono font-medium">{violation.source}</span>
           <button
             onClick={() => copyPrompt(buildCompactFixPrompt(violation))}
             title="Copy AI Fix Prompt"
-            className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+            className="flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50/80 px-3 py-1.5 text-xs font-extrabold text-[#9E0B10] hover:bg-[#9E0B10] hover:text-white shadow-2xs"
           >
             <Clipboard size={12} />
             <span className="hidden sm:inline">Copy AI Fix Prompt</span>
@@ -63,30 +63,30 @@ function ViolationRow({ violation }: { violation: Violation }) {
         </div>
       </div>
       {open && (
-        <div className="space-y-3 border-t border-gray-200 px-4 py-3 text-sm">
+        <div className="space-y-3.5 border-t border-slate-100 px-4 py-4 text-sm bg-slate-50/40">
           <div>
-            <div className="text-xs font-semibold uppercase text-gray-400">Policy violated</div>
-            <p className="mt-1 text-gray-700">{violation.policyViolated}</p>
+            <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Policy violated</div>
+            <p className="mt-1 text-slate-900 font-semibold">{violation.policyViolated}</p>
           </div>
           <div>
-            <div className="text-xs font-semibold uppercase text-gray-400">Why it matters</div>
-            <p className="mt-1 text-gray-700">{violation.why}</p>
+            <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Why it matters</div>
+            <p className="mt-1 text-slate-700 font-medium">{violation.why}</p>
           </div>
           <div>
-            <div className="text-xs font-semibold uppercase text-gray-400">How to fix</div>
-            <p className="mt-1 text-gray-700">{violation.howToFix}</p>
+            <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500">How to fix</div>
+            <p className="mt-1 text-emerald-700 font-bold">{violation.howToFix}</p>
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <div className="text-xs font-semibold uppercase text-gray-400">Full prompt to fix</div>
+              <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Full prompt to fix</div>
               <button
                 onClick={() => copyPrompt(violation.promptToFix)}
-                className="text-xs font-medium text-blue-600 hover:underline"
+                className="text-xs font-extrabold text-[#9E0B10] hover:underline"
               >
                 Copy
               </button>
             </div>
-            <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-white p-3 text-xs text-gray-600">
+            <pre className="mt-1.5 whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-900 p-3.5 font-mono text-xs text-slate-100 shadow-inner">
               {violation.promptToFix}
             </pre>
           </div>

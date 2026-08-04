@@ -20,17 +20,56 @@
 
 body {
   margin: 0;
-  background-color: #f7f7f8;
-  color: #1f2430;
+  background-color: #F8F9FA;
+  color: #0F172A;
+}
+
+.white-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  border-radius: 1rem;
+}
+
+.white-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.white-card-hover:hover {
+  border-color: rgba(254, 202, 202, 0.8);
+  box-shadow: 0 10px 30px rgba(158, 11, 16, 0.08);
+  transform: translateY(-2px);
+}
+
+.red-gradient {
+  background: linear-gradient(135deg, #8B0000 0%, #9E0B10 50%, #C8102E 100%);
+}
+
+.glass-input {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #0F172A;
+}
+
+.glass-input:focus {
+  border-color: #9E0B10;
+  box-shadow: 0 0 0 3px rgba(158, 11, 16, 0.12);
+  outline: none;
 }
 
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+::-webkit-scrollbar-track {
+  background: #F8F9FA;
+}
 ::-webkit-scrollbar-thumb {
-  background-color: #d8d8dc;
+  background-color: #CBD5E1;
   border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #94A3B8;
 }
 
 /* Login page micro-interactions — see web/src/pages/Login.tsx and components/auth/*.tsx */

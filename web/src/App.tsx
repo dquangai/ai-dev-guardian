@@ -33,7 +33,7 @@ function App() {
           <Route
             index
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'auditor']}>
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer', 'auditor']}>
                 <Overview />
               </ProtectedRoute>
             }

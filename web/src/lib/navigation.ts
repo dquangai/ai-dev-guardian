@@ -41,6 +41,7 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { to: '/diagnostics', label: 'System Diagnostics', icon: 'diagnostics' },
   ],
   developer: [
+    { to: '/', label: 'Overview', icon: 'overview' },
     { to: '/findings', label: 'My Findings', icon: 'findings' },
     { to: '/policies', label: 'Active Policies', icon: 'policies' },
     { to: '/code-audit', label: 'Code Audit', icon: 'code-audit' },

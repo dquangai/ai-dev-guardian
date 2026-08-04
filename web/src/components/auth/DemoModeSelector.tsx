@@ -74,7 +74,7 @@ export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorPro
         </div>
         <ChevronDown
           size={16}
-          className={`shrink-0 text-gray-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          className={`shrink-0 text-gray-400 ${expanded ? 'rotate-180' : ''}`}
         />
       </button>
 
@@ -90,7 +90,7 @@ export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorPro
                 title={description}
                 disabled={disabled}
                 onClick={() => handleSelect(role)}
-                className={`group relative flex min-h-[64px] flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-2.5 text-center transition-all duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 ${
+                className={`group relative flex min-h-[64px] flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-2.5 text-center disabled:cursor-not-allowed disabled:opacity-60 ${
                   isSelected
                     ? 'border-[#9E0B10] bg-[#9E0B10]/5 shadow-sm'
                     : 'border-[#E5E7EB] bg-white hover:border-[#9E0B10] hover:bg-[#9E0B10]/5 hover:shadow-sm'
