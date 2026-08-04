@@ -58,17 +58,17 @@ export function Sidebar() {
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-gray-200 bg-white">
       <div className="flex items-center gap-3 px-5 py-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-          <ShieldCheck className="text-blue-600" size={22} />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#9E0B10]/5 border border-[#9E0B10]/10">
+          <ShieldCheck className="text-[#9E0B10]" size={22} />
         </div>
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[15px] font-semibold text-gray-900">AI Dev Guardian</span>
-            <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600">
+            <span className="rounded-md bg-[#9E0B10]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#9E0B10]">
               v0.1
             </span>
           </div>
-          <p className="text-xs text-gray-500">Google Code Governance</p>
+          <p className="text-xs text-gray-500">Vingroup AI Security</p>
         </div>
       </div>
 
@@ -82,20 +82,22 @@ export function Sidebar() {
               end={item.to === '/'}
               className={({ isActive }) =>
                 `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+                  isActive 
+                    ? 'bg-[#9E0B10]/5 text-[#9E0B10] border border-[#9E0B10]/10' 
+                    : 'text-gray-600 hover:bg-gray-50 border border-transparent'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
                   <span className="flex items-center gap-3">
-                    <span className={isActive ? 'text-blue-600' : 'text-gray-400'}>{ICONS[item.icon]}</span>
+                    <span className={isActive ? 'text-[#9E0B10]' : 'text-gray-400'}>{ICONS[item.icon]}</span>
                     {item.label}
                   </span>
                   {badge !== undefined && badge > 0 && (
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                        isActive ? 'bg-[#9E0B10]/10 text-[#9E0B10]' : 'bg-[#9E0B10]/5 text-[#9E0B10]'
                       }`}
                     >
                       {badge}
@@ -111,9 +113,9 @@ export function Sidebar() {
       <div className="m-3 space-y-3 rounded-xl bg-gray-50 p-4 text-sm">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-gray-500">
-            <Sparkles size={14} className="text-violet-500" /> AI Engine
+            <Sparkles size={14} className="text-amber-500" /> AI Engine
           </span>
-          <span className="font-semibold text-gray-900">Gemini 2.5 Flash</span>
+          <span className="font-semibold text-gray-900">Gemini 3.5 Flash</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-gray-500">
