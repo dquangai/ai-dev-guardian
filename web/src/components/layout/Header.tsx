@@ -8,6 +8,7 @@ const ROLE_PILL: Record<Role, PillVariant> = {
   admin: 'blue',
   'senior-dev': 'green',
   developer: 'amber',
+  auditor: 'gray',
 }
 
 function initials(name: string): string {

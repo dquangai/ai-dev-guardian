@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sprint Plan</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #6b7280;
+    --border: #d7dbe3;
+    --header-bg: #3b5aa6;
+    --header-fg: #ffffff;
+    --info-bg: #e6eaf5;
+    --row-alt: #f7f8fb;
+    --accent: #2955c7;
+    --status-todo: #9ca3af;
+    --status-progress: #d97706;
+    --status-done: #16a34a;
+    --status-blocked: #dc2626;
+    --priority-high: #dc2626;
+    --priority-medium: #d97706;
+    --priority-low: #16a34a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171f;
+      --fg: #e8eaf0;
+      --muted: #9aa2b1;
+      --border: #2c3140;
+      --header-bg: #2c4180;
+      --header-fg: #f0f2f8;
+      --info-bg: #1c2233;
+      --row-alt: #191d29;
+      --accent: #7fa1ff;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171f;
+    --fg: #e8eaf0;
+    --muted: #9aa2b1;
+    --border: #2c3140;
+    --header-bg: #2c4180;
+    --header-fg: #f0f2f8;
+    --info-bg: #1c2233;
+    --row-alt: #191d29;
+    --accent: #7fa1ff;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #6b7280;
+    --border: #d7dbe3;
+    --header-bg: #3b5aa6;
+    --header-fg: #ffffff;
+    --info-bg: #e6eaf5;
+    --row-alt: #f7f8fb;
+    --accent: #2955c7;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1.25rem 4rem;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 1.25rem;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .info-cell {
+    background: var(--info-bg);
+    padding: 0.65rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    font-size: 0.92rem;
+  }
+  .info-cell .label { font-weight: 600; white-space: nowrap; }
+  .info-cell .value { color: var(--accent); font-weight: 600; }
+  .info-cell .value:empty::before {
+    content: "—";
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .board-title {
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    background: var(--info-bg);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 0 0 8px 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 820px;
+    font-size: 0.9rem;
+  }
+  thead th {
+    background: var(--header-bg);
+    color: var(--header-fg);
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border-right: 1px solid rgba(255,255,255,0.15);
+  }
+  thead th:last-child { border-right: none; }
+  tbody td {
+    padding: 0.6rem 0.75rem;
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody td:last-child { border-right: none; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  tbody tr:hover { background: var(--info-bg); }
+
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .status-todo { background: var(--status-todo); }
+  .status-progress { background: var(--status-progress); }
+  .status-done { background: var(--status-done); }
+  .status-blocked { background: var(--status-blocked); }
+
+  .priority-high { color: var(--priority-high); font-weight: 700; }
+  .priority-medium { color: var(--priority-medium); font-weight: 700; }
+  .priority-low { color: var(--priority-low); font-weight: 700; }
+
+  .empty-row td {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  footer {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sprint Plan</h1>
+
+  <div class="info-grid">
+    <div class="info-cell"><span class="label">Current Sprint:</span><span class="value">Sprint 2</span></div>
+    <div class="info-cell"><span class="label">Sprint Goal:</span><span class="value">Hoàn thành bản Web Dashboard thực tế: RBAC 4 role chặt chẽ (Dev/Senior Dev-Lead/Auditor/Admin), auth thật thay header giả, tích hợp duyệt bypass/policy, có test chống vượt quyền</span></div>
+    <div class="info-cell"><span class="label">Sprint Start:</span><span class="value">2026-08-04</span></div>
+    <div class="info-cell"><span class="label">Sprint End:</span><span class="value">2026-08-15</span></div>
+  </div>
+
+  <div class="board-title">TASK BOARD</div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Task ID</th>
+          <th>Task / User Story</th>
+          <th>Status</th>
+          <th>Story Pt</th>
+          <th>Priority</th>
+          <th>Start</th>
+          <th>Due</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>T-01</td>
+          <td>Dựng khung Web Dashboard (React/Vite/Tailwind) + Express API + lệnh <code>guardian dashboard</code></td>
+          <td><span class="badge status-done">Done</span></td>
+          <td>8</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-03</td>
+          <td>2026-08-03</td>
+          <td>Commit 6ff3647</td>
+        </tr>
+        <tr>
+          <td>T-02</td>
+          <td>RBAC 4 role (Admin/Senior Dev/Dev/Auditor) — permission matrix dùng chung server + web, gate qua <code>requirePermission()</code></td>
+          <td><span class="badge status-done">Done</span></td>
+          <td>5</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-03</td>
+          <td>2026-08-03</td>
+          <td>Commit 6ff3647 — hiện identity assert qua header <code>x-guardian-role</code>, chưa phải auth thật. Role <code>auditor</code> đã bị gỡ khỏi code sau đó, hiện chỉ còn 3 role (xem T-07)</td>
+        </tr>
+        <tr>
+          <td>T-03</td>
+          <td>Login flow, AuthContext, protected routes, Sidebar/Findings phân theo role</td>
+          <td><span class="badge status-done">Done</span></td>
+          <td>5</td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>2026-08-03</td>
+          <td>2026-08-03</td>
+          <td>Commit 3526b75</td>
+        </tr>
+        <tr>
+          <td>T-04</td>
+          <td>Vá các finding Guardian tự bắt được trên chính code dashboard: secret literals, input validation, policy gaps</td>
+          <td><span class="badge status-done">Done</span></td>
+          <td>3</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-03</td>
+          <td>2026-08-03</td>
+          <td>Commit 14dcf4d — "ăn thức ăn của chính mình" (dogfooding)</td>
+        </tr>
+        <tr>
+          <td>T-05</td>
+          <td>Policy change request + bypass request approval workflow, toast notifications, refine RBAC/routing</td>
+          <td><span class="badge status-done">Done</span></td>
+          <td>5</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-04</td>
+          <td>2026-08-04</td>
+          <td>Commit 1394217</td>
+        </tr>
+        <tr>
+          <td>T-06</td>
+          <td>Fix: enforce <code>bypass:approve</code> permission bên trong <code>decide()</code> handler (server-side, không chỉ ẩn nút UI)</td>
+          <td><span class="badge status-done">Done</span></td>
+          <td>1</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-04</td>
+          <td>2026-08-04</td>
+          <td>Commit 1604a30 — Guardian tự phát hiện lỗ hổng RBAC trên chính dashboard</td>
+        </tr>
+        <tr>
+          <td>T-07</td>
+          <td>RBAC Matrix v2 — khôi phục role <code>auditor</code> (read-only, không có quyền approve nào), gán <code>bypass:approve</code> + <code>policy:approve</code> cho <code>senior-dev</code> (Senior Dev/Lead). Cập nhật đồng bộ <code>src/server/rbac.ts</code>, <code>web/src/lib/rbac.ts</code>, <code>demoUsers.ts</code>, <code>navigation.ts</code></td>
+          <td><span class="badge status-done">Done</span></td>
+          <td>5</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-04</td>
+          <td>2026-08-05</td>
+          <td>Ngoài 4 file gốc còn phải đồng bộ thêm <code>App.tsx</code> (route-level <code>allowedRoles</code> là allowlist thật, tách biệt với <code>navigation.ts</code>), <code>Header.tsx</code>, <code>Forbidden.tsx</code>, <code>Login.tsx</code> — đều là <code>Record&lt;Role,…&gt;</code> hoặc mảng role cần exhaustive. Test + typecheck qua hết, chưa có test route-level riêng (xem T-11)</td>
+        </tr>
+        <tr>
+          <td>T-08</td>
+          <td>Auth thật (session hoặc JWT) thay cơ chế header <code>x-guardian-role</code> tự nhận — server ký & verify token khi login, ngừng tin header client tự set</td>
+          <td><span class="badge status-todo">To Do</span></td>
+          <td>8</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-05</td>
+          <td>2026-08-08</td>
+          <td>Lỗ hổng nghiêm trọng nhất hiện tại: bất kỳ ai <code>curl -H "x-guardian-role: admin"</code> là spoof được toàn bộ RBAC; mật khẩu demo hiện lộ trong bundle JS (<code>VITE_DEMO_PASSWORD</code>)</td>
+        </tr>
+        <tr>
+          <td>T-09</td>
+          <td>Giới hạn Dev chỉ xem finding của chính mình — lọc <code>GET /api/audit/history</code> theo <code>userId</code> khi role là <code>developer</code></td>
+          <td><span class="badge status-todo">To Do</span></td>
+          <td>3</td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>2026-08-08</td>
+          <td>2026-08-09</td>
+          <td>Hiện <code>audit:view</code> trả toàn bộ lịch sử cho mọi role có quyền, không lọc theo người tạo</td>
+        </tr>
+        <tr>
+          <td>T-10</td>
+          <td>⚠️ Cần quyết định: cơ chế "đồng bộ tự động" policy sau khi approve — tự <code>git commit</code>+<code>push</code>, hay chỉ ghi file + hướng dẫn commit thủ công</td>
+          <td><span class="badge status-blocked">Blocked</span></td>
+          <td>5</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-06</td>
+          <td>2026-08-10</td>
+          <td><code>writePolicyFile()</code> hiện chỉ ghi <code>.guardian/policies/*.md</code> cục bộ trên máy chạy dashboard, không hề commit/push — Dev khác <code>git pull</code> sẽ KHÔNG thấy gì mới. Auto-push là hành động khó đảo ngược, cần chốt hướng với bạn trước khi code</td>
+        </tr>
+        <tr>
+          <td>T-11</td>
+          <td>Integration test route-level cho RBAC: bypass approve/reject, policy approve/reject/direct-edit — đặc biệt case Dev tự gọi endpoint approve phải trả 403</td>
+          <td><span class="badge status-todo">To Do</span></td>
+          <td>5</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-09</td>
+          <td>2026-08-12</td>
+          <td>Hiện chỉ có <code>test/policyRouter.test.ts</code> test hàm thuần <code>routePolicies()</code> — chưa test route/permission nào; chưa có test cho bypass router</td>
+        </tr>
+        <tr>
+          <td>T-12</td>
+          <td>QA thủ công toàn bộ dashboard trên browser theo từng role thật (Dev/Senior Dev-Lead/Auditor/Admin) — nút ẩn/hiện đúng role, toast đúng trạng thái</td>
+          <td><span class="badge status-todo">To Do</span></td>
+          <td>2</td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>2026-08-12</td>
+          <td>2026-08-14</td>
+          <td>Chưa verify UI thật trên browser với 4 role, chỉ mới build/commit</td>
+        </tr>
+        <tr>
+          <td>T-13</td>
+          <td>🎯 Deadline: bàn giao bản Web Dashboard hoàn chỉnh — RBAC 4 role chặt chẽ, auth thật, approval workflow đồng bộ, có test</td>
+          <td><span class="badge status-todo">To Do</span></td>
+          <td>—</td>
+          <td><span class="priority-high">High</span></td>
+          <td>2026-08-15</td>
+          <td>2026-08-15</td>
+          <td>Milestone của Sprint Goal</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>Cập nhật lần cuối: 2026-08-04 · T-07 done · gap analysis dựa trên code thật (rbac.ts, authMiddleware.ts, policyStore.ts, bypass.ts)</footer>
+</div>
+</body>
+</html>

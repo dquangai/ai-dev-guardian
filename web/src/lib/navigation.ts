@@ -36,12 +36,21 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { to: '/findings', label: 'Findings', icon: 'findings' },
     { to: '/policies', label: 'Active Policies', icon: 'policies' },
     { to: '/policies/propose', label: 'Propose New Policy', icon: 'propose-policy' },
+    { to: '/policy-approvals', label: 'Policy Approvals Hub', icon: 'policy-approvals' },
+    { to: '/bypass-approvals', label: 'Bypass Approvals Hub', icon: 'bypass-approvals' },
     { to: '/diagnostics', label: 'System Diagnostics', icon: 'diagnostics' },
   ],
   developer: [
     { to: '/findings', label: 'My Findings', icon: 'findings' },
     { to: '/policies', label: 'Active Policies', icon: 'policies' },
     { to: '/code-audit', label: 'Code Audit', icon: 'code-audit' },
+  ],
+  auditor: [
+    { to: '/', label: 'Overview', icon: 'overview' },
+    { to: '/findings', label: 'Findings', icon: 'findings' },
+    { to: '/policies', label: 'Active Policies', icon: 'policies' },
+    { to: '/diagnostics', label: 'System Diagnostics', icon: 'diagnostics' },
+    { to: '/engine-config', label: 'AI Engine Config', icon: 'engine-config' },
   ],
 }
 
