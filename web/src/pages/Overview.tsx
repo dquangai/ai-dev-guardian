@@ -41,14 +41,14 @@ export function Overview() {
         <div className="flex items-start justify-between gap-6">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-              <ShieldCheck size={14} /> Google AI Pre-Push Code Governance
+              <ShieldCheck size={14} /> VinSmart Future AI Pre-Push Code Governance
             </span>
             <h2 className="mt-4 max-w-xl text-2xl font-semibold text-gray-900">
               Automated code governance before your commits reach Git.
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-gray-500">
               AI Dev Guardian checks code diffs against strict security rules, architecture
-              boundaries, circular dependencies, and Google Gemini 2.5 Flash policy reasoning.
+              boundaries, circular dependencies, and Gemini 3.5 Flash policy reasoning.
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">

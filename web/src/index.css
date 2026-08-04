@@ -3,6 +3,19 @@
 @theme {
   --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+
+  /* Redefine blue palette to Vingroup Premium Red theme colors */
+  /* This automatically themes the entire application's primary highlights, buttons, and badges */
+  --color-blue-50: rgba(158, 11, 16, 0.04);
+  --color-blue-100: rgba(158, 11, 16, 0.08);
+  --color-blue-200: rgba(158, 11, 16, 0.16);
+  --color-blue-300: rgba(158, 11, 16, 0.3);
+  --color-blue-400: #c00c12;
+  --color-blue-500: #b30f14;
+  --color-blue-600: #9E0B10; /* Corporate Vingroup Dark Red */
+  --color-blue-700: #80070B; /* Deep Red */
+  --color-blue-800: #590407;
+  --color-blue-900: #380103;
 }
 
 body {
@@ -18,4 +31,38 @@ body {
 ::-webkit-scrollbar-thumb {
   background-color: #d8d8dc;
   border-radius: 9999px;
+}
+
+/* Login page micro-interactions — see web/src/pages/Login.tsx and components/auth/*.tsx */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-spin-slow {
+    animation: none;
+  }
 }

@@ -5,8 +5,8 @@ import { StatusPill, type PillVariant } from '../ui/StatusPill'
 import type { Role } from '../../lib/rbac'
 
 const ROLE_PILL: Record<Role, PillVariant> = {
-  admin: 'blue',
-  'senior-dev': 'green',
+  admin: 'red',
+  'senior-dev': 'blue',
   developer: 'amber',
   auditor: 'gray',
 }
@@ -33,13 +33,13 @@ export function Header({ title, onRefresh }: { title: string; onRefresh?: () => 
     <header className="flex items-center justify-between border-b border-gray-200 bg-white px-8 py-5">
       <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
       <div className="flex items-center gap-3">
-        <div className="hidden items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 md:flex">
-          <Sparkles size={14} />
-          Powered by <span className="font-semibold">Google Gemini 2.5 Flash</span>
+        <div className="hidden items-center gap-1.5 rounded-full bg-[#9E0B10]/5 px-3 py-1.5 text-xs font-medium text-[#9E0B10] border border-[#9E0B10]/10 md:flex">
+          <Sparkles size={14} className="text-amber-500" />
+          Powered by <span className="font-semibold">Google Gemini 3.5 Flash</span>
         </div>
         <button
           onClick={onRefresh}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
           title="Refresh"
         >
           <RefreshCw size={15} />
@@ -47,7 +47,7 @@ export function Header({ title, onRefresh }: { title: string; onRefresh?: () => 
 
         {user && (
           <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#9E0B10] text-xs font-semibold text-white">
               {initials(user.name)}
             </div>
             <div className="hidden text-left leading-tight sm:block">
@@ -58,7 +58,7 @@ export function Header({ title, onRefresh }: { title: string; onRefresh?: () => 
             </div>
             <button
               onClick={handleLogout}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-600"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-[#9E0B10] transition-colors"
               title="Logout"
             >
               <LogOut size={15} />
