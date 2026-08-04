@@ -34,10 +34,10 @@ export function Header({ title, onRefresh }: { title: string; onRefresh?: () => 
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-slate-200/80 bg-white px-8 py-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+    <header className="flex h-20 items-center justify-between border-b border-slate-200/80 bg-white px-8 shrink-0 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
       <div className="flex items-center gap-3">
         <h1 className="text-xl font-extrabold tracking-tight text-slate-900">{title}</h1>
-        <span className="flex items-center gap-1.5 rounded-full bg-red-50 border border-red-200 px-3 py-1 text-xs font-bold text-[#9E0B10]">
+        <span className="flex items-center gap-2 rounded-full bg-red-50 border border-red-200 px-3 py-1 text-xs font-bold text-[#9E0B10]">
           <span className="h-2 w-2 rounded-full bg-[#9E0B10] ring-4 ring-red-100 animate-pulse" />
           Vingroup AI Guard
         </span>

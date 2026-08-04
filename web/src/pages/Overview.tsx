@@ -45,7 +45,7 @@ export function Overview() {
         <div className="flex items-start justify-between gap-6 relative z-10">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3.5 py-1 text-xs font-extrabold text-white shadow-sm">
-              <ShieldCheck size={14} /> VinSmart Future AI Pre-Push Code Governance
+              <Sparkles size={14} /> VinSmart Future AI Pre-Push Code Governance
             </span>
             <h2 className="mt-4 max-w-xl text-2xl font-extrabold tracking-tight text-white leading-snug">
               Automated code governance before your commits reach Git.

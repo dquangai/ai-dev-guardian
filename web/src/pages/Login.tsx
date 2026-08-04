@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { DemoModeSelector } from '../components/auth/DemoModeSelector'
 import { LoginHero } from '../components/auth/LoginHero'
 import { useAuth } from '../context/AuthContext'
@@ -62,10 +62,7 @@ export function Login() {
           <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgba(158,11,16,0.06)]">
             {/* Logo & Headline */}
             <div className="mb-6 flex flex-col items-center text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#9E0B10]/5 border border-[#9E0B10]/15 shadow-sm">
-                <ShieldCheck className="text-[#9E0B10]" size={26} />
-              </div>
-              <h2 className="mt-4 text-xl font-bold text-gray-900 tracking-tight">Đăng nhập hệ thống</h2>
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">Đăng nhập hệ thống</h2>
               <p className="mt-1.5 text-xs text-gray-500">Cổng xác thực dự án AI Dev Guardian</p>
             </div>
 
@@ -75,10 +72,10 @@ export function Login() {
                 Email doanh nghiệp
               </span>
               <span
-                title="Azua ID single sign-on chưa kết nối"
+                title="Microsoft Single Sign-On chưa kết nối"
                 className="ml-6 cursor-not-allowed px-2 pb-2.5 text-gray-300 font-medium"
               >
-                Azua ID
+                Microsoft 365
               </span>
             </div>
 
@@ -155,11 +152,16 @@ export function Login() {
             <button
               type="button"
               disabled
-              title="Azua ID single sign-on chưa kết nối"
-              className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50/20 py-2.5 text-sm font-semibold text-[#9E0B10]/60"
+              title="Microsoft Single Sign-On (chưa kết nối)"
+              className="flex w-full cursor-not-allowed items-center justify-center gap-2.5 rounded-xl border border-gray-300/80 bg-white py-2.5 text-sm font-semibold text-gray-700 shadow-xs opacity-90"
             >
-              <ShieldCheck size={16} />
-              Đăng nhập qua Azua ID
+              <svg className="h-4.5 w-4.5 shrink-0" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="10" height="10" fill="#F25022" />
+                <rect x="12" y="1" width="10" height="10" fill="#7FBA00" />
+                <rect x="1" y="12" width="10" height="10" fill="#00A4EF" />
+                <rect x="12" y="12" width="10" height="10" fill="#FFB900" />
+              </svg>
+              <span>Continue with Microsoft</span>
             </button>
           </div>
         </div>
