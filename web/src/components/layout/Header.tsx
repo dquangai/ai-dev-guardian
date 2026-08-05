@@ -6,6 +6,7 @@ import type { SystemDiagnostics } from '../../lib/types'
 import { StatusPill, type PillVariant } from '../ui/StatusPill'
 import type { Role } from '../../lib/rbac'
 import { engineLabel } from '../../lib/engineLabel'
+import { NotificationBell } from './NotificationBell'
 
 const ROLE_PILL: Record<Role, PillVariant> = {
   admin: 'red',
@@ -54,6 +55,8 @@ export function Header({ title, onRefresh }: { title: string; onRefresh?: () => 
         >
           <RefreshCw size={15} />
         </button>
+
+        {user && <NotificationBell />}
 
         {user && (
           <div className="flex items-center gap-3 border-l border-slate-200 pl-4">

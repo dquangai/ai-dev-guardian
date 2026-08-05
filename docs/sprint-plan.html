@@ -388,28 +388,40 @@
           </tr>
           <tr>
             <td>T-10</td>
-            <td>⚠️ Cần quyết định: cơ chế "đồng bộ tự động" policy sau khi approve — tự
-              <code>git commit</code>+<code>push</code>, hay chỉ ghi file + hướng dẫn commit thủ công</td>
-            <td><span class="badge status-blocked">Blocked</span></td>
+            <td>Quyết định + implement cơ chế "đồng bộ" policy sau khi ghi/xoá file — đã chốt: chỉ ghi file +
+              hướng dẫn commit thủ công (không auto git)</td>
+            <td><span class="badge status-done">Done</span></td>
             <td>5</td>
             <td><span class="priority-high">High</span></td>
             <td>2026-08-06</td>
             <td>2026-08-10</td>
-            <td><code>writePolicyFile()</code> hiện chỉ ghi <code>.guardian/policies/*.md</code> cục bộ trên máy chạy
-              dashboard, không hề commit/push — Dev khác <code>git pull</code> sẽ KHÔNG thấy gì mới. Auto-push là hành
-              động khó đảo ngược, cần chốt hướng với bạn trước khi code</td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-05). Đã chốt hướng với user: <strong>không</strong> auto
+              commit/push (rủi ro khó đảo ngược, conflict nếu nhiều clone). Thêm <code>gitSyncHint()</code> thuần
+              trong <code>policyStore.ts</code>, trả về field <code>gitHint</code> ở 3 chỗ ghi/xoá file
+              (<code>submitOrApply</code> direct-edit, <code>DELETE /:id</code> direct-delete, và
+              <code>POST /requests/:id/approve</code> khi approved) — web hiện qua toast
+              (<code>ChangeRequestsPanel</code>) và inline status (<code>PolicyEditor</code>). 2 unit test mới cho
+              <code>gitSyncHint()</code>; 24 file/171 test toàn repo + typecheck server & web đều sạch</td>
           </tr>
           <tr>
             <td>T-11</td>
             <td>Integration test route-level cho RBAC: bypass approve/reject, policy approve/reject/direct-edit — đặc
               biệt case Dev tự gọi endpoint approve phải trả 403</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>5</td>
             <td><span class="priority-high">High</span></td>
             <td>2026-08-09</td>
             <td>2026-08-12</td>
-            <td>Hiện chỉ có <code>test/policyRouter.test.ts</code> test hàm thuần <code>routePolicies()</code> — chưa
-              test route/permission nào; chưa có test cho bypass router</td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-05). Thêm <code>supertest</code> (devDependency mới) +
+              <code>createApp()</code> thật, ký JWT thật cho từng role qua <code>signToken()</code> — chạy qua đúng
+              middleware <code>requireAuth</code>/<code>requirePermission</code> thật, không mock. Test chạy trong
+              thư mục tmp riêng (chdir + seed <code>.guardian/policies/test.policy.md</code>) nên không đụng file
+              thật của repo. 57 test mới (<code>rbacIntegration.test.ts</code>): ma trận permission cho 11 route × 4
+              role (dùng <code>hasPermission()</code> từ <code>rbac.ts</code> làm nguồn sự thật, tự cập nhật nếu RBAC
+              đổi), cộng 3 kịch bản "đóng vòng" dùng request thật: bypass approve/reject, policy change-request
+              approve/reject, policy direct-edit theo role. Đã tự verify bằng cách cố tình làm yếu 1 permission gate
+              (<code>cache:manage</code> → <code>audit:view</code>) — test bắt đúng 3/3 role lẽ ra phải bị chặn, sau
+              đó revert lại. 27 file/243 test toàn repo pass, typecheck sạch</td>
           </tr>
           <tr>
             <td>T-12</td>
@@ -464,13 +476,129 @@
             <td>2026-08-04</td>
             <td>Commit 57cd009, 5af8ccd, 5038536</td>
           </tr>
+          <tr>
+            <td>T-17</td>
+            <td>Metadata frontmatter cho policy file — <code>version</code>/<code>lastUpdated</code>/<code>updatedBy</code>/<code>changeSummary</code>
+              tự ghi mỗi lần save (direct-edit hoặc approve)</td>
+            <td><span class="badge status-done">Done</span></td>
+            <td>5</td>
+            <td><span class="priority-medium">Medium</span></td>
+            <td>2026-08-05</td>
+            <td>2026-08-05</td>
+            <td>Yêu cầu phát sinh từ user để Dev/Senior Dev/Auditor không bỏ lỡ khi Admin sửa policy. Tách hàm thuần
+              <code>buildPolicyFileContent()</code> để test version-bump không cần đụng đĩa. Input "What changed?"
+              mới trong <code>PolicyEditor</code>. <strong>Lưu ý kỹ thuật</strong>: <code>matter.stringify()</code>
+              re-serialize toàn bộ frontmatter mỗi lần ghi qua js-yaml — đã thêm <code>{ lineWidth: -1 }</code> để
+              không bẻ dòng lại các description dài, nhưng mảng flow-style (<code>["a","b"]</code>) vẫn bị đổi thành
+              block-style (<code>- a</code>) ở lần save đầu tiên qua dashboard — cosmetic, không ảnh hưởng parse,
+              nhưng gây diff to hơn dự kiến. Cũng phát hiện và fix 1 bug có sẵn trong <code>PolicyEditor.tsx</code>:
+              effect reset state theo object reference của <code>policy</code> khiến status/changeSummary bị xoá gần
+              như ngay khi hiện ra (do refetch sau save trả về object mới) — đổi sang key theo <code>policy?.id</code>.
+              4 unit test mới (<code>policyStore.test.ts</code>)</td>
+          </tr>
+          <tr>
+            <td>T-18</td>
+            <td>Notification Center — bell icon + badge đỏ + dropdown + "Mark as read" cho mọi role khi policy có bản
+              cập nhật chưa đọc</td>
+            <td><span class="badge status-done">Done</span></td>
+            <td>5</td>
+            <td><span class="priority-medium">Medium</span></td>
+            <td>2026-08-05</td>
+            <td>2026-08-05</td>
+            <td>Read-state lưu theo 4 demo user cố định (đã chốt với user), file mới
+              <code>notificationStore.ts</code> (map userId→policyId→lastReadVersion, không hạ version khi mark lại)
+              + route <code>GET/POST /api/notifications/policies</code>. Component mới
+              <code>NotificationBell.tsx</code> trong Header, poll 30s. Bỏ hẳn trụ cột 3 gốc (Pre-push Gate CLI) theo
+              yêu cầu user — quá nhiều vấn đề kiến trúc (dashboard single-user local trên máy khác với máy Dev chạy
+              CLI, không có session dùng chung). Verify thật trên browser (Playwright headless): badge đúng số, giữ
+              nguyên qua restart server (đọc từ file thật), dropdown lọc đúng unread, mark-as-read giảm đúng count,
+              0 console error liên quan đến app. 11 unit test mới (<code>notificationStore.test.ts</code>,
+              <code>notifications.test.ts</code>)</td>
+          </tr>
         </tbody>
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-05 · T-09 done (sớm hơn lịch) · T-14, T-15, T-16 (rebrand UI) done · T-08
-      re-verified (2 lưu ý, xem Notes) · gap analysis dựa trên code thật (rbac.ts, authMiddleware.ts, policyStore.ts,
-      bypass.ts)</footer>
+    <div class="board-title" style="margin-top: 1.5rem">ROADMAP — ENTERPRISE SECURITY HARDENING (CHƯA LÊN LỊCH)</div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Gap / Việc cần làm</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>R-1</td>
+            <td>Tích hợp SSO/SAML/OIDC thật (đặc biệt với chính nền tảng V-ID) thay cho JWT tự chế hiện tại</td>
+            <td><span class="badge status-todo">Backlog</span></td>
+            <td><span class="priority-high">High</span></td>
+            <td>Câu hỏi đầu tiên Mentor V-ID sẽ hỏi — pitch SSO/định danh mà dashboard lại không cắm được vào
+              identity provider doanh nghiệp đã có, tự chế auth riêng (<code>token.ts</code>)</td>
+          </tr>
+          <tr>
+            <td>R-2</td>
+            <td>User directory thật — bỏ 4 tài khoản demo dùng chung 1 mật khẩu, thêm MFA, account lockout,
+              rate-limit trên login</td>
+            <td><span class="badge status-todo">Backlog</span></td>
+            <td><span class="priority-high">High</span></td>
+            <td><code>users.ts</code> hiện so sánh string trực tiếp với <code>GUARDIAN_DEMO_PASSWORD</code> dùng
+              chung cho mọi role — chấp nhận được cho demo, không đạt chuẩn enterprise</td>
+          </tr>
+          <tr>
+            <td>R-3</td>
+            <td>Mã hoá dữ liệu at-rest + chính sách backup/retention cho audit trail</td>
+            <td><span class="badge status-todo">Backlog</span></td>
+            <td><span class="priority-high">High</span></td>
+            <td>Toàn bộ state (<code>.guardian/*.json</code>) là file JSON phẳng trên 1 máy, không mã hoá, không
+              backup; <code>audit-history.json</code> giới hạn cứng số dòng — dữ liệu cũ bị rơi mất, có thể vi phạm
+              yêu cầu compliance cần lưu audit dài hạn</td>
+          </tr>
+          <tr>
+            <td>R-4</td>
+            <td>Multi-tenancy — cách ly dữ liệu theo tổ chức/phòng ban</td>
+            <td><span class="badge status-todo">Backlog</span></td>
+            <td><span class="priority-medium">Medium</span></td>
+            <td>README hiện ghi rõ đây là tool chạy local single-user, chưa có khái niệm tổ chức/tenant nào</td>
+          </tr>
+          <tr>
+            <td>R-5</td>
+            <td>Siết network: giới hạn CORS theo origin, bắt buộc TLS, thêm rate-limiting + helmet</td>
+            <td><span class="badge status-todo">Backlog</span></td>
+            <td><span class="priority-medium">Medium</span></td>
+            <td><code>app.ts:19</code> hiện <code>app.use(cors())</code> không giới hạn origin nào, chạy HTTP thuần
+              qua <code>app.listen</code> — chấp nhận được khi chỉ chạy localhost, phải siết lại hoàn toàn nếu expose
+              ra mạng</td>
+          </tr>
+          <tr>
+            <td>R-6</td>
+            <td>Session revocation / token blacklist cho JWT</td>
+            <td><span class="badge status-todo">Backlog</span></td>
+            <td><span class="priority-medium">Medium</span></td>
+            <td>JWT stateless hiện tại — không có cách nào vô hiệu hoá 1 token đã lộ trước khi hết hạn (12h hoặc 30
+              ngày nếu remember-me)</td>
+          </tr>
+          <tr>
+            <td>R-7</td>
+            <td>Phòng chống prompt injection cho nội dung đưa vào LLM (policy body, changeSummary do user nhập)</td>
+            <td><span class="badge status-todo">Backlog</span></td>
+            <td><span class="priority-medium">Medium</span></td>
+            <td>Rủi ro đặc thù kiến trúc LLM-centric của Guardian — nội dung policy/changeSummary (T-17) cuối cùng có
+              thể lọt vào prompt, chưa có cơ chế phòng chống nếu bị chỉnh sửa ác ý</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>Cập nhật lần cuối: 2026-08-05 · T-11 done (sớm hơn lịch) — 57 integration test RBAC thật, tự verify bằng
+      mutation test · Thêm Roadmap Enterprise Security Hardening (R-1..R-7) · T-17, T-18 (metadata + notification
+      center) done, verify thật trên browser · T-09, T-10 done (sớm hơn lịch) · T-14, T-15, T-16 (rebrand UI) done ·
+      T-08 re-verified (2 lưu ý, xem Notes) · gap analysis dựa trên code thật (rbac.ts, authMiddleware.ts,
+      policyStore.ts, bypass.ts)</footer>
   </div>
 </body>
 

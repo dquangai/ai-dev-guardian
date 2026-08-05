@@ -5,6 +5,7 @@ import type { PolicyChangeRequest } from '../../lib/types'
 import { Panel } from '../ui/Panel'
 import { StatusPill } from '../ui/StatusPill'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 
 export function ChangeRequestsPanel({
   requests,
@@ -14,12 +15,14 @@ export function ChangeRequestsPanel({
   onResolved: () => void
 }) {
   const { can } = useAuth()
+  const { showToast } = useToast()
   const [busyId, setBusyId] = useState<string | null>(null)
 
   async function decide(id: string, decision: 'approve' | 'reject') {
     setBusyId(id)
     try {
-      await api.post(`/policies/requests/${id}/${decision}`)
+      const result = await api.post<PolicyChangeRequest>(`/policies/requests/${id}/${decision}`)
+      if (result.gitHint) showToast(result.gitHint)
       onResolved()
     } catch (err) {
       alert(err instanceof ApiError ? err.message : `Failed to ${decision} change request.`)
