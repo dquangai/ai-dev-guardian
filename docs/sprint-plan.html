@@ -361,18 +361,30 @@
               còn spoof được (401), và chạy headless-browser (Playwright) qua toàn bộ luồng — demo login → Overview
               đúng role, reload giữ session, logout xoá token, route bảo vệ chặn khi chưa đăng nhập, form
               email/password test cả sai lẫn đúng mật khẩu — 0 console error. 15 unit test mới cho token
-              sign/verify/tamper, password check, <code>requireAuth</code></td>
+              sign/verify/tamper, password check, <code>requireAuth</code>.<br /><br />
+              <strong>Re-verify 2026-08-05</strong> (đọc code thật + chạy lại test): claim JWT sign/verify, secret
+              handling, mật khẩu server-side, bỏ trust header, route protection, và 15 unit test — tất cả
+              <strong>đúng</strong>, 15/15 test pass. 2 điểm cần lưu ý: (1) <code>POST /api/auth/demo-login</code> cấp
+              token cho nút đăng nhập 1-click mà <strong>không</strong> check password — không phải lỗ hổng (vẫn ký
+              token thật) nhưng là exception chưa ghi chú trước đó; (2) claim test Playwright headless-browser
+              <strong>không verify được từ code</strong> — repo không có Playwright config/test file nào, nhiều khả
+              năng là lần chạy tay thủ công chưa được đưa vào regression test</td>
           </tr>
           <tr>
             <td>T-09</td>
             <td>Giới hạn Dev chỉ xem finding của chính mình — lọc <code>GET /api/audit/history</code> theo
               <code>userId</code> khi role là <code>developer</code></td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>3</td>
             <td><span class="priority-medium">Medium</span></td>
             <td>2026-08-08</td>
             <td>2026-08-09</td>
-            <td>Hiện <code>audit:view</code> trả toàn bộ lịch sử cho mọi role có quyền, không lọc theo người tạo</td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-05). Tách logic lọc/paginate thành hàm thuần
+              <code>selectAuditHistory()</code> trong <code>auditStore.ts</code> để test được mà không đụng file
+              <code>.guardian/audit-history.json</code> thật; route <code>audit.ts</code> chỉ truyền
+              <code>triggeredBy</code> khi <code>req.role === "developer"</code>. 10 unit test mới
+              (<code>auditStore.test.ts</code>, <code>audit.test.ts</code>) — toàn bộ 23 file/169 test của repo pass,
+              typecheck sạch</td>
           </tr>
           <tr>
             <td>T-10</td>
@@ -456,8 +468,9 @@
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-05 · T-14, T-15, T-16 (rebrand UI) done · gap analysis dựa trên code thật
-      (rbac.ts, authMiddleware.ts, policyStore.ts, bypass.ts)</footer>
+    <footer>Cập nhật lần cuối: 2026-08-05 · T-09 done (sớm hơn lịch) · T-14, T-15, T-16 (rebrand UI) done · T-08
+      re-verified (2 lưu ý, xem Notes) · gap analysis dựa trên code thật (rbac.ts, authMiddleware.ts, policyStore.ts,
+      bypass.ts)</footer>
   </div>
 </body>
 

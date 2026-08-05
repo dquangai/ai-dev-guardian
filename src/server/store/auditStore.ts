@@ -27,9 +27,14 @@ export function recordAudit(input: Omit<AuditRecord, "id" | "timestamp">): Audit
   return record;
 }
 
-export function listAuditHistory(limit?: number): AuditRecord[] {
-  const all = historyStore.readAll();
-  return limit ? all.slice(0, limit) : all;
+/** Pure filter/paginate step, split out from listAuditHistory so it's testable without touching the on-disk store. */
+export function selectAuditHistory(records: AuditRecord[], limit?: number, triggeredBy?: string): AuditRecord[] {
+  const filtered = triggeredBy ? records.filter((record) => record.triggeredBy === triggeredBy) : records;
+  return limit ? filtered.slice(0, limit) : filtered;
+}
+
+export function listAuditHistory(limit?: number, triggeredBy?: string): AuditRecord[] {
+  return selectAuditHistory(historyStore.readAll(), limit, triggeredBy);
 }
 
 export interface DashboardSummary {
