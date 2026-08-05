@@ -2,6 +2,8 @@
 
 # AI Dev Guardian
 
+[![npm version](https://img.shields.io/npm/v/ai-dev-guardian.svg)](https://www.npmjs.com/package/ai-dev-guardian)
+[![npm downloads](https://img.shields.io/npm/dm/ai-dev-guardian.svg)](https://www.npmjs.com/package/ai-dev-guardian)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
@@ -25,25 +27,30 @@ copy-paste-ready fix prompt.
 
 ## Install
 
+`ai-dev-guardian` is [published on npm](https://www.npmjs.com/package/ai-dev-guardian) — install it
+globally in whichever project you want to gate:
+
+```bash
+npm install -g ai-dev-guardian
+guardian install-hook
+guardian dashboard
+```
+
+Or run it without a global install via `npx`:
+
+```bash
+npx ai-dev-guardian install-hook
+npx ai-dev-guardian dashboard
+```
+
+### Development setup (working on Guardian itself)
+
+To build and run this repo's own source instead of the published package:
+
 ```bash
 npm install
 npm run build:all   # compiles the CLI/server (dist/) and builds the dashboard UI (web/dist)
-npm link             # exposes the `guardian` command globally from this checkout
-```
-
-### Using it in another project (before this is published to a registry)
-
-`ai-dev-guardian` isn't on an npm registry yet, so [`npm link`](https://docs.npmjs.com/cli/v10/commands/npm-link)
-is the fastest way to gate a *real* project with it today, without waiting on a publish decision:
-
-```bash
-# in this repo, once:
-npm run build:all && npm link
-
-# in the project you actually want to gate:
-npm link ai-dev-guardian
-npx guardian install-hook
-npx guardian dashboard
+npm link             # exposes the `guardian` command globally from this checkout, pointing at dist/
 ```
 
 `npm link` symlinks to this repo's `dist/`, not `src/` — re-run `npm run build:all` here after any
@@ -385,12 +392,12 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | RBAC + approval workflows | 4-role permission matrix, policy change requests, and bypass-request review — see [Web Dashboard](#web-dashboard) |
 | Single-command dashboard launch | `guardian dashboard` serves the built UI and the API on one port, once `web/dist` exists |
 | Real auth for the dashboard | Signed JWT sessions (`POST /api/auth/login`), verified server-side on every request — replaced the `x-guardian-role` header the client used to self-assert |
+| Published to npm | [`ai-dev-guardian`](https://www.npmjs.com/package/ai-dev-guardian) is installable via `npm install -g ai-dev-guardian` or `npx ai-dev-guardian` — no local checkout or `npm link` required |
 
 ### Planned
 
 | Feature | What it would look like |
 |---|---|
-| **Publish to a registry** | `ai-dev-guardian` isn't installable via `npm install` from any registry yet — only `npm link` from a local checkout (see [Using it in another project](#using-it-in-another-project-before-this-is-published-to-a-registry)). Needs a decision on public npm vs. a private registry before other projects can adopt it without cloning this repo |
 | **CI / GitHub Action gate** | A `guardian-action` that runs `runGuardianCheck` against a PR's diff and posts a comment, plus a git-versioned baseline artifact (mirroring the diff-hash cache but shared across a team instead of local `.git/`) so PRs don't re-pay for a diff a teammate already got `PASS`'d elsewhere |
 | **Architecture Rules policy category** | Policy-driven dependency-direction rules beyond circular-dependency detection — e.g. `forbid: ["src/core/** -> src/cli/**"]` in policy frontmatter, checked deterministically by reusing the same local-import extraction RAG-lite already does, no LLM call needed |
 | **Git Workflow policy category** | Branch naming, commit message format, merge-strategy rules — deterministic, checked against `diff`/git metadata rather than file content |
