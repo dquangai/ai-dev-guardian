@@ -1,0 +1,11 @@
+node_modules/
+web/node_modules/
+src/
+web/src/
+test/
+.env
+*.log
+.guardian/
+.github/
+.claude/
+docs/
