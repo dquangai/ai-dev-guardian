@@ -427,12 +427,22 @@
             <td>T-12</td>
             <td>QA thủ công toàn bộ dashboard trên browser theo từng role thật (Dev/Senior Dev-Lead/Auditor/Admin) — nút
               ẩn/hiện đúng role, toast đúng trạng thái</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>2</td>
             <td><span class="priority-medium">Medium</span></td>
             <td>2026-08-12</td>
             <td>2026-08-14</td>
-            <td>Chưa verify UI thật trên browser với 4 role, chỉ mới build/commit</td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-05). Verify thật bằng Playwright headless qua cả 4 role (demo-login
+              trên UI, không dùng token tay): sidebar nav đúng danh sách theo <code>navigation.ts</code> cho từng
+              role; nút "New Policy" chỉ admin thấy; editor Policy đúng 3 trạng thái theo permission ("Save Policy"
+              cho admin, "Submit for Approval" cho senior-dev, read-only cho developer/auditor); Policy/Bypass
+              Approvals Hub chỉ admin & senior-dev thấy và có nút Approve/Reject; Code Audit chỉ developer vào được,
+              nút "Launch Code Audit" enabled đúng; Engine Config chỉ admin có nút Save, auditor xem được nhưng
+              không sửa. Seed 1 bypass request + 1 policy change request thật qua API để test nút Approve, xác nhận
+              toast gitHint (T-10) hiện đúng text sau khi senior-dev approve (ảnh chụp xác nhận trực quan). 23/23
+              check thật pass (4 "FAIL" ban đầu là do <code>ERR_CERT_AUTHORITY_INVALID</code> — noise môi trường có
+              từ trước, không liên quan code app; 1 "FAIL" do chính script QA gọi <code>isVisible()</code> không có
+              polling — không phải bug thật, đã xác nhận lại bằng screenshot)</td>
           </tr>
           <tr>
             <td>T-13</td>
@@ -594,11 +604,11 @@
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-05 · T-11 done (sớm hơn lịch) — 57 integration test RBAC thật, tự verify bằng
-      mutation test · Thêm Roadmap Enterprise Security Hardening (R-1..R-7) · T-17, T-18 (metadata + notification
-      center) done, verify thật trên browser · T-09, T-10 done (sớm hơn lịch) · T-14, T-15, T-16 (rebrand UI) done ·
-      T-08 re-verified (2 lưu ý, xem Notes) · gap analysis dựa trên code thật (rbac.ts, authMiddleware.ts,
-      policyStore.ts, bypass.ts)</footer>
+    <footer>Cập nhật lần cuối: 2026-08-05 · T-11, T-12 done (sớm hơn lịch) — chỉ còn T-13 (milestone 15/08) · 57
+      integration test RBAC thật + QA 4 role bằng Playwright headless · Thêm Roadmap Enterprise Security Hardening
+      (R-1..R-7) · T-17, T-18 (metadata + notification center) done, verify thật trên browser · T-09, T-10 done (sớm
+      hơn lịch) · T-14, T-15, T-16 (rebrand UI) done · T-08 re-verified (2 lưu ý, xem Notes) · gap analysis dựa trên
+      code thật (rbac.ts, authMiddleware.ts, policyStore.ts, bypass.ts)</footer>
   </div>
 </body>
 
