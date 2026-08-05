@@ -32,7 +32,8 @@ auditRouter.post("/run", requirePermission("audit:run"), async (req, res) => {
 auditRouter.get("/history", requirePermission("audit:view"), (req, res) => {
   const limit =
     req.query.limit === undefined ? undefined : parseBoundedInt(req.query.limit, MAX_HISTORY_PAGE, MAX_HISTORY_PAGE);
-  res.json(listAuditHistory(limit));
+  const triggeredBy = req.role === "developer" ? req.userId : undefined;
+  res.json(listAuditHistory(limit, triggeredBy));
 });
 
 auditRouter.get("/cache", requirePermission("audit:view"), (_req, res) => {
