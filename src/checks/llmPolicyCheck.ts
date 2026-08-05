@@ -162,6 +162,12 @@ export interface LLMPolicyCheckDeps {
   resolveLLMClient: typeof resolveLLMClient;
   resolveJudgeClient: typeof resolveJudgeClient;
   cwd: string;
+  /** Called once per file whose LLM call throws (network error, invalid/expired API key, rate
+   * limit...) — lets the caller know this result is a fail-open skip, not a verified-clean pass,
+   * so it isn't mistakenly cached as one (see orchestrator.ts's cache-skip guard, which already
+   * does the same for "no provider configured" — this covers "provider configured but the call
+   * itself failed"). */
+  onLLMCheckError?: (file: string, error: unknown) => void;
 }
 
 /**
@@ -225,7 +231,21 @@ export async function checkPoliciesWithLLM(
 
       const prompt = buildPrompt(file, fileDiffText, fileContent, satelliteFiles, filePolicies);
       const policyIds = filePolicies.map((p) => p.id);
-      const rawViolations = await client.reportViolations(prompt, policyIds);
+
+      let rawViolations: RawViolation[];
+      try {
+        rawViolations = await client.reportViolations(prompt, policyIds);
+      } catch (error) {
+        // Fail-open: a network error, invalid/expired key, or rate limit here must not crash the
+        // whole check (it used to — this file's LLM result is skipped, other files/checks still
+        // run). onLLMCheckError tells the caller not to trust the overall verdict as fully
+        // LLM-verified (see the cache-skip guard this feeds in orchestrator.ts).
+        console.error(
+          `[guardian] LLM policy check lỗi cho file ${file} — bỏ qua LLM check cho file này (fail-open, KHÔNG tính là đã verify sạch). Lỗi: ${error instanceof Error ? error.message : error}`
+        );
+        deps.onLLMCheckError?.(file, error);
+        return [];
+      }
 
       // Self-consistency re-check: a `critical` verdict blocks the push, so
       // before trusting one, ask the same question again and only keep it if
@@ -234,8 +254,19 @@ export async function checkPoliciesWithLLM(
       // critical findings) still costs exactly one call.
       let confirmedCriticalPolicyIds: Set<string> | null = null;
       if (rawViolations.some((v) => v.riskLevel === CRITICAL_RISK_LEVEL)) {
-        const secondPass = await client.reportViolations(prompt, policyIds);
-        confirmedCriticalPolicyIds = new Set(secondPass.map((v) => v.policyId));
+        try {
+          const secondPass = await client.reportViolations(prompt, policyIds);
+          confirmedCriticalPolicyIds = new Set(secondPass.map((v) => v.policyId));
+        } catch (error) {
+          // Can't confirm — fail-safe: treat as "none confirmed" so the unconfirmed critical
+          // violation(s) get dropped below, same as a real self-consistency disagreement. Still
+          // signals degraded so a resulting empty violation list isn't cached as verified-clean.
+          console.error(
+            `[guardian] Lượt xác nhận thứ 2 (critical) lỗi cho file ${file} — bỏ qua vi phạm critical chưa xác nhận được. Lỗi: ${error instanceof Error ? error.message : error}`
+          );
+          deps.onLLMCheckError?.(file, error);
+          confirmedCriticalPolicyIds = new Set();
+        }
       }
 
       const survivors: { violation: Violation; raw: RawViolation }[] = [];
