@@ -19,6 +19,11 @@ export interface Policy {
   tags: string[]
   body: string
   raw: string
+  /** Auto-managed metadata (T-17), absent on policies never saved through the dashboard. */
+  version?: number
+  lastUpdated?: string
+  updatedBy?: string
+  changeSummary?: string
 }
 
 export type ChangeRequestAction = 'create' | 'update' | 'delete'
@@ -29,12 +34,25 @@ export interface PolicyChangeRequest {
   policyId: string
   action: ChangeRequestAction
   content?: string
+  changeSummary?: string
   submittedBy: string
   submittedAt: string
   status: ChangeRequestStatus
   reviewedBy?: string
   reviewedAt?: string
   reviewNote?: string
+  /** Present when this response just wrote/deleted a policy file — no auto commit/push (T-10). */
+  gitHint?: string
+}
+
+/** T-18: one row per policy from GET /api/notifications/policies, unread relative to the caller. */
+export interface PolicyNotification {
+  id: string
+  version: number
+  lastUpdated?: string
+  updatedBy?: string
+  changeSummary?: string
+  unread: boolean
 }
 
 export interface AuditRecord {

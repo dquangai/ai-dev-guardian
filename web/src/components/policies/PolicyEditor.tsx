@@ -28,13 +28,19 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
   const { can } = useAuth()
   const [id, setId] = useState('')
   const [raw, setRaw] = useState('')
+  const [changeSummary, setChangeSummary] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // Keyed on policy?.id (not the policy object itself) so a post-save refetch — which hands
+  // down a new object for the *same* policy — doesn't wipe the just-set success status/summary
+  // before the user can read it. Only an actual switch to a different policy (or isNew toggle)
+  // should reset the form.
   useEffect(() => {
     setError(null)
     setStatus(null)
+    setChangeSummary('')
     if (isNew) {
       setId('new-policy.policy.md')
       setRaw(NEW_POLICY_TEMPLATE)
@@ -42,7 +48,8 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
       setId(policy.id)
       setRaw(policy.raw)
     }
-  }, [policy, isNew])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [policy?.id, isNew])
 
   if (!policy && !isNew) {
     return (
@@ -62,11 +69,11 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
     setStatus(null)
     try {
       const result = isNew
-        ? await api.post<{ status: string }>('/policies', { id, content: raw })
-        : await api.put<{ status: string }>(`/policies/${id}`, { content: raw })
+        ? await api.post<{ status: string; gitHint?: string }>('/policies', { id, content: raw, changeSummary })
+        : await api.put<{ status: string; gitHint?: string }>(`/policies/${id}`, { content: raw, changeSummary })
       setStatus(
         result.status === 'applied'
-          ? 'Saved directly to .guardian/policies — now Active.'
+          ? `Saved directly to .guardian/policies — now Active. ${result.gitHint ?? ''}`
           : 'Submitted for Lead approval — status: Pending Approval.'
       )
       onSaved()
@@ -83,9 +90,9 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
     setBusy(true)
     setError(null)
     try {
-      const result = await api.delete<{ status: string }>(`/policies/${policy.id}`)
+      const result = await api.delete<{ status: string; gitHint?: string }>(`/policies/${policy.id}`)
       setStatus(
-        result.status === 'applied' ? 'Deleted.' : 'Delete submitted for approval.'
+        result.status === 'applied' ? `Deleted. ${result.gitHint ?? ''}` : 'Delete submitted for approval.'
       )
       onDeleted()
     } catch (err) {
@@ -118,6 +125,24 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
           </button>
         )}
       </div>
+
+      {!isNew && policy?.version !== undefined && (
+        <p className="mb-3 text-xs text-gray-400">
+          v{policy.version}
+          {policy.updatedBy ? ` · updated by ${policy.updatedBy}` : ''}
+          {policy.lastUpdated ? ` · ${new Date(policy.lastUpdated).toLocaleString()}` : ''}
+          {policy.changeSummary ? ` · "${policy.changeSummary}"` : ''}
+        </p>
+      )}
+
+      {!readOnly && (
+        <input
+          value={changeSummary}
+          onChange={(e) => setChangeSummary(e.target.value)}
+          placeholder="What changed? (shown to everyone on the notification bell)"
+          className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:border-blue-400 focus:outline-none"
+        />
+      )}
 
       <textarea
         value={raw}

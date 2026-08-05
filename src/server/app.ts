@@ -9,6 +9,7 @@ import { bypassRouter } from "./routes/bypass";
 import { dashboardRouter } from "./routes/dashboard";
 import { engineConfigRouter } from "./routes/engineConfig";
 import { meRouter } from "./routes/me";
+import { notificationsRouter } from "./routes/notifications";
 import { policiesRouter } from "./routes/policies";
 import { systemRouter } from "./routes/system";
 
@@ -28,6 +29,7 @@ export function createApp(): Express {
   app.use("/api/me", meRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/policies", policiesRouter);
+  app.use("/api/notifications", notificationsRouter);
   app.use("/api/audit", auditRouter);
   app.use("/api/bypass-requests", bypassRouter);
   app.use("/api/system", systemRouter);

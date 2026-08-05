@@ -4,6 +4,7 @@ import { hasPermission } from "../rbac";
 import {
   deletePolicyFile,
   getPolicy,
+  gitSyncHint,
   listChangeRequests,
   listPolicies,
   resolveChangeRequest,
@@ -45,6 +46,7 @@ function submitOrApply(action: "create" | "update") {
   return (req: import("express").Request, res: import("express").Response) => {
     const id = req.params.id ?? req.body.id;
     const content = req.body.content as string | undefined;
+    const changeSummary = req.body.changeSummary as string | undefined;
     if (!isSafeId(id) || typeof content !== "string") {
       res.status(400).json({ error: "bad_request", message: "id and content are required." });
       return;
@@ -52,8 +54,8 @@ function submitOrApply(action: "create" | "update") {
 
     try {
       if (hasPermission(req.role, "policy:edit-direct")) {
-        writePolicyFile(id, content);
-        res.json({ status: "applied", policy: getPolicy(id) });
+        writePolicyFile(id, content, { updatedBy: req.userId, changeSummary });
+        res.json({ status: "applied", policy: getPolicy(id), gitHint: gitSyncHint(id, "write") });
         return;
       }
       if (!hasPermission(req.role, "policy:propose")) {
@@ -67,6 +69,7 @@ function submitOrApply(action: "create" | "update") {
         policyId: id,
         action,
         content,
+        changeSummary,
         submittedBy: req.userId,
       });
       res.status(202).json({ status: "pending-approval", request });
@@ -87,7 +90,7 @@ policiesRouter.delete("/:id", (req, res) => {
   }
   if (hasPermission(req.role, "policy:edit-direct")) {
     deletePolicyFile(id);
-    res.json({ status: "applied" });
+    res.json({ status: "applied", gitHint: gitSyncHint(id, "delete") });
     return;
   }
   if (!hasPermission(req.role, "policy:propose")) {
@@ -108,7 +111,8 @@ policiesRouter.post("/requests/:id/approve", requirePermission("policy:approve")
   }
   try {
     const request = resolveChangeRequest(req.params.id, "approved", req.userId, req.body?.note);
-    res.json(request);
+    const gitHint = gitSyncHint(request.policyId, request.action === "delete" ? "delete" : "write");
+    res.json({ ...request, gitHint });
   } catch (error) {
     res.status(400).json({ error: "invalid", message: (error as Error).message });
   }

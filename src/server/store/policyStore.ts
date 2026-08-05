@@ -8,6 +8,11 @@ import { JsonArrayStore } from "./jsonStore";
 export interface PolicyWithSource extends Policy {
   /** Raw markdown (frontmatter + body) as stored on disk, for the editor. */
   raw: string;
+  /** Auto-managed metadata (T-17), absent on policies never written through writePolicyFile(). */
+  version?: number;
+  lastUpdated?: string;
+  updatedBy?: string;
+  changeSummary?: string;
 }
 
 export type ChangeRequestAction = "create" | "update" | "delete";
@@ -19,6 +24,8 @@ export interface PolicyChangeRequest {
   action: ChangeRequestAction;
   /** Full raw markdown to write on approval. Absent for "delete". */
   content?: string;
+  /** T-17: human-readable summary of what changed, carried onto the policy's frontmatter on approval. */
+  changeSummary?: string;
   submittedBy: string;
   submittedAt: string;
   status: ChangeRequestStatus;
@@ -34,11 +41,23 @@ function policyPath(id: string): string {
   return path.join(DEFAULT_POLICY_DIR, id);
 }
 
+/** Reads the T-17 auto-managed fields back out of frontmatter; absent/malformed values are left undefined
+ * rather than defaulted, so callers can tell "never written through writePolicyFile()" from "version 1". */
+function parseMetadata(raw: string): Pick<PolicyWithSource, "version" | "lastUpdated" | "updatedBy" | "changeSummary"> {
+  const { data } = matter(raw);
+  return {
+    version: typeof data.version === "number" ? data.version : undefined,
+    lastUpdated: typeof data.lastUpdated === "string" ? data.lastUpdated : undefined,
+    updatedBy: typeof data.updatedBy === "string" ? data.updatedBy : undefined,
+    changeSummary: typeof data.changeSummary === "string" ? data.changeSummary : undefined,
+  };
+}
+
 export function listPolicies(): PolicyWithSource[] {
-  return loadPolicies().map((policy) => ({
-    ...policy,
-    raw: fs.readFileSync(policyPath(policy.id), "utf-8"),
-  }));
+  return loadPolicies().map((policy) => {
+    const raw = fs.readFileSync(policyPath(policy.id), "utf-8");
+    return { ...policy, raw, ...parseMetadata(raw) };
+  });
 }
 
 export function getPolicy(id: string): PolicyWithSource | null {
@@ -47,7 +66,7 @@ export function getPolicy(id: string): PolicyWithSource | null {
   const raw = fs.readFileSync(filePath, "utf-8");
   const policy = loadPolicies().find((p) => p.id === id);
   if (!policy) return null;
-  return { ...policy, raw };
+  return { ...policy, raw, ...parseMetadata(raw) };
 }
 
 /** Validates that raw markdown at least parses as frontmatter + body before it ever touches disk. */
@@ -63,18 +82,57 @@ function isSafePolicyId(id: string): boolean {
   return /^[\w.-]+\.policy\.md$/.test(id);
 }
 
-export function writePolicyFile(id: string, raw: string): void {
+export interface PolicyWriteMeta {
+  /** Who authored this content — the direct editor, or the original change-request submitter on approval. */
+  updatedBy: string;
+  changeSummary?: string;
+}
+
+/** Pure step, split out from writePolicyFile so version-bump/metadata-injection is testable without disk I/O. */
+export function buildPolicyFileContent(raw: string, previousVersion: number | undefined, meta: PolicyWriteMeta): string {
+  const { data, content } = matter(raw);
+  return matter.stringify(
+    content,
+    {
+      ...data,
+      version: (previousVersion ?? 0) + 1,
+      lastUpdated: new Date().toISOString(),
+      updatedBy: meta.updatedBy,
+      changeSummary: meta.changeSummary ?? "",
+    },
+    // js-yaml re-serializes the *entire* frontmatter on every write; lineWidth: -1 stops it from
+    // re-wrapping long scalar strings (e.g. rule descriptions) into folded block scalars, which
+    // would otherwise turn a one-field metadata bump into a large, unrelated-looking diff.
+    // gray-matter's .d.ts omits js-yaml passthrough options even though its own docs say they're
+    // forwarded — cast is for the type gap, not a runtime workaround.
+    { lineWidth: -1 } as Parameters<typeof matter.stringify>[2]
+  );
+}
+
+export function writePolicyFile(id: string, raw: string, meta: PolicyWriteMeta): void {
   if (!isSafePolicyId(id)) {
     throw new Error('Policy id must look like "name.policy.md" (letters, digits, - and _ only).');
   }
   assertValidPolicyContent(raw);
   fs.mkdirSync(DEFAULT_POLICY_DIR, { recursive: true });
-  fs.writeFileSync(policyPath(id), raw, "utf-8");
+
+  const filePath = policyPath(id);
+  const previousVersion = fs.existsSync(filePath) ? parseMetadata(fs.readFileSync(filePath, "utf-8")).version : undefined;
+  fs.writeFileSync(filePath, buildPolicyFileContent(raw, previousVersion, meta), "utf-8");
 }
 
 export function deletePolicyFile(id: string): void {
   const filePath = policyPath(id);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+}
+
+/** T-10: writes only ever touch the local filesystem — no auto commit/push (see docs/sprint-plan.html).
+ * Callers surface this hint to the client so a human commits the change themselves. */
+export function gitSyncHint(id: string, action: "write" | "delete"): string {
+  const filePath = policyPath(id);
+  const gitCmd = action === "delete" ? `git rm ${filePath}` : `git add ${filePath}`;
+  const verb = action === "delete" ? "remove" : "update";
+  return `Đã ${action === "delete" ? "xoá" : "ghi"} ${filePath} cục bộ — CHƯA commit/push. Chạy thủ công: ${gitCmd} && git commit -m "policy: ${verb} ${id}" && git push`;
 }
 
 export function listChangeRequests(status?: ChangeRequestStatus): PolicyChangeRequest[] {
@@ -117,7 +175,12 @@ export function resolveChangeRequest(
 
   if (decision === "approved") {
     if (request.action === "delete") deletePolicyFile(request.policyId);
-    else if (request.content) writePolicyFile(request.policyId, request.content);
+    else if (request.content) {
+      writePolicyFile(request.policyId, request.content, {
+        updatedBy: request.submittedBy,
+        changeSummary: request.changeSummary,
+      });
+    }
   }
 
   requestStore.writeAll(all);

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useApi } from '../lib/useApi'
-import type { Policy } from '../lib/types'
+import type { Policy, PolicyNotification } from '../lib/types'
 import { StatusPill, severityVariant } from '../components/ui/StatusPill'
 import { PolicyEditor } from '../components/policies/PolicyEditor'
 import { useAuth } from '../context/AuthContext'
@@ -9,8 +9,11 @@ import { useAuth } from '../context/AuthContext'
 export function Policies() {
   const { can } = useAuth()
   const { data: policies, refetch: refetchPolicies } = useApi<Policy[]>('/policies')
+  const { data: notifications } = useApi<PolicyNotification[]>('/notifications/policies')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creatingNew, setCreatingNew] = useState(false)
+
+  const unreadIds = new Set((notifications ?? []).filter((n) => n.unread).map((n) => n.id))
 
   const selected = policies?.find((p) => p.id === selectedId) ?? null
 
@@ -52,7 +55,10 @@ export function Policies() {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900">{p.id}</span>
+                  <span className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                    {p.id}
+                    {unreadIds.has(p.id) && <StatusPill variant="green">New</StatusPill>}
+                  </span>
                   <StatusPill variant={severityVariant(p.severity)}>{p.severity}</StatusPill>
                 </div>
                 <p className="mt-1 text-xs text-gray-500">{p.category}</p>

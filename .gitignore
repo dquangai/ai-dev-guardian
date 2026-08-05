@@ -12,3 +12,4 @@ web/dist/
 .guardian/policy-requests.json
 .guardian/bypass-requests.json
 .guardian/engine-config.json
+.guardian/policy-reads.json
