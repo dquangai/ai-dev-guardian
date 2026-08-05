@@ -352,6 +352,118 @@ describe("checkPoliciesWithLLM", () => {
     });
   });
 
+  describe("graceful degrade khi LLM call lỗi (network/API key invalid) — không được crash", () => {
+    const CRITICAL_DIFF: DiffResult = {
+      diffText: "diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1,1 +1,1 @@\n-a\n+b",
+      changedFiles: ["x.ts"],
+    };
+
+    it("lỗi ở lượt gọi đầu tiên: không throw ra ngoài, trả về [] cho file đó, báo onLLMCheckError", async () => {
+      const client: LLMClient = {
+        async reportViolations() {
+          throw new Error("401 Incorrect API key provided");
+        },
+        async judgeClaims() {
+          throw new Error("should not be called");
+        },
+      };
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const onLLMCheckError = vi.fn();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const violations = await checkPoliciesWithLLM(CRITICAL_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+        onLLMCheckError,
+      });
+
+      expect(violations).toEqual([]);
+      expect(onLLMCheckError).toHaveBeenCalledWith("x.ts", expect.any(Error));
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("1 file lỗi không làm mất vi phạm hợp lệ của file khác trong cùng lượt chạy", async () => {
+      const policyGlobal = makePolicy({ id: "global.md", scope: [] });
+      const diff = twoFileDiff("a.ts", "b.ts");
+      const client: LLMClient = {
+        async reportViolations(prompt) {
+          if (prompt.includes('"a.ts"')) throw new Error("network timeout");
+          return [
+            {
+              reasoning: "thật",
+              errorWhat: "lỗi thật ở file b",
+              policyId: "global.md",
+              riskLevel: "low",
+              why: "vì",
+              howToFix: "sửa",
+              evidenceSnippet: "new-b",
+            },
+          ];
+        },
+        async judgeClaims() {
+          throw new Error("should not be called");
+        },
+      };
+      const onLLMCheckError = vi.fn();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const violations = await checkPoliciesWithLLM(diff, [policyGlobal], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+        onLLMCheckError,
+      });
+
+      expect(violations).toHaveLength(1);
+      expect(violations[0].location).toBe("b.ts");
+      expect(onLLMCheckError).toHaveBeenCalledWith("a.ts", expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("lỗi ở lượt xác nhận thứ 2 (critical): bỏ vi phạm chưa xác nhận được, vẫn báo onLLMCheckError, không throw", async () => {
+      const policy = makePolicy({ id: "sec.md", severity: "critical", scope: [] });
+      let callCount = 0;
+      const client: LLMClient = {
+        async reportViolations() {
+          callCount += 1;
+          if (callCount === 1) {
+            return [
+              {
+                reasoning: "phát hiện secret hardcode",
+                errorWhat: "hardcode secret",
+                policyId: "sec.md",
+                riskLevel: "critical",
+                why: "lộ secret",
+                howToFix: "dùng biến môi trường",
+                evidenceSnippet: "b",
+              },
+            ];
+          }
+          throw new Error("rate limited on second pass");
+        },
+        async judgeClaims() {
+          throw new Error("should not be called");
+        },
+      };
+      const onLLMCheckError = vi.fn();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const violations = await checkPoliciesWithLLM(CRITICAL_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+        onLLMCheckError,
+      });
+
+      expect(callCount).toBe(2);
+      expect(violations).toEqual([]);
+      expect(onLLMCheckError).toHaveBeenCalledWith("x.ts", expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
   describe("judge pass (LLM-as-a-judge, xác minh độc lập sau grounding)", () => {
     const JUDGE_DIFF: DiffResult = {
       diffText: "diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1,1 +1,1 @@\n-a\n+b",

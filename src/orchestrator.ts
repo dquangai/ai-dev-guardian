@@ -71,12 +71,21 @@ export async function runGuardianCheck(
   const diffHash = hashDiffText(filteredDiff.diffText);
   const cacheHit = _readCache()?.passedDiffHashes.includes(diffHash) ?? false;
 
+  // Set by onLLMCheckError below if any file's LLM call throws (network error, invalid/expired
+  // key, rate limit...) — a PASS built on a degraded LLM check must not be cached as verified-clean
+  // (see the caching guard further down), same reasoning as llmCheckSkippedForMissingProvider.
+  let llmCheckDegraded = false;
+
   const runLLMCheck = async (): Promise<Violation[]> => {
     if (cacheHit) {
       console.log("[guardian] Bỏ qua quét AI: Không có thay đổi nào kể từ lần quét (PASS) trước.");
       return [];
     }
-    return _checkPoliciesWithLLM(filteredDiff, matchedPolicies);
+    return _checkPoliciesWithLLM(filteredDiff, matchedPolicies, {
+      onLLMCheckError: () => {
+        llmCheckDegraded = true;
+      },
+    });
   };
 
   const [
@@ -114,7 +123,7 @@ export async function runGuardianCheck(
   const llmCheckSkippedForMissingProvider = !cacheHit && _resolveLLMClient() === null;
 
   // Only cache a clean result — a BLOCK must always be re-scanned after a fix.
-  if (verdict === "PASS" && !llmCheckSkippedForMissingProvider) {
+  if (verdict === "PASS" && !llmCheckSkippedForMissingProvider && !llmCheckDegraded) {
     _writeCache(diffHash);
   }
 
