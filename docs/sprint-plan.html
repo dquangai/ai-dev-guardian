@@ -239,7 +239,8 @@
     <h1>Sprint Plan</h1>
 
     <div class="info-grid">
-      <div class="info-cell"><span class="label">Current Sprint:</span><span class="value">Sprint 2</span></div>
+      <div class="info-cell"><span class="label">Current Sprint:</span><span class="value">Sprint 2 —
+          <span class="badge status-done" style="text-transform: none">Goal Achieved 🎯</span></span></div>
       <div class="info-cell"><span class="label">Sprint Goal:</span><span class="value">Hoàn thành bản Web Dashboard
           thực tế: RBAC 4 role chặt chẽ (Dev/Senior Dev-Lead/Auditor/Admin), auth thật thay header giả, tích hợp duyệt
           bypass/policy, có test chống vượt quyền</span></div>
@@ -448,12 +449,21 @@
             <td>T-13</td>
             <td>🎯 Deadline: bàn giao bản Web Dashboard hoàn chỉnh — RBAC 4 role chặt chẽ, auth thật, approval workflow
               đồng bộ, có test</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>—</td>
             <td><span class="priority-high">High</span></td>
             <td>2026-08-15</td>
             <td>2026-08-15</td>
-            <td>Milestone của Sprint Goal</td>
+            <td>Đạt sớm hơn lịch 10 ngày (hoàn thành 2026-08-05). Toàn bộ T-01→T-12 Done, cả 4 tiêu chí Sprint Goal đều
+              có bằng chứng cụ thể: <strong>RBAC 4 role chặt chẽ</strong> (rbac.ts, gate qua requirePermission — T-02,
+              T-07); <strong>auth thật</strong> thay header giả (JWT sign/verify — T-08, re-verified); <strong>tích
+              hợp duyệt bypass/policy</strong> (workflow đầy đủ approve/reject — T-05, T-06, T-10); <strong>có test
+              chống vượt quyền</strong> (57 integration test route-level thật với JWT thật — T-11, tự verify bằng
+              mutation test) + QA thủ công xác nhận UI đúng trên cả 4 role bằng Playwright (T-12). Final
+              release-candidate check trước khi đóng milestone: 27 file/243 test pass, <code>npm run build</code>
+              (tsc) sạch, web typecheck sạch, lint sạch (chỉ còn vài warning fast-refresh không liên quan). Roadmap
+              Enterprise Security Hardening (R-1..R-7) đã tách riêng cho giai đoạn tiếp theo, không chặn milestone
+              này</td>
           </tr>
           <tr>
             <td>T-14</td>
@@ -604,11 +614,11 @@
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-05 · T-11, T-12 done (sớm hơn lịch) — chỉ còn T-13 (milestone 15/08) · 57
-      integration test RBAC thật + QA 4 role bằng Playwright headless · Thêm Roadmap Enterprise Security Hardening
-      (R-1..R-7) · T-17, T-18 (metadata + notification center) done, verify thật trên browser · T-09, T-10 done (sớm
-      hơn lịch) · T-14, T-15, T-16 (rebrand UI) done · T-08 re-verified (2 lưu ý, xem Notes) · gap analysis dựa trên
-      code thật (rbac.ts, authMiddleware.ts, policyStore.ts, bypass.ts)</footer>
+    <footer>Cập nhật lần cuối: 2026-08-05 · 🎯 <strong>T-13 Sprint Goal ĐẠT — sớm hơn lịch 10 ngày</strong> (T-01→T-12
+      Done, 243 test pass, build/typecheck/lint sạch) · Roadmap Enterprise Security Hardening (R-1..R-7) cho giai
+      đoạn tiếp theo · T-17, T-18 (metadata + notification center), T-11 (57 integration test RBAC), T-12 (QA 4 role
+      bằng Playwright) · T-08 re-verified (2 lưu ý, xem Notes) · gap analysis dựa trên code thật (rbac.ts,
+      authMiddleware.ts, policyStore.ts, bypass.ts)</footer>
   </div>
 </body>
 
