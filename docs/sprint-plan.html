@@ -4,64 +4,103 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sprint Plan</title>
+  <title>Sprint Plan - AI Dev Guardian | VinSmart Future</title>
+  <!-- Google Fonts: Inter (Đơn giản, Phổ biến, Hiện đại) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 2rem 1.5rem 4rem;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    h1, h2, h3, h4, h5, h6, .brand-title h1, .board-title, thead th {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
     :root {
       color-scheme: light dark;
-      --bg: #ffffff;
-      --fg: #1a1a1a;
-      --muted: #6b7280;
-      --border: #d7dbe3;
-      --header-bg: #3b5aa6;
-      --header-fg: #ffffff;
-      --info-bg: #e6eaf5;
-      --row-alt: #f7f8fb;
-      --accent: #2955c7;
-      --status-todo: #9ca3af;
-      --status-progress: #d97706;
-      --status-done: #16a34a;
-      --status-blocked: #dc2626;
-      --priority-high: #dc2626;
-      --priority-medium: #d97706;
-      --priority-low: #16a34a;
+      --vsf-red: #C8102E;
+      --vsf-red-dark: #9B0B21;
+      --vsf-red-light: #FFF0F2;
+      --vsf-red-border: #FFCCD3;
+      
+      --bg: #F8F9FA;
+      --card-bg: #FFFFFF;
+      --fg: #1A1D20;
+      --muted: #6C757D;
+      --border: #E9ECEF;
+      --header-bg: linear-gradient(135deg, #C8102E 0%, #9B0B21 100%);
+      --header-fg: #FFFFFF;
+      --info-bg: #FFFFFF;
+      --row-alt: #FFFBFB;
+      --accent: #C8102E;
+
+      --status-todo: #6C757D;
+      --status-progress: #D97706;
+      --status-done: #10B981;
+      --status-blocked: #C8102E;
+
+      --priority-high: #C8102E;
+      --priority-medium: #D97706;
+      --priority-low: #10B981;
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #14171f;
-        --fg: #e8eaf0;
-        --muted: #9aa2b1;
-        --border: #2c3140;
-        --header-bg: #2c4180;
-        --header-fg: #f0f2f8;
-        --info-bg: #1c2233;
-        --row-alt: #191d29;
-        --accent: #7fa1ff;
+        --bg: #121417;
+        --card-bg: #1A1D21;
+        --fg: #F8F9FA;
+        --muted: #9CA3AF;
+        --border: #2D3238;
+        --header-bg: linear-gradient(135deg, #A00C24 0%, #680716 100%);
+        --header-fg: #FFFFFF;
+        --info-bg: #1A1D21;
+        --row-alt: #16181C;
+        --accent: #FF4D6D;
+        --vsf-red-light: #2A1216;
+        --vsf-red-border: #4A1A21;
       }
     }
 
     :root[data-theme="dark"] {
-      --bg: #14171f;
-      --fg: #e8eaf0;
-      --muted: #9aa2b1;
-      --border: #2c3140;
-      --header-bg: #2c4180;
-      --header-fg: #f0f2f8;
-      --info-bg: #1c2233;
-      --row-alt: #191d29;
-      --accent: #7fa1ff;
+      --bg: #121417;
+      --card-bg: #1A1D21;
+      --fg: #F8F9FA;
+      --muted: #9CA3AF;
+      --border: #2D3238;
+      --header-bg: linear-gradient(135deg, #A00C24 0%, #680716 100%);
+      --header-fg: #FFFFFF;
+      --info-bg: #1A1D21;
+      --row-alt: #16181C;
+      --accent: #FF4D6D;
+      --vsf-red-light: #2A1216;
+      --vsf-red-border: #4A1A21;
     }
 
     :root[data-theme="light"] {
-      --bg: #ffffff;
-      --fg: #1a1a1a;
-      --muted: #6b7280;
-      --border: #d7dbe3;
-      --header-bg: #3b5aa6;
-      --header-fg: #ffffff;
-      --info-bg: #e6eaf5;
-      --row-alt: #f7f8fb;
-      --accent: #2955c7;
+      --bg: #F8F9FA;
+      --card-bg: #FFFFFF;
+      --fg: #1A1D20;
+      --muted: #6C757D;
+      --border: #E9ECEF;
+      --header-bg: linear-gradient(135deg, #C8102E 0%, #9B0B21 100%);
+      --header-fg: #FFFFFF;
+      --info-bg: #FFFFFF;
+      --row-alt: #FFFBFB;
+      --accent: #C8102E;
+      --vsf-red-light: #FFF0F2;
+      --vsf-red-border: #FFCCD3;
     }
 
     * {
@@ -70,49 +109,124 @@
 
     body {
       margin: 0;
-      padding: 2rem 1.25rem 4rem;
+      padding: 2rem 1.5rem 4rem;
       background: var(--bg);
       color: var(--fg);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
     .wrap {
-      max-width: 1100px;
+      max-width: 1240px;
       margin: 0 auto;
     }
 
-    h1 {
-      font-size: 1.4rem;
-      margin: 0 0 1.25rem;
+    .brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 1.25rem 1.75rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      border-left: 6px solid var(--vsf-red);
+      box-shadow: 0 4px 14px rgba(200, 16, 46, 0.06);
+      margin-bottom: 1.5rem;
+    }
+
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .brand-title h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--fg);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+
+    .brand-title .company-tag {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--vsf-red);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .author-badge {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--vsf-red-light);
+      border: 1px solid var(--vsf-red-border);
+      padding: 0.65rem 1.25rem;
+      border-radius: 10px;
+    }
+
+    .author-avatar {
+      width: 42px;
+      height: 42px;
+      background: var(--vsf-red);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      box-shadow: 0 3px 8px rgba(200, 16, 46, 0.3);
+    }
+
+    .author-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .author-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--fg);
+    }
+
+    .author-role {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--vsf-red);
     }
 
     .info-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      margin-bottom: 1.5rem;
+      gap: 12px;
+      margin-bottom: 1.75rem;
     }
 
     .info-cell {
-      background: var(--info-bg);
-      padding: 0.65rem 1rem;
+      background: var(--card-bg);
+      padding: 0.85rem 1.25rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
       display: flex;
-      gap: 0.5rem;
+      gap: 0.75rem;
       align-items: baseline;
       font-size: 0.92rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     }
 
     .info-cell .label {
-      font-weight: 600;
+      font-weight: 700;
       white-space: nowrap;
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     .info-cell .value {
-      color: var(--accent);
+      color: var(--fg);
       font-weight: 600;
     }
 
@@ -123,38 +237,46 @@
     }
 
     .board-title {
-      text-align: center;
+      text-align: left;
       font-weight: 700;
-      letter-spacing: 0.03em;
-      background: var(--info-bg);
-      border: 1px solid var(--border);
-      border-bottom: none;
-      border-radius: 8px 8px 0 0;
-      padding: 0.5rem;
-      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      background: var(--header-bg);
+      color: var(--header-fg);
+      border-radius: 10px 10px 0 0;
+      padding: 0.85rem 1.25rem;
+      font-size: 1.15rem;
+      text-transform: uppercase;
+      box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
+      border-bottom: 3px solid var(--vsf-red-dark);
     }
 
     .table-scroll {
       overflow-x: auto;
       border: 1px solid var(--border);
-      border-radius: 0 0 8px 8px;
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      background: var(--card-bg);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.03);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 820px;
-      font-size: 0.9rem;
+      min-width: 880px;
+      font-size: 0.88rem;
     }
 
     thead th {
       background: var(--header-bg);
-      color: var(--header-fg);
+      color: #FFFFFF;
       text-align: left;
-      padding: 0.6rem 0.75rem;
+      padding: 0.75rem 0.85rem;
       font-weight: 600;
       white-space: nowrap;
       border-right: 1px solid rgba(255, 255, 255, 0.15);
+      font-family: "Cormorant Garamond", serif;
+      font-size: 1.05rem;
+      letter-spacing: 0.02em;
     }
 
     thead th:last-child {
@@ -162,7 +284,7 @@
     }
 
     tbody td {
-      padding: 0.6rem 0.75rem;
+      padding: 0.7rem 0.85rem;
       border-top: 1px solid var(--border);
       border-right: 1px solid var(--border);
       vertical-align: top;
@@ -177,16 +299,20 @@
     }
 
     tbody tr:hover {
-      background: var(--info-bg);
+      background: rgba(10, 37, 64, 0.03);
     }
 
+    /* Ép nút Badge Status nằm trên 1 hàng duy nhất (white-space: nowrap) */
     .badge {
       display: inline-block;
-      padding: 0.15rem 0.55rem;
+      padding: 0.25rem 0.65rem;
       border-radius: 999px;
       font-size: 0.78rem;
-      font-weight: 600;
+      font-weight: 700;
       color: #fff;
+      white-space: nowrap;
+      word-break: keep-all;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }
 
     .status-todo {
@@ -236,16 +362,28 @@
 
 <body>
   <div class="wrap">
-    <h1>Sprint Plan</h1>
+    <!-- VinSmart Future Header -->
+    <div class="brand-header">
+      <div class="brand-title">
+        <span class="company-tag">VinSmart Future</span>
+        <h1>AI Dev Guardian — Sprint Plan</h1>
+      </div>
+      <div class="author-badge">
+        <div class="author-avatar">Q</div>
+        <div class="author-info">
+          <span class="author-name">Đoàn Minh Quang</span>
+          <span class="author-role">Thực Tập Sinh AI</span>
+        </div>
+      </div>
+    </div>
 
     <div class="info-grid">
-      <div class="info-cell"><span class="label">Current Sprint:</span><span class="value">Sprint 2 —
-          <span class="badge status-done" style="text-transform: none">Goal Achieved 🎯</span></span></div>
-      <div class="info-cell"><span class="label">Sprint Goal:</span><span class="value">Hoàn thành bản Web Dashboard
-          thực tế: RBAC 4 role chặt chẽ (Dev/Senior Dev-Lead/Auditor/Admin), auth thật thay header giả, tích hợp duyệt
-          bypass/policy, có test chống vượt quyền</span></div>
-      <div class="info-cell"><span class="label">Sprint Start:</span><span class="value">2026-08-04</span></div>
-      <div class="info-cell"><span class="label">Sprint End:</span><span class="value">2026-08-15</span></div>
+      <div class="info-cell"><span class="label">Current Sprint:</span><span class="value">Sprint 3</span></div>
+      <div class="info-cell"><span class="label">Sprint Goal:</span><span class="value">Multi-Team Authorization
+          bằng OpenFGA (ReBAC/Zanzibar-style) — thay RBAC phẳng hiện tại, thêm Team/Organization + role Super Admin
+          kế thừa quyền xuyên suốt mọi team, có test route-level cách ly dữ liệu chéo team</span></div>
+      <div class="info-cell"><span class="label">Sprint Start:</span><span class="value">2026-08-06</span></div>
+      <div class="info-cell"><span class="label">Sprint End:</span><span class="value">2026-08-09 (4 ngày)</span></div>
       <div class="info-cell" style="grid-column: 1 / -1">
         <span class="label">📦 Published:</span>
         <span class="value">
@@ -256,7 +394,7 @@
       </div>
     </div>
 
-    <div class="board-title">TASK BOARD</div>
+    <div class="board-title">SPRINT 2 TASK BOARD (HOÀN THÀNH)</div>
     <div class="table-scroll">
       <table>
         <thead>
@@ -547,87 +685,139 @@
       </table>
     </div>
 
-    <div class="board-title" style="margin-top: 1.5rem">ROADMAP — ENTERPRISE SECURITY HARDENING (CHƯA LÊN LỊCH)</div>
+    <div class="board-title" style="margin-top: 1.5rem">SPRINT 3 TASK BOARD — MULTI-TEAM AUTHORIZATION (OPENFGA)</div>
     <div class="table-scroll">
       <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Gap / Việc cần làm</th>
+            <th>Task ID</th>
+            <th>Task / User Story</th>
             <th>Status</th>
+            <th>Story Pt</th>
             <th>Priority</th>
+            <th>Start</th>
+            <th>Due</th>
             <th>Notes</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>R-1</td>
-            <td>Tích hợp SSO/SAML/OIDC thật (đặc biệt với chính nền tảng V-ID) thay cho JWT tự chế hiện tại</td>
-            <td><span class="badge status-todo">Backlog</span></td>
+            <td>T-19</td>
+            <td>Dựng OpenFGA local (Docker) + viết Authorization Model (organization/team/policy/audit_record/
+              bypass_request/engine_config) + verify qua CLI/Playground</td>
+            <td><span class="badge status-todo">To Do</span></td>
+            <td>3</td>
             <td><span class="priority-high">High</span></td>
-            <td>Câu hỏi đầu tiên Mentor V-ID sẽ hỏi — pitch SSO/định danh mà dashboard lại không cắm được vào
-              identity provider doanh nghiệp đã có, tự chế auth riêng (<code>token.ts</code>)</td>
+            <td>2026-08-06</td>
+            <td>2026-08-06</td>
+            <td>Xem chi tiết model + tuple mẫu trong <code>reports/thiet-ke-multi-team-rbac.md</code>. Chạy
+              <code>docker run openfga/openfga run</code>, viết model bằng FGA DSL, test thử vài <code>check()</code>
+              qua Playground trước khi đụng code Express</td>
           </tr>
           <tr>
-            <td>R-2</td>
-            <td>User directory thật — bỏ 4 tài khoản demo dùng chung 1 mật khẩu, thêm MFA, account lockout,
-              rate-limit trên login</td>
-            <td><span class="badge status-todo">Backlog</span></td>
+            <td>T-20</td>
+            <td>Cài <code>@openfga/sdk</code>, viết middleware <code>requireRelation()</code> thay
+              <code>requirePermission()</code>, migrate 2-3 route mẫu (policy view/approve) làm proof-of-concept</td>
+            <td><span class="badge status-todo">To Do</span></td>
+            <td>5</td>
             <td><span class="priority-high">High</span></td>
-            <td><code>users.ts</code> hiện so sánh string trực tiếp với <code>GUARDIAN_DEMO_PASSWORD</code> dùng
-              chung cho mọi role — chấp nhận được cho demo, không đạt chuẩn enterprise</td>
+            <td>2026-08-06</td>
+            <td>2026-08-07</td>
+            <td>Chạy song song 2 cơ chế (feature flag) trong lúc chuyển đổi để không vỡ luồng T-11 (57 integration
+              test RBAC) đang chạy</td>
           </tr>
           <tr>
-            <td>R-3</td>
-            <td>Mã hoá dữ liệu at-rest + chính sách backup/retention cho audit trail</td>
-            <td><span class="badge status-todo">Backlog</span></td>
+            <td>T-21</td>
+            <td>Thêm entity Team/Organization + script migration: tạo <code>team-default</code>, ghi tuple gán 4
+              demo user hiện tại đúng role cũ, thêm 1 demo user mới role <code>super_admin</code></td>
+            <td><span class="badge status-todo">To Do</span></td>
+            <td>5</td>
             <td><span class="priority-high">High</span></td>
-            <td>Toàn bộ state (<code>.guardian/*.json</code>) là file JSON phẳng trên 1 máy, không mã hoá, không
-              backup; <code>audit-history.json</code> giới hạn cứng số dòng — dữ liệu cũ bị rơi mất, có thể vi phạm
-              yêu cầu compliance cần lưu audit dài hạn</td>
+            <td>2026-08-07</td>
+            <td>2026-08-07</td>
+            <td>Không mất dữ liệu hiện có — mọi policy/audit/bypass request cũ coi như thuộc
+              <code>team-default</code></td>
           </tr>
           <tr>
-            <td>R-4</td>
-            <td>Multi-tenancy — cách ly dữ liệu theo tổ chức/phòng ban</td>
-            <td><span class="badge status-todo">Backlog</span></td>
-            <td><span class="priority-medium">Medium</span></td>
-            <td>README hiện ghi rõ đây là tool chạy local single-user, chưa có khái niệm tổ chức/tenant nào</td>
+            <td>T-22</td>
+            <td>Migrate toàn bộ route còn lại (audit, bypass, engine-config) sang <code>requireRelation()</code>, bỏ
+              hẳn <code>src/server/rbac.ts</code> cũ</td>
+            <td><span class="badge status-todo">To Do</span></td>
+            <td>8</td>
+            <td><span class="priority-high">High</span></td>
+            <td>2026-08-07</td>
+            <td>2026-08-08</td>
+            <td>T-09 (dev chỉ xem audit của mình) phải giữ đúng ngữ nghĩa qua quan hệ <code>owner</code>, không quay
+              lại filter thủ công theo <code>triggeredBy</code></td>
           </tr>
           <tr>
-            <td>R-5</td>
-            <td>Siết network: giới hạn CORS theo origin, bắt buộc TLS, thêm rate-limiting + helmet</td>
-            <td><span class="badge status-todo">Backlog</span></td>
+            <td>T-23</td>
+            <td>Route + UI quản lý Team — tạo Team mới, gán/xoá thành viên, chỉ Super Admin gọi được</td>
+            <td><span class="badge status-todo">To Do</span></td>
+            <td>5</td>
             <td><span class="priority-medium">Medium</span></td>
-            <td><code>app.ts:19</code> hiện <code>app.use(cors())</code> không giới hạn origin nào, chạy HTTP thuần
-              qua <code>app.listen</code> — chấp nhận được khi chỉ chạy localhost, phải siết lại hoàn toàn nếu expose
-              ra mạng</td>
+            <td>2026-08-08</td>
+            <td>2026-08-08</td>
+            <td>Route mới <code>GET/POST /api/teams</code>, <code>POST /api/teams/:id/members</code> — ghi tuple qua
+              API thay vì sửa JSON tay</td>
           </tr>
           <tr>
-            <td>R-6</td>
-            <td>Session revocation / token blacklist cho JWT</td>
-            <td><span class="badge status-todo">Backlog</span></td>
+            <td>T-24</td>
+            <td>Team switcher trong Header (cho Super Admin) + cập nhật Org Chart demo (<code>DemoModeSelector</code>)
+              thêm node Super Admin ở trên cùng</td>
+            <td><span class="badge status-todo">To Do</span></td>
+            <td>3</td>
             <td><span class="priority-medium">Medium</span></td>
-            <td>JWT stateless hiện tại — không có cách nào vô hiệu hoá 1 token đã lộ trước khi hết hạn (12h hoặc 30
-              ngày nếu remember-me)</td>
+            <td>2026-08-08</td>
+            <td>2026-08-09</td>
+            <td>Giữ nguyên UX Role Hierarchy Org Chart hiện tại (đang rất trực quan khi demo) — chỉ thêm 1 node, không
+              đổi luồng demo cũ</td>
           </tr>
           <tr>
-            <td>R-7</td>
-            <td>Phòng chống prompt injection cho nội dung đưa vào LLM (policy body, changeSummary do user nhập)</td>
-            <td><span class="badge status-todo">Backlog</span></td>
+            <td>T-25</td>
+            <td>Viết lại bộ test route-level dùng tuple thay vì chỉ JWT role (mở rộng pattern T-11) — đặc biệt test
+              Super Admin tự động kế thừa quyền admin trên team chưa từng gán tuple trực tiếp, và test cách ly
+              cross-team (Admin Team A không đụng được resource Team B)</td>
+            <td><span class="badge status-todo">To Do</span></td>
+            <td>5</td>
+            <td><span class="priority-high">High</span></td>
+            <td>2026-08-09</td>
+            <td>2026-08-09</td>
+            <td>Có thể chạy OpenFGA dưới dạng test-container (Testcontainers) trong CI, không cần OpenFGA instance
+              thật khi chạy <code>vitest</code></td>
+          </tr>
+          <tr>
+            <td>T-26</td>
+            <td>QA thủ công toàn bộ luồng mới qua browser thật (đăng nhập từng role/team, verify cách ly dữ liệu,
+              verify Super Admin xem xuyên team) + sửa bug phát sinh + cập nhật README/sprint-plan</td>
+            <td><span class="badge status-todo">To Do</span></td>
+            <td>3</td>
             <td><span class="priority-medium">Medium</span></td>
-            <td>Rủi ro đặc thù kiến trúc LLM-centric của Guardian — nội dung policy/changeSummary (T-17) cuối cùng có
-              thể lọt vào prompt, chưa có cơ chế phòng chống nếu bị chỉnh sửa ác ý</td>
+            <td>2026-08-09</td>
+            <td>2026-08-09</td>
+            <td>Theo đúng pattern Playwright headless đã dùng ở T-12</td>
+          </tr>
+          <tr>
+            <td>T-27</td>
+            <td>🎯 Deadline: Multi-Team Authorization bằng OpenFGA hoạt động đầy đủ, có test, demo được cho
+              Mentor</td>
+            <td><span class="badge status-todo">To Do</span></td>
+            <td>—</td>
+            <td><span class="priority-high">High</span></td>
+            <td>2026-08-09</td>
+            <td>2026-08-09</td>
+            <td>Milestone của Sprint 3 — mục tiêu 4 ngày kể từ 2026-08-06</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-05 · 📦 <strong>Đã publish <code>ai-dev-guardian@0.1.0</code> lên npm công
-      khai</strong> · 🎯 <strong>T-13 Sprint Goal ĐẠT — sớm hơn lịch 10 ngày</strong> (T-01→T-12
-      Done, 243 test pass, build/typecheck/lint sạch) · Roadmap Enterprise Security Hardening (R-1..R-7) cho giai
-      đoạn tiếp theo · T-17, T-18 (metadata + notification center), T-11 (57 integration test RBAC), T-12 (QA 4 role
-      bằng Playwright) · T-08 re-verified (2 lưu ý, xem Notes) · gap analysis dựa trên code thật (rbac.ts,
-      authMiddleware.ts, policyStore.ts, bypass.ts)</footer>
+    <footer>Cập nhật lần cuối: 2026-08-06 · 🚀 <strong>Bắt đầu Sprint 3 — Multi-Team Authorization bằng OpenFGA</strong>
+      (T-19→T-27, mục tiêu 4 ngày, xong 2026-08-09) — thay hẳn Roadmap Enterprise Security Hardening cũ (bỏ R-1 SSO/
+      V-ID vì không truy cập được codebase họ, giữ nguyên mock Auth/Role Switcher cho Demo & Development, dồn lực vào
+      RBAC nhiều team). Chi tiết thiết kế: <code>reports/thiet-ke-multi-team-rbac.md</code> · 📦 Đã publish
+      <code>ai-dev-guardian@0.1.0</code> lên npm công khai · 🎯 Sprint 2 ĐẠT sớm hơn lịch 10 ngày (T-01→T-18 Done, 249
+      test pass, build/typecheck/lint sạch)</footer>
   </div>
 </body>
 
