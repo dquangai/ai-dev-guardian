@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Code, Crown, Network, Shield, UserCheck, X } from 'lucide-react'
+import { ArrowRight, Code, Crown, Globe2, Network, Shield, UserCheck, X } from 'lucide-react'
 import type { Role } from '../../lib/rbac'
 
 interface DemoRoleNode {
@@ -13,10 +13,22 @@ interface DemoRoleNode {
 }
 
 const ORG_HIERARCHY: {
+  level0: DemoRoleNode
   level1: DemoRoleNode
   level2: DemoRoleNode
   level3: DemoRoleNode[]
 } = {
+  // T-24: org-wide, sits above the single-org chart entirely — no team of its own until it picks
+  // one via the Team switcher in the Header (see TeamManagement.tsx / AuthContext.actAsTeam).
+  level0: {
+    role: 'super-admin',
+    level: 'CẤP 0 — TOÀN QUYỀN TỔ CHỨC',
+    label: 'Super Admin',
+    titleVi: 'Quản trị viên Tổ chức',
+    description: 'Quản lý toàn bộ Team trong tổ chức, chuyển đổi ngữ cảnh làm việc theo từng Team qua Team switcher',
+    badgeColor: 'bg-slate-800 text-white border-slate-700',
+    borderColor: 'border-slate-800 hover:bg-slate-50',
+  },
   level1: {
     role: 'admin',
     level: 'CẤP 1 — QUẢN TRỊ CAO CẤP',
@@ -123,6 +135,30 @@ export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorPro
 
             {/* Hierarchy Tree Container */}
             <div className="mt-6 flex flex-col items-center gap-4">
+              {/* Level 0: Super Admin */}
+              <div className="w-full max-w-md">
+                <button
+                  type="button"
+                  onClick={() => handleSelect(ORG_HIERARCHY.level0.role)}
+                  className={`group relative flex w-full flex-col gap-2 rounded-2xl border-2 ${ORG_HIERARCHY.level0.borderColor} bg-white p-4 text-left shadow-xs transition-colors duration-150 hover:shadow-md cursor-pointer`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${ORG_HIERARCHY.level0.badgeColor}`}>
+                      {ORG_HIERARCHY.level0.level}
+                    </span>
+                    <Globe2 size={18} className="text-slate-800" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-slate-700 transition-colors">
+                      {ORG_HIERARCHY.level0.label} <span className="text-xs font-semibold text-slate-500">({ORG_HIERARCHY.level0.titleVi})</span>
+                    </h4>
+                    <p className="mt-1 text-xs text-slate-600 leading-relaxed">{ORG_HIERARCHY.level0.description}</p>
+                  </div>
+                </button>
+              </div>
+
+              <div className="h-6 w-0.5 bg-slate-300" />
+
               {/* Level 1: Admin */}
               <div className="w-full max-w-md">
                 <button

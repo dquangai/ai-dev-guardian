@@ -9,6 +9,9 @@ export interface AuthUser {
   name: string
   email: string
   role: Role
+  /** T-24: active team context — always set for the 4 team-scoped roles; for super-admin, only
+   * set after they "act as" a team (see actAsTeam below), undefined means org-wide. */
+  teamId?: string
 }
 
 interface MeResponse extends AuthUser {
@@ -30,6 +33,9 @@ interface AuthContextValue {
   ready: boolean
   loginWithCredentials: (email: string, password: string, remember: boolean) => Promise<boolean>
   loginAsDemo: (role: Role) => Promise<void>
+  /** T-24: Super Admin only — reissues the session token with `teamId` set to the chosen team
+   * (or undefined to go back to org-wide). Throws ApiError on 403/404/400 for the caller to show. */
+  actAsTeam: (teamId: string | undefined) => Promise<void>
   logout: () => void
   can: (permission: Permission) => boolean
 }
@@ -56,7 +62,7 @@ function clearStoredToken(): void {
 }
 
 function toAuthUser(me: MeResponse): AuthUser {
-  return { id: me.id, name: me.name, email: me.email, role: me.role }
+  return { id: me.id, name: me.name, email: me.email, role: me.role, teamId: me.teamId }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -113,6 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(toAuthUser(res.user))
   }
 
+  async function actAsTeam(teamId: string | undefined): Promise<void> {
+    const res = await api.post<LoginResponse>('/auth/act-as-team', { teamId: teamId ?? null })
+    persistToken(res.token, true)
+    setAuthToken(res.token)
+    setUser(toAuthUser(res.user))
+  }
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -120,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       loginWithCredentials,
       loginAsDemo,
+      actAsTeam,
       logout,
       can: (permission) => (user ? hasPermission(user.role, permission) : false),
     }),

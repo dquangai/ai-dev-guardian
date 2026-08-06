@@ -60,9 +60,8 @@ policiesRouter.get(
  * `can_view`/`can_edit_direct` on it afterwards (T-21 found this exact gap for pre-existing
  * policies; new ones need the same fix at creation time). Team = the content's author's team:
  * the direct-editor for an immediate apply, or the original proposer for an approved request. */
-async function tagPolicyTeam(policyId: string, authorUserId: string): Promise<void> {
-  const teamId = findUserById(authorUserId)?.teamId;
-  if (!teamId) return; // super-admin or unknown author — no single team to tag; skip, not fatal.
+async function tagPolicyTeam(policyId: string, teamId: string | undefined): Promise<void> {
+  if (!teamId) return; // no single team to tag (e.g. super-admin with no active team context) — skip, not fatal.
   await tryWriteTuples([{ user: `team:${teamId}`, relation: "team", object: `policy:${policyId}` }]);
 }
 
@@ -87,7 +86,7 @@ function submitOrApply(action: "create" | "update") {
       });
       if (canEditDirect) {
         writePolicyFile(id, content, { updatedBy: req.userId, changeSummary });
-        if (action === "create") await tagPolicyTeam(id, req.userId);
+        if (action === "create") await tagPolicyTeam(id, req.teamId ?? findUserById(req.userId)?.teamId);
         res.json({ status: "applied", policy: getPolicy(id), gitHint: gitSyncHint(id, "write") });
         return;
       }
@@ -176,7 +175,8 @@ policiesRouter.post(
     try {
       const before = listChangeRequests().find((r) => r.id === req.params.id);
       const request = resolveChangeRequest(req.params.id, "approved", req.userId, req.body?.note);
-      if (before?.action === "create") await tagPolicyTeam(request.policyId, request.submittedBy);
+      if (before?.action === "create")
+        await tagPolicyTeam(request.policyId, findUserById(request.submittedBy)?.teamId);
       const gitHint = gitSyncHint(request.policyId, request.action === "delete" ? "delete" : "write");
       res.json({ ...request, gitHint });
     } catch (error) {

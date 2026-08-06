@@ -1,4 +1,4 @@
-# OpenFGA Authorization Model (T-19, T-20, T-21, T-22, T-23)
+# OpenFGA Authorization Model (T-19, T-20, T-21, T-22, T-23, T-24)
 
 Authorization Model + tuple demo cho Sprint 3 (Multi-Team Authorization). Thiết kế đầy đủ ở
 [`reports/thiet-ke-multi-team-rbac.md`](../reports/thiet-ke-multi-team-rbac.md).
@@ -218,3 +218,63 @@ thành công.
   verify xong, trả file về đúng trạng thái ban đầu (chỉ còn `team-default`)
 
 `npm audit`: không phát sinh CVE mới (không thêm dependency ở T-23).
+
+## T-24 — Team switcher (Header) + Super Admin trong Org Chart demo
+
+**Phase 1 (BA)**: "Team switcher trong Header" mơ hồ về mức chức năng — đã hỏi lại user thay vì tự
+chọn. Chốt: switcher **đổi ngữ cảnh thật** (không chỉ hiển thị) — Super Admin chọn 1 Team, hệ thống
+cấp lại JWT với `teamId` đó, và họ dùng lại được đúng 3 trang team-scoped có sẵn (Overview, Findings,
+Policies) y hệt 1 admin của team đó, cộng với Team Management luôn có sẵn.
+
+Code mới/sửa:
+- `src/server/routes/auth.ts`: `POST /api/auth/act-as-team` (yêu cầu `requireAuth`, chỉ super-admin)
+  — cấp lại token với `teamId` được chọn (hoặc bỏ trống để quay về org-wide); không đụng tới
+  `DEMO_USERS` (khác hẳn T-23's "di chuyển thành viên" — đây chỉ là lựa chọn **theo phiên**, không
+  phải gán lại danh tính lâu dài). `respondWithToken()` đổi chữ ký nhận `teamId` tường minh từ mọi
+  caller thay vì tự đọc `user.teamId`, để tránh nhập nhằng.
+- `src/server/routes/me.ts`: trả thêm `teamId` — cần để hydrate lại đúng ngữ cảnh sau khi F5 trang.
+- `src/server/routes/policies.ts`: **sửa lỗi phát hiện khi code T-24** — `tagPolicyTeam()` trước đó
+  luôn tra `findUserById(authorUserId)?.teamId`, mà `DEMO_USERS["super-admin"]` không bao giờ có
+  `teamId` (org-wide theo thiết kế) → Super Admin tạo policy trực tiếp trong lúc "act as" 1 team sẽ
+  không bao giờ được gắn tuple `team` đúng. Sửa: nhánh direct-apply giờ ưu tiên `req.teamId` (từ
+  token phiên hiện tại) trước khi fallback `findUserById`; nhánh approve-flow vẫn dùng
+  `findUserById(request.submittedBy)?.teamId` — đúng vì đó phải là team của **người đề xuất gốc**,
+  không phải người đang duyệt.
+- Frontend: `web/src/lib/navigation.ts` thêm `navItemsFor(role, teamId)` (nguồn sự thật duy nhất
+  cho sidebar + route access, thay `NAV_BY_ROLE[role]` tra thẳng) — Super Admin không có team chỉ
+  thấy Team Management, có team thấy thêm Overview/Findings/Policies. `AuthContext.tsx` thêm
+  `teamId` vào `AuthUser` + hàm `actAsTeam()`. `ProtectedRoute.tsx` thêm prop `requireTeamContext`
+  (chặn Super Admin vào thẳng URL `/`, `/findings`, `/policies` khi chưa chọn team — role khác luôn
+  có teamId nên prop này là no-op với họ). `TeamSwitcher.tsx` (component mới, Header) — dropdown gọi
+  `actAsTeam()`, điều hướng về `/` khi chọn team hoặc `/teams` khi bỏ chọn. `DemoModeSelector.tsx`
+  thêm node "CẤP 0 — TOÀN QUYỀN TỔ CHỨC" phía trên Admin — đóng khoảng trống T-23 để lại (trước đó
+  không có cách đăng nhập Super Admin qua UI thật).
+
+**8 unit/integration test mới** (`authRouter.test.ts`) cho `/act-as-team` (401/403/400/404 + luồng
+thành công đổi/xoá ngữ cảnh, xác nhận qua `/me`) + regression demo-login vẫn trả đúng `teamId`.
+**35 file / 322 test pass**, typecheck sạch backend lẫn `web/`, `npm run build` thành công.
+
+**Đã verify sống thật, cả API lẫn trình duyệt thật**:
+- Đăng nhập Super Admin **qua UI thật** (bấm Org Chart, không còn cần bơm token) → vào thẳng
+  `/teams`, sidebar chỉ có Team Management
+- Mở Team switcher, chọn "Default Team" thật → điều hướng `/`, sidebar hiện thêm Overview/Findings/
+  Policies, trang Overview load dữ liệu dashboard thật (4 audit, Governance Health 100%, Live
+  Architecture Graph) — ảnh chụp xác nhận
+- Chọn lại "Toàn tổ chức" → điều hướng về `/teams`, sidebar rút gọn lại đúng như ban đầu
+- **Verify fix `tagPolicyTeam` bằng OpenFGA thật** (store mới, `npm run authz:migrate` thật): Super
+  Admin act-as-team `team-default`, tạo policy mới trực tiếp qua API thật → `fga query check` xác
+  nhận `developer-1` (thành viên `team-default`) `can_view` policy đó = **true**, user không liên
+  quan (`user:nobody-1`) = **false** — đúng như thiết kế, chứng minh tuple `team` được gắn đúng theo
+  `req.teamId` của phiên "act as", không còn bị bỏ sót như trước khi sửa
+- admin gọi `POST /api/auth/act-as-team` → 403 đúng
+
+**Giới hạn phát hiện thêm (ghi nhận, không thuộc phạm vi T-24)**: khi `GUARDIAN_AUTHZ_MODE=fga`
+thật sự bật, tạo **policy hoàn toàn mới** (cả direct-apply lẫn propose) sẽ luôn bị chặn cho MỌI role
+— vì `can_edit_direct`/`can_propose` được check trên object `policy:<id>` chưa từng tồn tại (chưa có
+tuple `team` nào để suy luận), không riêng gì Super Admin. Đây là khoảng trống kiến trúc có từ T-22,
+phát hiện khi chuẩn bị verify sống T-24 (đã né bằng cách verify ở chế độ flag-off, đúng với hành vi
+production hiện tại) — nên cân nhắc xử lý ở T-25 (vd: check quyền tạo mới dựa trên quan hệ
+`senior_dev`/`admin` của `team:<req.teamId>` trực tiếp thay vì trên object chưa tồn tại).
+
+Dọn sạch: xoá policy test (`t24-live-verify.policy.md`) khỏi `.guardian/policies/`, dừng server,
+dừng + xoá container OpenFGA tạm. `npm audit`: không CVE mới.

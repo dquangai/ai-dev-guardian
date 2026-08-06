@@ -35,7 +35,7 @@ export function Forbidden({ requiredRoles }: { requiredRoles?: Role[] } = {}) {
         )}
       </p>
       <Link
-        to={user ? defaultRouteForRole(user.role) : '/login'}
+        to={user ? defaultRouteForRole(user.role, user.teamId) : '/login'}
         className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
       >
         Back to safety

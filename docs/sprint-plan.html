@@ -824,13 +824,29 @@
             <td>T-24</td>
             <td>Team switcher trong Header (cho Super Admin) + cập nhật Org Chart demo (<code>DemoModeSelector</code>)
               thêm node Super Admin ở trên cùng</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>3</td>
             <td><span class="priority-medium">Medium</span></td>
             <td>2026-08-08</td>
             <td>2026-08-09</td>
-            <td>Giữ nguyên UX Role Hierarchy Org Chart hiện tại (đang rất trực quan khi demo) — chỉ thêm 1 node, không
-              đổi luồng demo cũ</td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-06). <strong>BA</strong>: "Team switcher" mơ hồ mức chức năng —
+              hỏi lại user, chốt đổi ngữ cảnh thật (không chỉ hiển thị). Route mới
+              <code>POST /api/auth/act-as-team</code> (chỉ super-admin) cấp lại JWT với <code>teamId</code> chọn
+              theo phiên, không đụng danh tính lâu dài (khác T-23's di chuyển thành viên). Sau khi chọn Team, Super
+              Admin dùng lại đúng 3 trang có sẵn: Overview/Findings/Policies + luôn có Team Management —
+              <code>navItemsFor(role, teamId)</code> mới trong <code>navigation.ts</code> thay cho tra bảng tĩnh.
+              <strong>Bug phát hiện &amp; sửa khi code</strong>: <code>tagPolicyTeam()</code> trước đó luôn tra
+              teamId từ <code>DEMO_USERS</code> tĩnh — Super Admin không có teamId tĩnh nên policy tạo trực tiếp lúc
+              "act as" 1 team sẽ không được gắn tuple đúng; sửa ưu tiên <code>req.teamId</code> (từ token phiên).
+              Thêm node "CẤP 0 — TOÀN QUYỀN TỔ CHỨC" vào Org Chart demo, đóng khoảng trống T-23 để lại (trước đó
+              chưa có cách đăng nhập Super Admin qua UI thật). 8 test mới, <strong>35 file/322 test pass</strong>,
+              typecheck sạch, <code>npm run build</code> ok. <strong>Verify sống</strong>: đăng nhập Super Admin qua
+              UI thật (không bơm token), dùng Team switcher thật chuyển ngữ cảnh (ảnh chụp xác nhận sidebar/dữ liệu
+              đổi đúng), và verify fix <code>tagPolicyTeam</code> bằng OpenFGA thật — tạo policy lúc act-as-team rồi
+              <code>fga query check</code> xác nhận đúng thành viên team xem được, người ngoài thì không. Phát hiện
+              thêm 1 giới hạn kiến trúc có từ T-22 (tạo policy hoàn toàn mới bị chặn khi bật flag FGA, mọi role) —
+              ghi nhận cho T-25, không thuộc phạm vi T-24. <code>npm audit</code>: không CVE mới. Chi tiết:
+              <code>authz/README.md</code></td>
           </tr>
           <tr>
             <td>T-25</td>
@@ -871,7 +887,7 @@
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-06 · Sprint 3: T-19, T-20, T-21, T-22, T-23 done (đều sớm hơn lịch) — 34 file/314 test
+    <footer>Cập nhật lần cuối: 2026-08-06 · Sprint 3: T-19, T-20, T-21, T-22, T-23, T-24 done (đều sớm hơn lịch) — 35 file/322 test
       pass · Đã thêm <code>CLAUDE.md</code> (Corporate Execution Rules — Role-play Matrix + quy trình 4 giai đoạn +
       9-bước Definition of Done) áp dụng từ T-21 trở đi · Chi tiết thiết kế:
       <code>reports/thiet-ke-multi-team-rbac.md</code>, tiến độ kỹ thuật: <code>authz/README.md</code> · 📦 Đã publish
