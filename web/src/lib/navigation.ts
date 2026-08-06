@@ -14,6 +14,7 @@ export interface NavItem {
     | 'code-audit'
     | 'diagnostics'
     | 'engine-config'
+    | 'teams'
 }
 
 /**
@@ -22,6 +23,10 @@ export interface NavItem {
  * pageAllowedForRole) so there's no gap between what's linked and what's reachable by URL.
  */
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
+  // T-23: super-admin is org-wide (no single team), so the rest of the dashboard's team-scoped
+  // pages don't apply — Team Management is its one and only page for now. The Org Chart demo
+  // login entry for this role lands in T-24.
+  'super-admin': [{ to: '/teams', label: 'Team Management', icon: 'teams' }],
   admin: [
     { to: '/', label: 'Overview', icon: 'overview' },
     { to: '/findings', label: 'Findings', icon: 'findings' },

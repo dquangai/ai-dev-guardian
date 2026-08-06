@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { requirePermission } from "../authMiddleware";
-import { hasPermission } from "../rbac";
-import { authzGate } from "../authz/authzGate";
+import { authzGate, hasRelationOrPermission, listGate, listRouteGate } from "../authz/authzGate";
+import { tryWriteTuples } from "../authz/fgaClient";
+import { findUserById } from "../users";
 import {
   deletePolicyFile,
   getPolicy,
@@ -18,16 +18,26 @@ const CHANGE_REQUEST_STATUSES = ["pending", "approved", "rejected"] as const;
 
 export const policiesRouter = Router();
 
-policiesRouter.get("/", requirePermission("policy:view"), (_req, res) => {
-  res.json(listPolicies());
+policiesRouter.get("/", listRouteGate("policy:view"), async (req, res) => {
+  const policies = await listGate(req.userId, listPolicies(), {
+    objectType: "policy",
+    relation: "can_view",
+    objectIdFor: (p) => p.id,
+  });
+  res.json(policies);
 });
 
-policiesRouter.get("/requests", requirePermission("policy:view"), (req, res) => {
+policiesRouter.get("/requests", listRouteGate("policy:view"), async (req, res) => {
   const status = parseEnumQuery(req.query.status, CHANGE_REQUEST_STATUSES);
-  res.json(listChangeRequests(status));
+  const requests = await listGate(req.userId, listChangeRequests(status), {
+    objectType: "policy",
+    relation: "can_view",
+    objectIdFor: (r) => r.policyId,
+  });
+  res.json(requests);
 });
 
-// T-20 PoC: migrated to authzGate (OpenFGA when GUARDIAN_AUTHZ_MODE=fga, requirePermission otherwise).
+// T-20: migrated to authzGate (OpenFGA when GUARDIAN_AUTHZ_MODE=fga, requirePermission otherwise).
 policiesRouter.get(
   "/:id",
   authzGate("policy:view", { objectType: "policy", relation: "can_view", objectIdFrom: (req) => req.params.id }),
@@ -45,11 +55,22 @@ policiesRouter.get(
   }
 );
 
+/** T-22: a brand-new policy needs a `team` tuple the moment it's created (direct-apply) or the
+ * moment its change request is approved, or nobody — including its own team — can ever satisfy
+ * `can_view`/`can_edit_direct` on it afterwards (T-21 found this exact gap for pre-existing
+ * policies; new ones need the same fix at creation time). Team = the content's author's team:
+ * the direct-editor for an immediate apply, or the original proposer for an approved request. */
+async function tagPolicyTeam(policyId: string, authorUserId: string): Promise<void> {
+  const teamId = findUserById(authorUserId)?.teamId;
+  if (!teamId) return; // super-admin or unknown author — no single team to tag; skip, not fatal.
+  await tryWriteTuples([{ user: `team:${teamId}`, relation: "team", object: `policy:${policyId}` }]);
+}
+
 /** Create/update: direct write for roles with policy:edit-direct, otherwise a pending
  * change request that an approver (policy:approve) must resolve. Same handler for both
  * so the workflow logic — who needs review — lives in exactly one place. */
 function submitOrApply(action: "create" | "update") {
-  return (req: import("express").Request, res: import("express").Response) => {
+  return async (req: import("express").Request, res: import("express").Response) => {
     const id = req.params.id ?? req.body.id;
     const content = req.body.content as string | undefined;
     const changeSummary = req.body.changeSummary as string | undefined;
@@ -59,12 +80,23 @@ function submitOrApply(action: "create" | "update") {
     }
 
     try {
-      if (hasPermission(req.role, "policy:edit-direct")) {
+      const canEditDirect = await hasRelationOrPermission(req, "policy:edit-direct", {
+        objectType: "policy",
+        relation: "can_edit_direct",
+        object: id,
+      });
+      if (canEditDirect) {
         writePolicyFile(id, content, { updatedBy: req.userId, changeSummary });
+        if (action === "create") await tagPolicyTeam(id, req.userId);
         res.json({ status: "applied", policy: getPolicy(id), gitHint: gitSyncHint(id, "write") });
         return;
       }
-      if (!hasPermission(req.role, "policy:propose")) {
+      const canPropose = await hasRelationOrPermission(req, "policy:propose", {
+        objectType: "policy",
+        relation: "can_propose",
+        object: id,
+      });
+      if (!canPropose) {
         res.status(403).json({
           error: "forbidden",
           message: `Role "${req.role}" cannot edit or propose policy changes.`,
@@ -88,18 +120,28 @@ function submitOrApply(action: "create" | "update") {
 policiesRouter.post("/", submitOrApply("create"));
 policiesRouter.put("/:id", submitOrApply("update"));
 
-policiesRouter.delete("/:id", (req, res) => {
+policiesRouter.delete("/:id", async (req, res) => {
   const id = req.params.id;
   if (!isSafeId(id)) {
     res.status(400).json({ error: "bad_request", message: "Invalid policy id." });
     return;
   }
-  if (hasPermission(req.role, "policy:edit-direct")) {
+  const canEditDirect = await hasRelationOrPermission(req, "policy:edit-direct", {
+    objectType: "policy",
+    relation: "can_edit_direct",
+    object: id,
+  });
+  if (canEditDirect) {
     deletePolicyFile(id);
     res.json({ status: "applied", gitHint: gitSyncHint(id, "delete") });
     return;
   }
-  if (!hasPermission(req.role, "policy:propose")) {
+  const canPropose = await hasRelationOrPermission(req, "policy:propose", {
+    objectType: "policy",
+    relation: "can_propose",
+    object: id,
+  });
+  if (!canPropose) {
     res.status(403).json({
       error: "forbidden",
       message: `Role "${req.role}" cannot delete or propose policy changes.`,
@@ -111,16 +153,41 @@ policiesRouter.delete("/:id", (req, res) => {
 });
 
 /** Resolves a change-request id to its target policy id, for authzGate's objectIdFrom — the
- * approve route's :id is the *request*, but `can_approve` (T-19 model) is a relation on the
- * *policy* it targets. "__unknown__" on a missing request 403s harmlessly; the handler's own
+ * approve/reject route's :id is the *request*, but `can_approve` (T-19 model) is a relation on
+ * the *policy* it targets. "__unknown__" on a missing request 403s harmlessly; the handler's own
  * isSafeId/resolveChangeRequest checks below give the real 400/404. */
 function policyIdForChangeRequest(req: import("express").Request): string {
   return listChangeRequests().find((r) => r.id === req.params.id)?.policyId ?? "__unknown__";
 }
 
-// T-20 PoC: migrated to authzGate (OpenFGA when GUARDIAN_AUTHZ_MODE=fga, requirePermission otherwise).
+// T-20: migrated to authzGate (OpenFGA when GUARDIAN_AUTHZ_MODE=fga, requirePermission otherwise).
 policiesRouter.post(
   "/requests/:id/approve",
+  authzGate("policy:approve", {
+    objectType: "policy",
+    relation: "can_approve",
+    objectIdFrom: policyIdForChangeRequest,
+  }),
+  async (req, res) => {
+    if (!isSafeId(req.params.id)) {
+      res.status(400).json({ error: "bad_request", message: "Invalid request id." });
+      return;
+    }
+    try {
+      const before = listChangeRequests().find((r) => r.id === req.params.id);
+      const request = resolveChangeRequest(req.params.id, "approved", req.userId, req.body?.note);
+      if (before?.action === "create") await tagPolicyTeam(request.policyId, request.submittedBy);
+      const gitHint = gitSyncHint(request.policyId, request.action === "delete" ? "delete" : "write");
+      res.json({ ...request, gitHint });
+    } catch (error) {
+      res.status(400).json({ error: "invalid", message: (error as Error).message });
+    }
+  }
+);
+
+// T-22: migrated to authzGate — was still on requirePermission() directly until now.
+policiesRouter.post(
+  "/requests/:id/reject",
   authzGate("policy:approve", {
     objectType: "policy",
     relation: "can_approve",
@@ -132,24 +199,10 @@ policiesRouter.post(
       return;
     }
     try {
-      const request = resolveChangeRequest(req.params.id, "approved", req.userId, req.body?.note);
-      const gitHint = gitSyncHint(request.policyId, request.action === "delete" ? "delete" : "write");
-      res.json({ ...request, gitHint });
+      const request = resolveChangeRequest(req.params.id, "rejected", req.userId, req.body?.note);
+      res.json(request);
     } catch (error) {
       res.status(400).json({ error: "invalid", message: (error as Error).message });
     }
   }
 );
-
-policiesRouter.post("/requests/:id/reject", requirePermission("policy:approve"), (req, res) => {
-  if (!isSafeId(req.params.id)) {
-    res.status(400).json({ error: "bad_request", message: "Invalid request id." });
-    return;
-  }
-  try {
-    const request = resolveChangeRequest(req.params.id, "rejected", req.userId, req.body?.note);
-    res.json(request);
-  } catch (error) {
-    res.status(400).json({ error: "invalid", message: (error as Error).message });
-  }
-});

@@ -43,7 +43,9 @@ describe("GET /api/notifications/policies", () => {
     vi.mocked(getReadVersion).mockReset();
   });
 
-  it("đánh dấu unread=true khi version hiện tại cao hơn readVersion", () => {
+  // T-22: GET /policies is now async (awaits listGate() — a no-op passthrough with
+  // GUARDIAN_AUTHZ_MODE unset, same as every other list route migrated this task).
+  it("đánh dấu unread=true khi version hiện tại cao hơn readVersion", async () => {
     vi.mocked(listPolicies).mockReturnValue([
       { id: "a.policy.md", version: 3, lastUpdated: "t", updatedBy: "admin-1", changeSummary: "x" } as ReturnType<
         typeof listPolicies
@@ -51,26 +53,26 @@ describe("GET /api/notifications/policies", () => {
     ]);
     vi.mocked(getReadVersion).mockReturnValue(1);
     const res = mockRes();
-    handler(mockReq({ userId: "dev-1" } as Partial<Request>), res);
+    await handler(mockReq({ userId: "dev-1" } as Partial<Request>), res);
     expect(res.json).toHaveBeenCalledWith([
       { id: "a.policy.md", version: 3, lastUpdated: "t", updatedBy: "admin-1", changeSummary: "x", unread: true },
     ]);
   });
 
-  it("unread=false khi đã đọc bằng đúng version hiện tại", () => {
+  it("unread=false khi đã đọc bằng đúng version hiện tại", async () => {
     vi.mocked(listPolicies).mockReturnValue([{ id: "a.policy.md", version: 2 } as ReturnType<typeof listPolicies>[number]]);
     vi.mocked(getReadVersion).mockReturnValue(2);
     const res = mockRes();
-    handler(mockReq({ userId: "dev-1" } as Partial<Request>), res);
+    await handler(mockReq({ userId: "dev-1" } as Partial<Request>), res);
     const body = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(body[0].unread).toBe(false);
   });
 
-  it("policy chưa từng qua writePolicyFile (không có version) mặc định coi là version=1", () => {
+  it("policy chưa từng qua writePolicyFile (không có version) mặc định coi là version=1", async () => {
     vi.mocked(listPolicies).mockReturnValue([{ id: "legacy.policy.md" } as ReturnType<typeof listPolicies>[number]]);
     vi.mocked(getReadVersion).mockReturnValue(0);
     const res = mockRes();
-    handler(mockReq({ userId: "dev-1" } as Partial<Request>), res);
+    await handler(mockReq({ userId: "dev-1" } as Partial<Request>), res);
     const body = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(body[0]).toMatchObject({ version: 1, unread: true });
   });

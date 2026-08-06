@@ -4,9 +4,9 @@
  * bundle never reaches into Node-only backend code — this file must stay
  * pure and in sync by hand if the backend matrix changes.
  */
-export type Role = 'admin' | 'senior-dev' | 'developer' | 'auditor'
+export type Role = 'admin' | 'senior-dev' | 'developer' | 'auditor' | 'super-admin'
 
-export const ROLES: Role[] = ['admin', 'senior-dev', 'developer', 'auditor']
+export const ROLES: Role[] = ['admin', 'senior-dev', 'developer', 'auditor', 'super-admin']
 
 export type Permission =
   | 'policy:view'
@@ -21,17 +21,22 @@ export type Permission =
   | 'engine-config:view'
   | 'engine-config:edit'
 
+const ADMIN_PERMISSIONS: Permission[] = [
+  'policy:view',
+  'policy:edit-direct',
+  'policy:approve',
+  'audit:view',
+  'cache:manage',
+  'bypass:approve',
+  'engine-config:view',
+  'engine-config:edit',
+]
+
 const PERMISSIONS: Record<Role, Permission[]> = {
-  admin: [
-    'policy:view',
-    'policy:edit-direct',
-    'policy:approve',
-    'audit:view',
-    'cache:manage',
-    'bypass:approve',
-    'engine-config:view',
-    'engine-config:edit',
-  ],
+  admin: ADMIN_PERMISSIONS,
+  // T-23: mirrors backend rbac.ts — superset of admin so it never 403s on a not-yet-migrated
+  // route; team management itself is gated by role (`super-admin`) directly, not a Permission.
+  'super-admin': ADMIN_PERMISSIONS,
   'senior-dev': [
     'policy:view',
     'policy:propose',
@@ -45,6 +50,7 @@ const PERMISSIONS: Record<Role, Permission[]> = {
 
 export const ROLE_LABELS: Record<Role, string> = {
   admin: 'Admin',
+  'super-admin': 'Super Admin',
   'senior-dev': 'Senior Dev-Lead',
   developer: 'Dev',
   auditor: 'Auditor',

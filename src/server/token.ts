@@ -7,6 +7,8 @@ export interface TokenPayload {
   role: Role;
   name: string;
   email: string;
+  // T-22: absent for org-wide roles (super-admin) — see users.ts's DemoUser.teamId.
+  teamId?: string;
 }
 
 // GUARDIAN_JWT_SECRET lets a secret survive server restarts (set it for anything longer-lived

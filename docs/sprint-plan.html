@@ -769,24 +769,56 @@
             <td>T-22</td>
             <td>Migrate toàn bộ route còn lại (audit, bypass, engine-config) sang <code>requireRelation()</code>, bỏ
               hẳn <code>src/server/rbac.ts</code> cũ</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>8</td>
             <td><span class="priority-high">High</span></td>
             <td>2026-08-07</td>
             <td>2026-08-08</td>
-            <td>T-09 (dev chỉ xem audit của mình) phải giữ đúng ngữ nghĩa qua quan hệ <code>owner</code>, không quay
-              lại filter thủ công theo <code>triggeredBy</code></td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-06). <strong>Quyết định SA</strong>: giữ nguyên
+              <code>rbac.ts</code>/<code>rbacIntegration.test.ts</code> (68 test) thay vì xoá ngay — xoá bây giờ sẽ
+              để trống hoàn toàn bộ test bảo vệ nhánh mặc định (chưa bật flag). Thay thế bằng bộ test dùng tuple thật
+              dời sang T-25, khi đó mới xoá hẳn. Migrate toàn bộ route còn lại: <code>policies.ts</code> (create/
+              edit-direct/delete/approve/reject), <code>audit.ts</code> (run/history/cache), <code>bypass.ts</code>
+              (request/approve/reject/list), <code>engineConfig.ts</code>, <code>notifications.ts</code>,
+              <code>system.ts</code> (<code>/diagnostics</code>). Thêm <code>teamId</code> xuyên suốt JWT, tuple
+              ghi tự động lúc tạo resource mới (<code>tryWriteTuples()</code> — policy/audit_record/bypass_request
+              đều được gắn <code>team</code>/<code>owner</code>/<code>requester</code> ngay khi tạo), và
+              <code>listGate()</code>/<code>listRouteGate()</code> để lọc route danh sách theo quan hệ thật.
+              19 unit test mới, sửa 3 test cũ ở <code>notifications.test.ts</code> (handler chuyển <code>async</code>).
+              <strong>295/295 test pass, typecheck sạch.</strong> <strong>Đã verify sống trên dashboard thật</strong>
+              (store OpenFGA riêng, migrate script thật, login thật lấy JWT 5 role): engine-config 6/6, audit:run
+              3/3, T-09 (<code>owner</code>) đúng ngữ nghĩa qua <code>/audit/history</code>, luồng bypass
+              request→approve 3/3, notifications 200 — và xác nhận chế độ RBAC cũ (flag tắt) vẫn y hệt hành vi cũ.
+              <code>npm audit</code>: không phát sinh CVE mới. Chi tiết đầy đủ: <code>authz/README.md</code></td>
           </tr>
           <tr>
             <td>T-23</td>
             <td>Route + UI quản lý Team — tạo Team mới, gán/xoá thành viên, chỉ Super Admin gọi được</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>5</td>
             <td><span class="priority-medium">Medium</span></td>
             <td>2026-08-08</td>
             <td>2026-08-08</td>
-            <td>Route mới <code>GET/POST /api/teams</code>, <code>POST /api/teams/:id/members</code> — ghi tuple qua
-              API thay vì sửa JSON tay</td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-06). <strong>BA</strong>: phát hiện <code>users.ts</code> chỉ có
+              5 demo user cố định (1/role), không phải user directory thật — đã hỏi lại user thay vì tự chọn, chốt
+              phương án "di chuyển demo user giữa Team" (không tạo user mới). Route mới
+              <code>src/server/routes/teams.ts</code>: <code>GET/POST /api/teams</code>,
+              <code>POST /api/teams/:id/members</code> (gán/di chuyển, 400 nếu role org-wide),
+              <code>DELETE /api/teams/:id/members/:userId</code> — gate bằng role check trực tiếp
+              (<code>req.role === "super-admin"</code>, không cần OpenFGA sống vì đúng 1 super-admin cố định).
+              Thêm <code>deleteTuples()</code>/<code>tryDeleteTuples()</code> vào <code>fgaClient.ts</code> và
+              <code>setUserTeam()</code> vào <code>users.ts</code>. Frontend: trang mới
+              <code>TeamManagement.tsx</code>, thêm <code>'super-admin'</code> vào toàn bộ
+              <code>Record&lt;Role,...&gt;</code> phía web (trước đó frontend chưa hề biết role này tồn tại).
+              19 test mới (17 integration <code>teamsRouter.test.ts</code> + 2 unit), <strong>34 file/314 test
+              pass</strong>, typecheck sạch cả backend lẫn <code>web/</code>, <code>npm run build</code> thành công.
+              <strong>Verify sống thật</strong>: curl gate 401/403/200 đúng, tạo/di chuyển/xoá thành viên qua API
+              thật, và <strong>QA qua trình duyệt thật</strong> (Playwright: đăng nhập bằng JWT super-admin thật,
+              tạo Team qua form thật, gán/xoá thành viên qua UI thật, ảnh chụp xác nhận đúng). Do
+              <code>DemoModeSelector</code> chưa có node Super Admin (thuộc phạm vi T-24), QA trình duyệt bơm token
+              thật qua <code>localStorage</code> thay vì click nút đăng nhập. Dọn sạch team test khỏi
+              <code>.guardian/teams.json</code> sau verify. <code>npm audit</code>: không CVE mới. Chi tiết:
+              <code>authz/README.md</code></td>
           </tr>
           <tr>
             <td>T-24</td>
@@ -839,7 +871,7 @@
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-06 · Sprint 3: T-19, T-20, T-21 done (đều sớm hơn lịch) — 33 file/282 test
+    <footer>Cập nhật lần cuối: 2026-08-06 · Sprint 3: T-19, T-20, T-21, T-22, T-23 done (đều sớm hơn lịch) — 34 file/314 test
       pass · Đã thêm <code>CLAUDE.md</code> (Corporate Execution Rules — Role-play Matrix + quy trình 4 giai đoạn +
       9-bước Definition of Done) áp dụng từ T-21 trở đi · Chi tiết thiết kế:
       <code>reports/thiet-ke-multi-team-rbac.md</code>, tiến độ kỹ thuật: <code>authz/README.md</code> · 📦 Đã publish

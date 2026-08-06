@@ -36,8 +36,24 @@ describe("buildMigrationTuples", () => {
     expect(tuples).toContainEqual({ user: "user:auditor-1", relation: "auditor", object: "team:team-default" });
   });
 
-  it("tổng đúng 6 tuple khi không truyền policyIds (1 org-link + 1 super_admin + 4 role user)", () => {
-    expect(tuples).toHaveLength(6);
+  it("gán engine_config:default thuộc org + admin (view+edit) + auditor (view only) — T-22", () => {
+    expect(tuples).toContainEqual({
+      user: `organization:${ORG_ID}`,
+      relation: "org",
+      object: "engine_config:default",
+    });
+    expect(tuples).toContainEqual({ user: "user:admin-1", relation: "can_view", object: "engine_config:default" });
+    expect(tuples).toContainEqual({ user: "user:admin-1", relation: "can_edit", object: "engine_config:default" });
+    expect(tuples).toContainEqual({ user: "user:auditor-1", relation: "can_view", object: "engine_config:default" });
+    expect(tuples).not.toContainEqual({
+      user: "user:auditor-1",
+      relation: "can_edit",
+      object: "engine_config:default",
+    });
+  });
+
+  it("tổng đúng 10 tuple khi không truyền policyIds (1 org-team-link + 1 super_admin + 4 role user + 4 engine_config)", () => {
+    expect(tuples).toHaveLength(10);
   });
 
   it("gán mọi policyId truyền vào thuộc team-default (bài học tìm được lúc verify sống T-21)", () => {
@@ -52,7 +68,7 @@ describe("buildMigrationTuples", () => {
       relation: "team",
       object: "policy:security.policy.md",
     });
-    expect(withPolicies).toHaveLength(8);
+    expect(withPolicies).toHaveLength(12);
   });
 
   it("không truyền policyIds thì không tự thêm tuple policy nào (mặc định [])", () => {
