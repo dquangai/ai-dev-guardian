@@ -1,0 +1,45 @@
+model
+  schema 1.1
+
+type user
+
+type organization
+  relations
+    define super_admin: [user]
+
+type team
+  relations
+    define org: [organization]
+    define admin: [user] or super_admin from org
+    define senior_dev: [user]
+    define developer: [user]
+    define auditor: [user]
+    define member: admin or senior_dev or developer or auditor
+
+type policy
+  relations
+    define team: [team]
+    define can_view: member from team
+    define can_edit_direct: admin from team
+    define can_propose: senior_dev from team
+    define can_approve: admin from team or senior_dev from team
+
+type audit_record
+  relations
+    define team: [team]
+    define owner: [user]
+    define can_view: owner or admin from team or senior_dev from team or auditor from team
+
+type bypass_request
+  relations
+    define team: [team]
+    define requester: [user]
+    define can_request: developer from team
+    define can_view: requester or admin from team or senior_dev from team or auditor from team
+    define can_approve: admin from team or senior_dev from team
+
+type engine_config
+  relations
+    define org: [organization]
+    define can_view: [user] or super_admin from org
+    define can_edit: [user] or super_admin from org
