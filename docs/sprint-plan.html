@@ -705,14 +705,19 @@
             <td>T-19</td>
             <td>Dựng OpenFGA local (Docker) + viết Authorization Model (organization/team/policy/audit_record/
               bypass_request/engine_config) + verify qua CLI/Playground</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>3</td>
             <td><span class="priority-high">High</span></td>
             <td>2026-08-06</td>
             <td>2026-08-06</td>
-            <td>Xem chi tiết model + tuple mẫu trong <code>reports/thiet-ke-multi-team-rbac.md</code>. Chạy
-              <code>docker run openfga/openfga run</code>, viết model bằng FGA DSL, test thử vài <code>check()</code>
-              qua Playground trước khi đụng code Express</td>
+            <td>OpenFGA chạy Docker (<code>authz/setup.sh</code>, có thể chạy lại được), model DSL tại
+              <code>authz/model.fga</code> — đã <code>fga model validate</code> hợp lệ. Verify bằng
+              <code>check()</code> thật (không phải Playground — OpenFGA đã đánh dấu Playground deprecated, dùng CLI
+              thay thế): 11/11 case đúng, gồm case quan trọng nhất — Super Admin tự động kế thừa quyền
+              <code>admin</code> trên team <strong>chưa từng gán tuple trực tiếp</strong>, và case cách ly chéo team
+              (Admin Team A không đụng được resource Team B). Phát hiện 1 lưu ý quan trọng cho T-23: tạo Team mới
+              phải ghi kèm tuple <code>org</code> ngay, thiếu sẽ làm Super Admin "mù" trước Team đó — xem
+              <code>authz/README.md</code></td>
           </tr>
           <tr>
             <td>T-20</td>

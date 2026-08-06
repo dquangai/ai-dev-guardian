@@ -1,0 +1,11 @@
+[
+  { "user": "user:quang", "relation": "super_admin", "object": "organization:vsf" },
+  { "user": "organization:vsf", "relation": "org", "object": "team:team-default" },
+  { "user": "user:admin-1", "relation": "admin", "object": "team:team-default" },
+  { "user": "user:senior-dev-1", "relation": "senior_dev", "object": "team:team-default" },
+  { "user": "user:developer-1", "relation": "developer", "object": "team:team-default" },
+  { "user": "user:auditor-1", "relation": "auditor", "object": "team:team-default" },
+  { "user": "team:team-default", "relation": "team", "object": "policy:sso-redirect.policy.md" },
+  { "user": "team:team-default", "relation": "team", "object": "audit_record:audit-1" },
+  { "user": "user:developer-1", "relation": "owner", "object": "audit_record:audit-1" }
+]
