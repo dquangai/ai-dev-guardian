@@ -21,7 +21,7 @@ import { TeamManagement } from './pages/TeamManagement'
 function DefaultRedirect() {
   const { user, ready } = useAuth()
   if (!ready) return null
-  return <Navigate to={user ? defaultRouteForRole(user.role) : '/login'} replace />
+  return <Navigate to={user ? defaultRouteForRole(user.role, user.teamId) : '/login'} replace />
 }
 
 function App() {
@@ -34,7 +34,10 @@ function App() {
           <Route
             index
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer', 'auditor']}>
+              <ProtectedRoute
+                allowedRoles={['admin', 'senior-dev', 'developer', 'auditor', 'super-admin']}
+                requireTeamContext
+              >
                 <Overview />
               </ProtectedRoute>
             }
@@ -42,7 +45,10 @@ function App() {
           <Route
             path="findings"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer', 'auditor']}>
+              <ProtectedRoute
+                allowedRoles={['admin', 'senior-dev', 'developer', 'auditor', 'super-admin']}
+                requireTeamContext
+              >
                 <Findings />
               </ProtectedRoute>
             }
@@ -50,7 +56,10 @@ function App() {
           <Route
             path="policies"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'senior-dev', 'developer', 'auditor']}>
+              <ProtectedRoute
+                allowedRoles={['admin', 'senior-dev', 'developer', 'auditor', 'super-admin']}
+                requireTeamContext
+              >
                 <Policies />
               </ProtectedRoute>
             }

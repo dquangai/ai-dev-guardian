@@ -2,12 +2,12 @@ import { NavLink } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import type { SystemDiagnostics } from '../../lib/types'
 import { useAuth } from '../../context/AuthContext'
-import { NAV_BY_ROLE } from '../../lib/navigation'
+import { navItemsFor } from '../../lib/navigation'
 import { engineLabel } from '../../lib/engineLabel'
 
 export function Sidebar() {
   const { user } = useAuth()
-  const items = user ? NAV_BY_ROLE[user.role] : []
+  const items = user ? navItemsFor(user.role, user.teamId) : []
   const hasItem = (to: string) => items.some((i) => i.to === to)
 
   const { data: diagnostics } = useApi<SystemDiagnostics>('/system/diagnostics')

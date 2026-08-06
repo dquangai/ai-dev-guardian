@@ -2,7 +2,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { useAuth } from '../../context/AuthContext'
-import { NAV_BY_ROLE } from '../../lib/navigation'
+import { navItemsFor } from '../../lib/navigation'
 
 const FALLBACK_TITLES: Record<string, string> = {
   '/': 'Executive Dashboard',
@@ -14,6 +14,7 @@ const FALLBACK_TITLES: Record<string, string> = {
   '/bypass-approvals': 'Bypass Approvals Hub',
   '/diagnostics': 'System Diagnostics',
   '/engine-config': 'AI Engine Config',
+  '/teams': 'Team Management',
 }
 
 export function AppLayout() {
@@ -23,7 +24,9 @@ export function AppLayout() {
 
   // Header title follows the role's own nav label (e.g. "My Findings" for a developer)
   // rather than a fixed page name, so it doesn't contradict what the sidebar just called it.
-  const roleNavItem = user ? NAV_BY_ROLE[user.role].find((item) => item.to === location.pathname) : undefined
+  const roleNavItem = user
+    ? navItemsFor(user.role, user.teamId).find((item) => item.to === location.pathname)
+    : undefined
   const title = roleNavItem?.label ?? FALLBACK_TITLES[location.pathname] ?? 'AI Dev Guardian'
 
   return (

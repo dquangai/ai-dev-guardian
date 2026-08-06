@@ -22,7 +22,8 @@ export function Login() {
   useEffect(() => {
     if (!user) return
     const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname
-    const target = from && pageAllowedForRole(user.role, from) ? from : defaultRouteForRole(user.role)
+    const target =
+      from && pageAllowedForRole(user.role, from, user.teamId) ? from : defaultRouteForRole(user.role, user.teamId)
     navigate(target, { replace: true })
   }, [user, location.state, navigate])
 

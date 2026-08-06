@@ -7,6 +7,7 @@ import { StatusPill, type PillVariant } from '../ui/StatusPill'
 import type { Role } from '../../lib/rbac'
 import { engineLabel } from '../../lib/engineLabel'
 import { NotificationBell } from './NotificationBell'
+import { TeamSwitcher } from './TeamSwitcher'
 
 const ROLE_PILL: Record<Role, PillVariant> = {
   admin: 'red',
@@ -57,6 +58,7 @@ export function Header({ title, onRefresh }: { title: string; onRefresh?: () => 
           <RefreshCw size={15} />
         </button>
 
+        {user?.role === 'super-admin' && <TeamSwitcher />}
         {user && <NotificationBell />}
 
         {user && (

@@ -22,11 +22,23 @@ export interface NavItem {
  * ever sees the pages it's allowed into, and ProtectedRoute checks the same list (via
  * pageAllowedForRole) so there's no gap between what's linked and what's reachable by URL.
  */
+/** T-24: shown to Super Admin only once they've picked an active team via the Header switcher
+ * (see AuthContext's actAsTeam) — the same 3 pages a real admin of that team would see. Kept as a
+ * short, explicit subset rather than reusing NAV_BY_ROLE.admin wholesale, matching exactly what
+ * was scoped for this task (not policy-approvals/bypass-approvals/diagnostics/engine-config). */
+const SUPER_ADMIN_TEAM_CONTEXT_NAV: NavItem[] = [
+  { to: '/', label: 'Overview', icon: 'overview' },
+  { to: '/findings', label: 'Findings', icon: 'findings' },
+  { to: '/policies', label: 'Policies', icon: 'policies' },
+]
+
+const TEAM_MANAGEMENT_NAV: NavItem = { to: '/teams', label: 'Team Management', icon: 'teams' }
+
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
-  // T-23: super-admin is org-wide (no single team), so the rest of the dashboard's team-scoped
-  // pages don't apply — Team Management is its one and only page for now. The Org Chart demo
-  // login entry for this role lands in T-24.
-  'super-admin': [{ to: '/teams', label: 'Team Management', icon: 'teams' }],
+  // T-23/T-24: super-admin is org-wide (no single team) until they act as one — see
+  // navItemsFor() below, which is what callers should actually use (this raw table only covers
+  // the "no team selected" case for super-admin).
+  'super-admin': [TEAM_MANAGEMENT_NAV],
   admin: [
     { to: '/', label: 'Overview', icon: 'overview' },
     { to: '/findings', label: 'Findings', icon: 'findings' },
@@ -60,10 +72,17 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   ],
 }
 
-export function pageAllowedForRole(role: Role, pathname: string): boolean {
-  return NAV_BY_ROLE[role].some((item) => item.to === pathname)
+/** The single source of truth for what's in the sidebar / reachable by URL — accounts for
+ * super-admin's team context (T-24), which the plain per-role table above can't express. */
+export function navItemsFor(role: Role, teamId?: string): NavItem[] {
+  if (role !== 'super-admin') return NAV_BY_ROLE[role]
+  return teamId ? [...SUPER_ADMIN_TEAM_CONTEXT_NAV, TEAM_MANAGEMENT_NAV] : [TEAM_MANAGEMENT_NAV]
 }
 
-export function defaultRouteForRole(role: Role): string {
-  return NAV_BY_ROLE[role][0]?.to ?? '/login'
+export function pageAllowedForRole(role: Role, pathname: string, teamId?: string): boolean {
+  return navItemsFor(role, teamId).some((item) => item.to === pathname)
+}
+
+export function defaultRouteForRole(role: Role, teamId?: string): string {
+  return navItemsFor(role, teamId)[0]?.to ?? '/login'
 }
