@@ -15,6 +15,13 @@ export interface DemoUser {
  */
 export const DEMO_USERS: Record<Role, DemoUser> = {
   admin: { id: "admin-1", name: "Alex Morgan", email: "admin@guardian.dev", role: "admin" },
+  // T-21: org-wide role (Sprint 3 multi-team) — not scoped to any single team, see authz/model.fga.
+  "super-admin": {
+    id: "super-admin-1",
+    name: "Taylor Nguyen",
+    email: "super.admin@guardian.dev",
+    role: "super-admin",
+  },
   "senior-dev": {
     id: "senior-dev-1",
     name: "Jordan Lee",

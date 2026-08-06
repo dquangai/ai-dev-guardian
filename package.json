@@ -21,6 +21,7 @@
     "prepublishOnly": "npm run build:all",
     "test": "vitest run",
     "cli": "tsx src/cli.ts",
+    "authz:migrate": "tsx src/server/authz/migrateTeamDefault.ts",
     "server:dev": "tsx src/server/index.ts",
     "server:start": "node dist/server/index.js",
     "web:install": "npm --prefix web install",

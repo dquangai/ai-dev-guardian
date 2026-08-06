@@ -1,4 +1,4 @@
-import { OpenFgaClient } from "@openfga/sdk";
+import { ClientWriteRequestOnDuplicateWrites, OpenFgaClient } from "@openfga/sdk";
 
 let client: OpenFgaClient | null = null;
 
@@ -24,13 +24,31 @@ export function _resetFgaClientForTests(): void {
   client = null;
 }
 
-export async function checkRelation(userId: string, relation: string, object: string): Promise<boolean> {
+function requireFgaClient(): OpenFgaClient {
   const fga = resolveFgaClient();
   if (!fga) {
     throw new Error(
       "OpenFGA client not configured — set FGA_API_URL and FGA_STORE_ID (see authz/README.md)."
     );
   }
-  const response = await fga.check({ user: `user:${userId}`, relation, object });
+  return fga;
+}
+
+export async function checkRelation(userId: string, relation: string, object: string): Promise<boolean> {
+  const response = await requireFgaClient().check({ user: `user:${userId}`, relation, object });
   return response.allowed ?? false;
+}
+
+export interface Tuple {
+  user: string;
+  relation: string;
+  object: string;
+}
+
+/** Idempotent by design (onDuplicateWrites: "ignore") — safe to re-run a migration script that
+ * calls this against tuples that already exist, matching T-21's "chạy lại được" requirement. */
+export async function writeTuples(tuples: Tuple[]): Promise<void> {
+  await requireFgaClient().writeTuples(tuples, {
+    conflict: { onDuplicateWrites: ClientWriteRequestOnDuplicateWrites.Ignore },
+  });
 }
