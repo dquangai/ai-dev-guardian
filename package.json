@@ -32,6 +32,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
     "@ast-grep/napi": "^0.45.0",
+    "@openfga/sdk": "^0.9.6",
     "chalk": "^4.1.2",
     "commander": "^12.1.0",
     "cors": "^2.8.5",
@@ -43,6 +44,9 @@
     "micromatch": "^4.0.8",
     "openai": "^7.0.0",
     "simple-git": "^3.27.0"
+  },
+  "overrides": {
+    "axios": "^1.19.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

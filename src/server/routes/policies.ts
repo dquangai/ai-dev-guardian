@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requirePermission } from "../authMiddleware";
 import { hasPermission } from "../rbac";
+import { authzGate } from "../authz/authzGate";
 import {
   deletePolicyFile,
   getPolicy,
@@ -26,18 +27,23 @@ policiesRouter.get("/requests", requirePermission("policy:view"), (req, res) => 
   res.json(listChangeRequests(status));
 });
 
-policiesRouter.get("/:id", requirePermission("policy:view"), (req, res) => {
-  if (!isSafeId(req.params.id)) {
-    res.status(400).json({ error: "bad_request", message: "Invalid policy id." });
-    return;
+// T-20 PoC: migrated to authzGate (OpenFGA when GUARDIAN_AUTHZ_MODE=fga, requirePermission otherwise).
+policiesRouter.get(
+  "/:id",
+  authzGate("policy:view", { objectType: "policy", relation: "can_view", objectIdFrom: (req) => req.params.id }),
+  (req, res) => {
+    if (!isSafeId(req.params.id)) {
+      res.status(400).json({ error: "bad_request", message: "Invalid policy id." });
+      return;
+    }
+    const policy = getPolicy(req.params.id);
+    if (!policy) {
+      res.status(404).json({ error: "not_found", message: `Policy "${req.params.id}" not found.` });
+      return;
+    }
+    res.json(policy);
   }
-  const policy = getPolicy(req.params.id);
-  if (!policy) {
-    res.status(404).json({ error: "not_found", message: `Policy "${req.params.id}" not found.` });
-    return;
-  }
-  res.json(policy);
-});
+);
 
 /** Create/update: direct write for roles with policy:edit-direct, otherwise a pending
  * change request that an approver (policy:approve) must resolve. Same handler for both
@@ -104,19 +110,36 @@ policiesRouter.delete("/:id", (req, res) => {
   res.status(202).json({ status: "pending-approval", request });
 });
 
-policiesRouter.post("/requests/:id/approve", requirePermission("policy:approve"), (req, res) => {
-  if (!isSafeId(req.params.id)) {
-    res.status(400).json({ error: "bad_request", message: "Invalid request id." });
-    return;
+/** Resolves a change-request id to its target policy id, for authzGate's objectIdFrom — the
+ * approve route's :id is the *request*, but `can_approve` (T-19 model) is a relation on the
+ * *policy* it targets. "__unknown__" on a missing request 403s harmlessly; the handler's own
+ * isSafeId/resolveChangeRequest checks below give the real 400/404. */
+function policyIdForChangeRequest(req: import("express").Request): string {
+  return listChangeRequests().find((r) => r.id === req.params.id)?.policyId ?? "__unknown__";
+}
+
+// T-20 PoC: migrated to authzGate (OpenFGA when GUARDIAN_AUTHZ_MODE=fga, requirePermission otherwise).
+policiesRouter.post(
+  "/requests/:id/approve",
+  authzGate("policy:approve", {
+    objectType: "policy",
+    relation: "can_approve",
+    objectIdFrom: policyIdForChangeRequest,
+  }),
+  (req, res) => {
+    if (!isSafeId(req.params.id)) {
+      res.status(400).json({ error: "bad_request", message: "Invalid request id." });
+      return;
+    }
+    try {
+      const request = resolveChangeRequest(req.params.id, "approved", req.userId, req.body?.note);
+      const gitHint = gitSyncHint(request.policyId, request.action === "delete" ? "delete" : "write");
+      res.json({ ...request, gitHint });
+    } catch (error) {
+      res.status(400).json({ error: "invalid", message: (error as Error).message });
+    }
   }
-  try {
-    const request = resolveChangeRequest(req.params.id, "approved", req.userId, req.body?.note);
-    const gitHint = gitSyncHint(request.policyId, request.action === "delete" ? "delete" : "write");
-    res.json({ ...request, gitHint });
-  } catch (error) {
-    res.status(400).json({ error: "invalid", message: (error as Error).message });
-  }
-});
+);
 
 policiesRouter.post("/requests/:id/reject", requirePermission("policy:approve"), (req, res) => {
   if (!isSafeId(req.params.id)) {

@@ -723,13 +723,24 @@
             <td>T-20</td>
             <td>Cài <code>@openfga/sdk</code>, viết middleware <code>requireRelation()</code> thay
               <code>requirePermission()</code>, migrate 2-3 route mẫu (policy view/approve) làm proof-of-concept</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>5</td>
             <td><span class="priority-high">High</span></td>
             <td>2026-08-06</td>
             <td>2026-08-07</td>
-            <td>Chạy song song 2 cơ chế (feature flag) trong lúc chuyển đổi để không vỡ luồng T-11 (57 integration
-              test RBAC) đang chạy</td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-06). Thêm <code>src/server/authz/</code>: <code>fgaClient.ts</code>
+              (wrap <code>@openfga/sdk</code>), <code>requireRelation()</code>, và
+              <code>authzGate()</code> — feature flag <code>GUARDIAN_AUTHZ_MODE=fga</code> chọn OpenFGA, mặc định
+              (không set) vẫn dùng <code>requirePermission()</code> cũ nên T-11 (57 test) không hề bị ảnh hưởng.
+              Migrate 2 route: <code>GET /api/policies/:id</code> (can_view) và
+              <code>POST /requests/:id/approve</code> (can_approve, resolve object qua policyId của change request).
+              <strong>Đã verify sống trên dashboard thật</strong> (không chỉ unit test): bật server với
+              <code>GUARDIAN_AUTHZ_MODE=fga</code> trỏ vào OpenFGA từ T-19, tạo change request thật, developer-1
+              approve → đúng 403, admin-1 approve cùng request → đúng 200 và ghi file thật (revert lại sau test).
+              <strong>Lưu ý dependency</strong>: <code>@openfga/sdk</code> kéo theo nhiều CVE qua <code>axios@1.16</code>
+              — đã ép <code>overrides.axios: ^1.19.0</code> trong <code>package.json</code>, về lại đúng baseline 6
+              vulnerability cũ (madge/vite/vitest, không liên quan). 11 unit test mới (<code>fgaClient.test.ts</code>,
+              <code>requireRelation.test.ts</code>, <code>authzGate.test.ts</code>) — 31 file/260 test toàn repo pass</td>
           </tr>
           <tr>
             <td>T-21</td>

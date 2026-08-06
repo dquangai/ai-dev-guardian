@@ -1,4 +1,4 @@
-# OpenFGA Authorization Model (T-19)
+# OpenFGA Authorization Model (T-19, T-20)
 
 Authorization Model + tuple demo cho Sprint 3 (Multi-Team Authorization). Thiết kế đầy đủ ở
 [`reports/thiet-ke-multi-team-rbac.md`](../reports/thiet-ke-multi-team-rbac.md).
@@ -54,3 +54,22 @@ thừa `admin: [user] or super_admin from org`). Route `POST /api/teams` (T-23) 
 
 `--playground-enabled` có bật port 3000, nhưng OpenFGA đã đánh dấu **deprecated**, khuyến nghị dùng
 CLI `fga query check` (như trên) hoặc `@openfga/sdk` để verify thay vì Playground.
+
+## T-20 — Middleware `requireRelation()` + migrate route mẫu
+
+Code ở `src/server/authz/`:
+- `fgaClient.ts` — wrap `@openfga/sdk`, đọc cấu hình từ `FGA_API_URL`/`FGA_STORE_ID`/`FGA_MODEL_ID`
+- `requireRelation(objectType, relation, objectIdFrom)` — middleware Express gọi `check()` thật
+- `authzGate(permission, fgaArgs)` — feature flag: `GUARDIAN_AUTHZ_MODE=fga` mới dùng
+  `requireRelation()`, mặc định (không set) vẫn `requirePermission()` cũ — T-11 (57 test RBAC) không
+  bị ảnh hưởng cho tới khi chủ động migrate hết ở T-22
+
+Đã migrate 2 route trong `policies.ts` làm mẫu: `GET /:id` (`can_view`) và
+`POST /requests/:id/approve` (`can_approve`, resolve object qua `policyId` của change request).
+
+**Đã verify sống trên dashboard thật** (bật server với `GUARDIAN_AUTHZ_MODE=fga` trỏ vào store T-19,
+thêm tuple cho 4 policy thật vào `team-default`): tạo 1 change request thật, developer-1 approve →
+403 đúng, admin-1 approve cùng request → 200 đúng và ghi file thật (đã revert lại sau test).
+
+**Lưu ý dependency**: `@openfga/sdk` kéo theo axios 1.16 dính nhiều CVE — đã thêm
+`"overrides": { "axios": "^1.19.0" }` vào `package.json` gốc để ép bản vá, không hạ cấp SDK.
