@@ -1,4 +1,4 @@
-# OpenFGA Authorization Model (T-19, T-20)
+# OpenFGA Authorization Model (T-19, T-20, T-21)
 
 Authorization Model + tuple demo cho Sprint 3 (Multi-Team Authorization). Thiết kế đầy đủ ở
 [`reports/thiet-ke-multi-team-rbac.md`](../reports/thiet-ke-multi-team-rbac.md).
@@ -73,3 +73,28 @@ thêm tuple cho 4 policy thật vào `team-default`): tạo 1 change request th�
 
 **Lưu ý dependency**: `@openfga/sdk` kéo theo axios 1.16 dính nhiều CVE — đã thêm
 `"overrides": { "axios": "^1.19.0" }` vào `package.json` gốc để ép bản vá, không hạ cấp SDK.
+
+## T-21 — Team entity + script migration thật
+
+Code mới:
+- `src/server/store/teamStore.ts` — `Team { id, name, createdAt, createdBy }`, lưu ở
+  `.guardian/teams.json` (gitignore, giống các store runtime khác — không phải config commit)
+- `src/server/authz/migrateTeamDefault.ts` — chạy qua `npm run authz:migrate`
+  (`FGA_API_URL`/`FGA_STORE_ID`/`FGA_MODEL_ID`): tạo `team-default`, gán 4 demo user cũ đúng role,
+  thêm `super-admin-1` mới, và **tự động link mọi policy file thật hiện có** vào `team-default`
+- Thêm role `super-admin` vào `rbac.ts`/`users.ts` — superset quyền của `admin` trong RBAC cũ (để
+  không bị 403 ở các route chưa migrate sang OpenFGA, xem T-20's `authzGate`)
+
+**Phát hiện lúc verify sống (không phải chỉ đọc code)**: bản đầu của script chỉ gán role cho user,
+**quên link policy file thật vào team** — khiến `can_view`/`can_edit_direct` không ai thoả được vì
+thiếu tupleset `team` trên chính policy đó. Đã vá ngay: script giờ đọc `listPolicies()` thật và tự
+tạo tuple `team → policy` cho từng file đang có trong `.guardian/policies/`.
+
+**Đã verify sống 2 lần** (không chỉ unit test): chạy script thật trên store OpenFGA sạch, xác nhận
+idempotent (chạy 2 lần liên tiếp không lỗi, không tạo trùng), rồi `check()` thật trên đúng 4 policy
+file có sẵn trong repo — 8/8 case đúng, gồm case cốt lõi: `super-admin-1` `can_edit_direct` được cả
+4 policy thật dù chưa từng gán tuple trực tiếp. RBAC cũ: `rbacIntegration.test.ts` tự tăng từ 57 lên
+68 test (11 route × role `super-admin` mới) — cả 68 đều pass, không sửa gì thêm ở test đó.
+
+11 unit test mới (`teamStore.test.ts`, `migrateTeamDefault.test.ts`). 33 file/282 test toàn repo
+pass, typecheck sạch, `npm audit` không phát sinh CVE mới.

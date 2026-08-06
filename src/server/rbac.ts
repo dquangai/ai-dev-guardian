@@ -10,9 +10,9 @@
  * engine; Auditor is read-only oversight across the board — no approve, no
  * edit, no run.
  */
-export type Role = "admin" | "senior-dev" | "developer" | "auditor";
+export type Role = "admin" | "senior-dev" | "developer" | "auditor" | "super-admin";
 
-export const ROLES: Role[] = ["admin", "senior-dev", "developer", "auditor"];
+export const ROLES: Role[] = ["admin", "senior-dev", "developer", "auditor", "super-admin"];
 
 export type Permission =
   | "policy:view"
@@ -27,17 +27,25 @@ export type Permission =
   | "engine-config:view"
   | "engine-config:edit";
 
+const ADMIN_PERMISSIONS: Permission[] = [
+  "policy:view",
+  "policy:edit-direct",
+  "policy:approve",
+  "audit:view",
+  "cache:manage",
+  "bypass:approve",
+  "engine-config:view",
+  "engine-config:edit",
+];
+
 const PERMISSIONS: Record<Role, Permission[]> = {
-  admin: [
-    "policy:view",
-    "policy:edit-direct",
-    "policy:approve",
-    "audit:view",
-    "cache:manage",
-    "bypass:approve",
-    "engine-config:view",
-    "engine-config:edit",
-  ],
+  admin: ADMIN_PERMISSIONS,
+  // T-21: super-admin is org-wide in the new OpenFGA world (Sprint 3) — most routes haven't
+  // migrated off this flat table yet (see authz/authzGate.ts), so until T-22 finishes that
+  // migration, super-admin needs every permission admin has here too, or it would 403 on any
+  // not-yet-migrated route. Superset-of-admin, not its own list, so it can never silently drift
+  // behind admin's permissions as those change.
+  "super-admin": ADMIN_PERMISSIONS,
   "senior-dev": [
     "policy:view",
     "policy:propose",
@@ -59,6 +67,7 @@ export function isValidRole(value: unknown): value is Role {
 
 export const ROLE_LABELS: Record<Role, string> = {
   admin: "Admin",
+  "super-admin": "Super Admin",
   "senior-dev": "Senior Dev-Lead",
   developer: "Dev",
   auditor: "Auditor",

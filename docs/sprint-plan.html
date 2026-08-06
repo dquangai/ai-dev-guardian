@@ -746,13 +746,24 @@
             <td>T-21</td>
             <td>Thêm entity Team/Organization + script migration: tạo <code>team-default</code>, ghi tuple gán 4
               demo user hiện tại đúng role cũ, thêm 1 demo user mới role <code>super_admin</code></td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>5</td>
             <td><span class="priority-high">High</span></td>
             <td>2026-08-07</td>
             <td>2026-08-07</td>
-            <td>Không mất dữ liệu hiện có — mọi policy/audit/bypass request cũ coi như thuộc
-              <code>team-default</code></td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-06), theo đúng quy trình 4 giai đoạn trong
+              <code>CLAUDE.md</code>. <code>src/server/store/teamStore.ts</code> (Team entity) +
+              <code>src/server/authz/migrateTeamDefault.ts</code> (chạy qua <code>npm run authz:migrate</code>) +
+              thêm role <code>super-admin</code> vào <code>rbac.ts</code>/<code>users.ts</code> (superset quyền
+              admin trong RBAC cũ, để không 403 ở route chưa migrate sang OpenFGA).
+              <strong>Phát hiện lúc verify sống</strong>: bản đầu script quên link policy file thật vào team, khiến
+              không ai <code>can_view</code> được — đã vá ngay (đọc <code>listPolicies()</code> thật, tự tạo tuple
+              team→policy). Verify sống 2 lần: idempotent (chạy 2 lần liên tiếp không lỗi/trùng), và
+              <code>check()</code> thật trên 4 policy có sẵn — 8/8 case đúng gồm case cốt lõi Super Admin edit-direct
+              được mọi policy dù chưa gán tuple trực tiếp. <code>rbacIntegration.test.ts</code> tự tăng 57→68 test
+              (role super-admin mới × 11 route), cả 68 pass không sửa gì thêm. 11 unit test mới — 33 file/282 test
+              toàn repo pass, typecheck sạch, <code>npm audit</code> không phát sinh CVE mới. Chi tiết:
+              <code>authz/README.md</code></td>
           </tr>
           <tr>
             <td>T-22</td>
@@ -828,12 +839,11 @@
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-06 · 🚀 <strong>Bắt đầu Sprint 3 — Multi-Team Authorization bằng OpenFGA</strong>
-      (T-19→T-27, mục tiêu 4 ngày, xong 2026-08-09) — thay hẳn Roadmap Enterprise Security Hardening cũ (bỏ R-1 SSO/
-      V-ID vì không truy cập được codebase họ, giữ nguyên mock Auth/Role Switcher cho Demo & Development, dồn lực vào
-      RBAC nhiều team). Chi tiết thiết kế: <code>reports/thiet-ke-multi-team-rbac.md</code> · 📦 Đã publish
-      <code>ai-dev-guardian@0.1.0</code> lên npm công khai · 🎯 Sprint 2 ĐẠT sớm hơn lịch 10 ngày (T-01→T-18 Done, 249
-      test pass, build/typecheck/lint sạch)</footer>
+    <footer>Cập nhật lần cuối: 2026-08-06 · Sprint 3: T-19, T-20, T-21 done (đều sớm hơn lịch) — 33 file/282 test
+      pass · Đã thêm <code>CLAUDE.md</code> (Corporate Execution Rules — Role-play Matrix + quy trình 4 giai đoạn +
+      9-bước Definition of Done) áp dụng từ T-21 trở đi · Chi tiết thiết kế:
+      <code>reports/thiet-ke-multi-team-rbac.md</code>, tiến độ kỹ thuật: <code>authz/README.md</code> · 📦 Đã publish
+      <code>ai-dev-guardian@0.1.0</code> lên npm công khai · 🎯 Sprint 2 ĐẠT sớm hơn lịch 10 ngày (T-01→T-18 Done)</footer>
   </div>
 </body>
 
