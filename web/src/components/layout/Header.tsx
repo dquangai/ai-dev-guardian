@@ -10,6 +10,7 @@ import { NotificationBell } from './NotificationBell'
 
 const ROLE_PILL: Record<Role, PillVariant> = {
   admin: 'red',
+  'super-admin': 'red',
   'senior-dev': 'blue',
   developer: 'amber',
   auditor: 'gray',

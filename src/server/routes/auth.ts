@@ -6,7 +6,10 @@ import { checkPassword, findUserByEmail, findUserByRole, type DemoUser } from ".
 export const authRouter = Router();
 
 function respondWithToken(res: Response, user: DemoUser, rememberMe: boolean): void {
-  const token = signToken({ sub: user.id, role: user.role, name: user.name, email: user.email }, rememberMe);
+  const token = signToken(
+    { sub: user.id, role: user.role, name: user.name, email: user.email, teamId: user.teamId },
+    rememberMe
+  );
   res.json({
     token,
     user: {

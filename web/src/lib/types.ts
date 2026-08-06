@@ -111,6 +111,30 @@ export interface EngineDiagnostics {
   effectiveSemgrepConfig: string
 }
 
+/** T-23: one of the 4 fixed team-scoped demo accounts (never includes super-admin, which is
+ * org-wide and never a team "member"). */
+export interface TeamMember {
+  id: string
+  name: string
+  email: string
+  role: 'admin' | 'senior-dev' | 'developer' | 'auditor'
+}
+
+export interface Team {
+  id: string
+  name: string
+  createdAt: string
+  createdBy: string
+  members: TeamMember[]
+}
+
+/** `users` is every team-scoped demo user with their *current* teamId (or undefined if
+ * unassigned) — used to populate the "add member" picker without a separate /api/users call. */
+export interface TeamsResponse {
+  teams: Team[]
+  users: (TeamMember & { teamId?: string })[]
+}
+
 export interface SystemDiagnostics {
   nodeVersion: string
   platform: string

@@ -6,6 +6,7 @@ import type { Role } from '../lib/rbac'
 
 const SHORT_ROLE_LABEL: Record<Role, string> = {
   admin: 'Admin',
+  'super-admin': 'Super Admin',
   'senior-dev': 'Senior Dev-Lead',
   developer: 'Dev',
   auditor: 'Auditor',

@@ -12,8 +12,11 @@ import { writeTuples, type Tuple } from "./fgaClient";
 
 export const ORG_ID = "vsf";
 export const DEFAULT_TEAM_ID = "team-default";
+export const ENGINE_CONFIG_ID = "default";
 
-const TEAM_SCOPED_ROLES: { role: Role; relation: string }[] = [
+// T-23: exported so routes/teams.ts can reuse the exact same role -> FGA relation mapping when
+// moving a demo user between teams, instead of duplicating it.
+export const TEAM_SCOPED_ROLES: { role: Role; relation: string }[] = [
   { role: "admin", relation: "admin" },
   { role: "senior-dev", relation: "senior_dev" },
   { role: "developer", relation: "developer" },
@@ -41,6 +44,16 @@ export function buildMigrationTuples(policyIds: string[] = []): Tuple[] {
       object: `team:${DEFAULT_TEAM_ID}`,
     });
   }
+
+  // T-22: engine_config is an org-wide singleton, not team-scoped — old RBAC gave engine-config:view
+  // to admin+auditor and engine-config:edit to admin only (an asymmetric pair no team relation
+  // captures cleanly), so these are direct grants rather than inherited via team membership.
+  tuples.push(
+    { user: `organization:${ORG_ID}`, relation: "org", object: `engine_config:${ENGINE_CONFIG_ID}` },
+    { user: `user:${DEMO_USERS.admin.id}`, relation: "can_view", object: `engine_config:${ENGINE_CONFIG_ID}` },
+    { user: `user:${DEMO_USERS.admin.id}`, relation: "can_edit", object: `engine_config:${ENGINE_CONFIG_ID}` },
+    { user: `user:${DEMO_USERS.auditor.id}`, relation: "can_view", object: `engine_config:${ENGINE_CONFIG_ID}` }
+  );
 
   // Found during T-21 live verification: without this, can_view/can_edit_direct/can_approve on
   // an existing policy never resolves for ANYONE (including team members) — the policy relation

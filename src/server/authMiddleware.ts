@@ -10,6 +10,8 @@ declare global {
       userId: string;
       userName: string;
       userEmail: string;
+      // T-22: absent for org-wide roles (super-admin) — see users.ts's DemoUser.teamId.
+      teamId?: string;
     }
   }
 }
@@ -32,6 +34,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   req.userId = payload.sub;
   req.userName = payload.name;
   req.userEmail = payload.email;
+  req.teamId = payload.teamId;
   next();
 }
 

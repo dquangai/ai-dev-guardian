@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { checkPassword, findUserByEmail, findUserByRole } from "../src/server/users";
+import { checkPassword, DEMO_USERS, findUserByEmail, findUserByRole, findUserById, setUserTeam } from "../src/server/users";
 
 describe("findUserByEmail", () => {
   it("finds a demo user case-insensitively", () => {
@@ -19,6 +19,24 @@ describe("findUserByRole", () => {
   it("returns null for an invalid/unknown role", () => {
     expect(findUserByRole("superadmin")).toBeNull();
     expect(findUserByRole(undefined)).toBeNull();
+  });
+});
+
+describe("setUserTeam (T-23)", () => {
+  const original = DEMO_USERS.developer.teamId;
+
+  afterEach(() => {
+    setUserTeam("developer", original);
+  });
+
+  it("đổi teamId của user theo role, phản ánh ngay qua findUserById", () => {
+    setUserTeam("developer", "team-eng");
+    expect(findUserById(DEMO_USERS.developer.id)?.teamId).toBe("team-eng");
+  });
+
+  it("có thể xoá khỏi team (teamId thành undefined)", () => {
+    setUserTeam("developer", undefined);
+    expect(findUserById(DEMO_USERS.developer.id)?.teamId).toBeUndefined();
   });
 });
 
