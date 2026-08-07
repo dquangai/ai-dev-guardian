@@ -378,3 +378,12 @@ ghi nhận từ T-25, không đổi).
 Dọn sạch: chuyển `auditor-1` về lại `team-default`, xoá `team-security` khỏi
 `.guardian/teams.json`, dừng server, dừng + xoá container OpenFGA. `git status` xác nhận chỉ còn
 đúng các file code đã sửa (`requireRelation.ts`, `Header.tsx`, `Sidebar.tsx`, test liên quan).
+
+## Vá 2 CVE phát hiện ở T-25 (sau Sprint 3)
+
+Đã chạy `npm audit fix` (không `--force`, đã xác nhận trước qua `--dry-run` chỉ bump patch version,
+không đụng `vitest`/`vite`): `js-yaml` 3.15.0 → 3.15.1, `brace-expansion` 5.0.8 → 5.0.9 (qua
+`gray-matter` và `madge` — transitive, không đổi `package.json`, chỉ `package-lock.json`). Còn lại
+5 vulnerability (chuỗi `esbuild`/`vite`/`vitest` cũ, cần `--force` và nâng `vitest` breaking) —
+**cố tình chưa vá**, giữ nguyên baseline đã biết từ trước. Verify sau khi vá: `tsc --noEmit` sạch,
+36 file/339 test pass, `npm run build` (frontend) thành công.
