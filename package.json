@@ -20,6 +20,7 @@
     "build:all": "npm run build && npm run web:build",
     "prepublishOnly": "npm run build:all",
     "test": "vitest run",
+    "test:tuples": "vitest run test/tupleRouteIntegration.test.ts",
     "cli": "tsx src/cli.ts",
     "authz:migrate": "tsx src/server/authz/migrateTeamDefault.ts",
     "server:dev": "tsx src/server/index.ts",

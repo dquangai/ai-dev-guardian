@@ -1,4 +1,4 @@
-# OpenFGA Authorization Model (T-19, T-20, T-21, T-22, T-23, T-24)
+# OpenFGA Authorization Model (T-19, T-20, T-21, T-22, T-23, T-24, T-25)
 
 Authorization Model + tuple demo cho Sprint 3 (Multi-Team Authorization). Thiết kế đầy đủ ở
 [`reports/thiet-ke-multi-team-rbac.md`](../reports/thiet-ke-multi-team-rbac.md).
@@ -278,3 +278,55 @@ production hiện tại) — nên cân nhắc xử lý ở T-25 (vd: check quy�
 
 Dọn sạch: xoá policy test (`t24-live-verify.policy.md`) khỏi `.guardian/policies/`, dừng server,
 dừng + xoá container OpenFGA tạm. `npm audit`: không CVE mới.
+
+## T-25 — Bộ test route-level dùng tuple thật (không phải chỉ JWT role)
+
+**Phase 1 (BA/SA) — quyết định quan trọng trước khi code**: mô tả gốc của T-25 trong sprint-plan
+nói "thay thế `rbacIntegration.test.ts`" — đã hỏi lại user trước khi làm theo nghĩa đen. Phát hiện:
+`GUARDIAN_AUTHZ_MODE` mặc định (unset) **vẫn là chế độ chạy thật của package `ai-dev-guardian` đã
+publish lên npm** — không phải toàn bộ dùng OpenFGA bắt buộc. Xoá `rbac.ts`/`rbacIntegration.test.ts`
+sẽ phá vỡ sản phẩm cho mọi người dùng không tự dựng OpenFGA. **Quyết định**: giữ nguyên `rbac.ts`
+vĩnh viễn; T-25 = thuần bổ sung một bộ test MỚI (`test/tupleRouteIntegration.test.ts`) chứng minh
+đúng các tính chất bảo mật quan hệ (kế thừa Super Admin, cách ly cross-team) khi chạy ở chế độ
+OpenFGA thật — không đụng gì tới `rbacIntegration.test.ts` (68 test) hiện có.
+
+**Thiết kế**: chạy route-level qua `supertest` như T-11, nhưng:
+- Dựng **OpenFGA thật qua Docker** trong `beforeAll` (không mock `checkRelation()` — mock lại logic
+  suy luận quan hệ sẽ tự đánh lừa chính mình, không chứng minh được gì)
+- Model nạp từ `authz/model.json` (file JSON mới, sinh 1 lần bằng `fga model transform --file
+  model.fga --output-format json` — dùng CLI thật để transform, không đoán schema JSON của OpenFGA
+  bằng tay) qua `@openfga/sdk` trực tiếp — **không cần cài `fga` CLI để CHẠY test**, chỉ Docker
+- Dữ liệu 100% tuple thật: 2 team độc lập (`team-alpha`, `team-beta`) cùng 1 org, user tổng hợp
+  (không dùng `DEMO_USERS` cố định) để có thể test 2 admin khác team cùng lúc — điều `rbac.ts`
+  không bao giờ mô tả được (role "admin" không biết gì về team)
+- Tự skip (không fail) toàn bộ file nếu không có Docker — verify bằng cách giả lập Docker daemon
+  không kết nối được, xác nhận `16 skipped`, không phải lỗi
+
+**Bug thật phát hiện lúc viết test (không phải lỗi test, lỗi hiểu sai thứ tự thực thi)**:
+`authzGate()`/`listRouteGate()` đọc `GUARDIAN_AUTHZ_MODE` **một lần duy nhất lúc router được đăng
+ký** (lúc `bypassRouter.post(path, authzGate(...), handler)` chạy khi module `bypass.ts` được
+import) — không đọc lại mỗi request. Bản đầu của test file gọi `createApp()` ở module scope (import
+tĩnh), tức là TRƯỚC khi `beforeAll` kịp set `GUARDIAN_AUTHZ_MODE=fga` — toàn bộ test vô tình chạy
+trên RBAC cũ, và các case cùng-team "tình cờ" đúng (RBAC cũ và OpenFGA trùng kết quả khi không có
+cross-team), che giấu sự thật cho tới khi 2 case cách ly cross-team fail rõ ràng (403 kỳ vọng nhưng
+ra 200). Sửa: `createApp` import động (`await import(...)`) bên trong `beforeAll`, sau khi
+`GUARDIAN_AUTHZ_MODE` đã được set — ES module import tĩnh luôn hoist lên trước mọi code khác trong
+file, nên đây là cách DUY NHẤT đảm bảo đúng thứ tự. Đã re-run và xác nhận 3 case cross-team trước đó
+fail sai giờ pass đúng, chứng minh bug có thật và đã sửa đúng chỗ (không phải chỉnh test cho qua).
+
+**16 test mới**, phủ:
+- Super Admin kế thừa `admin` qua org trên team **chưa từng gán tuple trực tiếp** (2 case)
+- Cách ly cross-team: admin team A không đụng được resource team B, cả 2 chiều (4 case)
+- `audit:run` qua quan hệ `developer` trên team, không phải chuỗi role (2 case)
+- T-09 qua tuple `owner`: dev chỉ thấy audit của chính mình, kể cả đồng đội cùng team cũng không
+  thấy; senior_dev thấy toàn team; admin team khác không thấy gì (4 case)
+- `bypass_request`: tự duyệt bị chặn, team khác duyệt bị chặn, đúng team duyệt được (4 case)
+
+**36 file / 338 test pass** toàn repo (thêm 16, không phá gì cũ), typecheck sạch. Chạy độc lập qua
+`npm run test:tuples` (cần Docker) hoặc tự động trong `npm test` (tự skip nếu thiếu Docker).
+
+**`npm audit`**: phát hiện **2 CVE mới không liên quan tới T-25** (không thêm dependency nào ở task
+này) — `brace-expansion` (qua `madge`, high) và `js-yaml` (qua `gray-matter`, high) — đây là CVE mới
+công bố giữa các lần audit trong ngày (database CVE cập nhật theo thời gian thực, không phải do thay
+đổi code). Ghi nhận, không tự ý chạy `npm audit fix`/`fix --force` (có thể kéo theo breaking change
+không nằm trong phạm vi T-25) — cần user xác nhận hướng xử lý riêng.
