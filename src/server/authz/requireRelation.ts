@@ -11,7 +11,20 @@ export function requireRelation(
   objectIdFrom: (req: Request) => string
 ) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const object = `${objectType}:${objectIdFrom(req)}`;
+    const objectId = objectIdFrom(req);
+    // T-26: found via live browser QA — Super Admin with no active team context (req.teamId
+    // undefined) previously fell through to `${objectType}:` (empty id, e.g. "team:"), which
+    // OpenFGA's API rejects as a validation error, surfacing as a raw 500 instead of a normal 403.
+    // An empty id can never resolve to a real object, so this is always correctly a deny — no need
+    // to ask OpenFGA at all.
+    if (!objectId) {
+      res.status(403).json({
+        error: "forbidden",
+        message: `User lacks relation "${relation}" on "${objectType}:" (no active team context).`,
+      });
+      return;
+    }
+    const object = `${objectType}:${objectId}`;
     try {
       const allowed = await checkRelation(req.userId, relation, object);
       if (!allowed) {

@@ -29,7 +29,11 @@ function initials(name: string): string {
 export function Header({ title, onRefresh }: { title: string; onRefresh?: () => void }) {
   const { user, roleLabel, logout } = useAuth()
   const navigate = useNavigate()
-  const { data: diagnostics } = useApi<SystemDiagnostics>('/system/diagnostics')
+  // T-26: Super Admin with no active team context can't satisfy the team-scoped `member` relation
+  // this endpoint requires — skip the call rather than let it 403 on every page load.
+  const { data: diagnostics } = useApi<SystemDiagnostics>('/system/diagnostics', [], {
+    enabled: !(user?.role === 'super-admin' && !user?.teamId),
+  })
 
   function handleLogout() {
     logout()

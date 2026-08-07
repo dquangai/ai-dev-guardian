@@ -64,6 +64,19 @@ describe("requireRelation", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it("T-26: objectIdFrom trả về rỗng (vd Super Admin chưa chọn team) -> 403 thẳng, không gọi checkRelation", async () => {
+    const middleware = requireRelation("team", "member", () => "");
+    const req = mockReq("super-admin-1");
+    const res = mockRes();
+    const next = vi.fn();
+
+    await middleware(req, res, next);
+
+    expect(checkRelation).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("build đúng object string từ objectIdFrom tuỳ biến (vd resolve qua change request)", async () => {
     vi.mocked(checkRelation).mockResolvedValue(true);
     const middleware = requireRelation("policy", "can_approve", () => "resolved-policy-id.policy.md");

@@ -1,4 +1,4 @@
-# OpenFGA Authorization Model (T-19, T-20, T-21, T-22, T-23, T-24, T-25)
+# OpenFGA Authorization Model (T-19, T-20, T-21, T-22, T-23, T-24, T-25, T-26)
 
 Authorization Model + tuple demo cho Sprint 3 (Multi-Team Authorization). Thiết kế đầy đủ ở
 [`reports/thiet-ke-multi-team-rbac.md`](../reports/thiet-ke-multi-team-rbac.md).
@@ -330,3 +330,51 @@ này) — `brace-expansion` (qua `madge`, high) và `js-yaml` (qua `gray-matter`
 công bố giữa các lần audit trong ngày (database CVE cập nhật theo thời gian thực, không phải do thay
 đổi code). Ghi nhận, không tự ý chạy `npm audit fix`/`fix --force` (có thể kéo theo breaking change
 không nằm trong phạm vi T-25) — cần user xác nhận hướng xử lý riêng.
+
+## T-26 — QA thủ công toàn bộ luồng mới qua browser thật
+
+Dựng môi trường sống đầy đủ: OpenFGA thật qua Docker, `npm run authz:migrate` thật,
+`GUARDIAN_AUTHZ_MODE=fga`, `web/dist` build thật — theo đúng pattern Playwright headless đã dùng ở
+T-12. Để có 2 team **thật** với dữ liệu khác nhau cho việc QA cách ly (không chỉ 1 `team-default`
+như mọi lần verify trước), đã tạo thật `team-security` qua UI Team Management và **chuyển
+`auditor-1` sang đó tạm thời** — verify xong chuyển lại đúng nguyên trạng.
+
+**Đăng nhập qua UI thật cho cả 5 role** (Org Chart demo selector, không bơm token — lần đầu tiên
+Super Admin đăng nhập qua đúng luồng UI thật kể từ khi node được thêm ở T-24): cả 5 role load
+không lỗi console, đúng sidebar theo `navItemsFor()`.
+
+**Bug thật phát hiện lúc QA — 500 lỗi cho Super Admin chưa chọn team**: `GET /system/diagnostics`
+(và mọi route dùng `requireRelation` với `objectIdFrom: (req) => req.teamId ?? ""`) khi
+`req.teamId` rỗng sẽ tạo object OpenFGA dạng `"team:"` (id rỗng) — OpenFGA API từ chối object này
+bằng lỗi validation, và middleware biến lỗi đó thành **500** thay vì 403 hợp lý. Đây là khoảng trống
+có từ T-22 nhưng chưa từng lộ diện vì mọi lần verify trước hoặc chạy flag-off (T-24's UI click-through
+ban đầu), hoặc Super Admin luôn đã chọn sẵn 1 team trước khi chạm trang cần diagnostics. **Sửa tận
+gốc trong `requireRelation()`** (dùng chung cho cả 4 chỗ gọi kiểu này: `system.ts`, `audit.ts` × 2,
+`bypass.ts`) — id rỗng thì 403 thẳng, không gọi OpenFGA. Thêm 1 unit test xác nhận không gọi
+`checkRelation()` khi id rỗng.
+
+**Polish thêm (không phải bug, nhưng ảnh hưởng độ sạch demo)**: Header/Sidebar gọi
+`/system/diagnostics` vô điều kiện — với Super Admin org-wide (chưa chọn team) sẽ luôn 403 (đúng),
+nhưng in ra console 2 lỗi mạng mỗi lần tải trang dù UI vẫn xuống cấp gọn gàng (text mặc định, không
+vỡ layout). Thêm `enabled: !(role==='super-admin' && !teamId)` cho cả 2 nơi gọi — sạch console hoàn
+toàn khi demo.
+
+**Verify cách ly dữ liệu thật qua browser** (không chỉ curl):
+- Auditor-1 sau khi chuyển sang `team-security` → trang Policies hiện **"Policies (0)"**, không thấy
+  4 policy của `team-default` — ảnh chụp xác nhận
+- Developer-1 (vẫn ở `team-default`) → trang Policies hiện **"Policies (4)"** với nội dung thật —
+  đối chứng dương, xác nhận không phải do lỗi tải trang chung
+- Super Admin qua Team switcher xem `team-default` lẫn `team-security` đều thấy sidebar badge
+  "Policies 4" **giống nhau** — ban đầu tưởng là bug cách ly, nhưng xác minh lại đây là hành vi ĐÚNG
+  theo thiết kế ReBAC: `can_view` (policy) chỉ phụ thuộc quan hệ `member` của người xem trên team
+  sở hữu policy, và Super Admin kế thừa `admin` (nên cả `member`) trên **mọi** team qua org — không
+  phụ thuộc đang "act as" team nào. Switcher chỉ scope các hành động GHI (tag team mới, audit:run,
+  cache:manage), không giới hạn quyền XEM của Super Admin — ghi rõ lại để tránh hiểu nhầm khi demo.
+
+**Kết quả**: 36 file / **339 test pass** (thêm 1 unit test mới cho fix), typecheck sạch backend lẫn
+`web/`, `npm run build` (frontend) thành công, `npm audit` không phát sinh thêm CVE (đã có 2 CVE
+ghi nhận từ T-25, không đổi).
+
+Dọn sạch: chuyển `auditor-1` về lại `team-default`, xoá `team-security` khỏi
+`.guardian/teams.json`, dừng server, dừng + xoá container OpenFGA. `git status` xác nhận chỉ còn
+đúng các file code đã sửa (`requireRelation.ts`, `Header.tsx`, `Sidebar.tsx`, test liên quan).
