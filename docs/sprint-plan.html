@@ -378,12 +378,14 @@
     </div>
 
     <div class="info-grid">
-      <div class="info-cell"><span class="label">Current Sprint:</span><span class="value">Sprint 3</span></div>
+      <div class="info-cell"><span class="label">Current Sprint:</span><span class="value">Sprint 3 —
+          <strong style="color:#15803d">HOÀN THÀNH ✅</strong></span></div>
       <div class="info-cell"><span class="label">Sprint Goal:</span><span class="value">Multi-Team Authorization
           bằng OpenFGA (ReBAC/Zanzibar-style) — thay RBAC phẳng hiện tại, thêm Team/Organization + role Super Admin
           kế thừa quyền xuyên suốt mọi team, có test route-level cách ly dữ liệu chéo team</span></div>
       <div class="info-cell"><span class="label">Sprint Start:</span><span class="value">2026-08-06</span></div>
-      <div class="info-cell"><span class="label">Sprint End:</span><span class="value">2026-08-09 (4 ngày)</span></div>
+      <div class="info-cell"><span class="label">Sprint End:</span><span class="value">Hoàn thành 2026-08-07 —
+          sớm hơn 2 ngày so với mục tiêu 2026-08-09 (4 ngày)</span></div>
       <div class="info-cell" style="grid-column: 1 / -1">
         <span class="label">📦 Published:</span>
         <span class="value">
@@ -685,7 +687,7 @@
       </table>
     </div>
 
-    <div class="board-title" style="margin-top: 1.5rem">SPRINT 3 TASK BOARD — MULTI-TEAM AUTHORIZATION (OPENFGA)</div>
+    <div class="board-title" style="margin-top: 1.5rem">SPRINT 3 TASK BOARD — MULTI-TEAM AUTHORIZATION (OPENFGA) (HOÀN THÀNH)</div>
     <div class="table-scroll">
       <table>
         <thead>
@@ -882,33 +884,56 @@
             <td>T-26</td>
             <td>QA thủ công toàn bộ luồng mới qua browser thật (đăng nhập từng role/team, verify cách ly dữ liệu,
               verify Super Admin xem xuyên team) + sửa bug phát sinh + cập nhật README/sprint-plan</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>3</td>
             <td><span class="priority-medium">Medium</span></td>
             <td>2026-08-09</td>
             <td>2026-08-09</td>
-            <td>Theo đúng pattern Playwright headless đã dùng ở T-12</td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-07). Dựng môi trường sống đầy đủ (OpenFGA thật, migrate thật,
+              flag bật, web/dist build thật); tạo thật <code>team-security</code> qua UI + chuyển
+              <code>auditor-1</code> sang đó tạm thời để có 2 team dữ liệu khác nhau cho QA cách ly (trả lại đúng
+              nguyên trạng sau khi xong). Đăng nhập qua UI thật (Org Chart) cho cả 5 role — lần đầu Super Admin
+              login đúng luồng thật kể từ khi thêm ở T-24. <strong>Bug thật phát hiện</strong>: Super Admin chưa
+              chọn team gọi các route dùng <code>req.teamId ?? ""</code> (system diagnostics, audit:run,
+              cache:manage, bypass) sẽ tạo object OpenFGA rỗng (<code>"team:"</code>), bị API từ chối và middleware
+              biến thành lỗi <strong>500</strong> thay vì 403 hợp lý — khoảng trống có từ T-22, chưa từng lộ diện
+              vì chưa ai QA đúng tổ hợp "Super Admin org-wide + flag bật + browser thật" trước đây. Sửa tận gốc
+              trong <code>requireRelation()</code> (dùng chung 4 chỗ gọi) — id rỗng thì 403 thẳng, không gọi
+              OpenFGA. Polish thêm: bỏ gọi <code>/system/diagnostics</code> khi Super Admin chưa chọn team (tránh
+              403 vô ích, sạch console khi demo). <strong>Verify cách ly qua browser thật</strong> (không chỉ
+              curl): auditor chuyển sang team mới → "Policies (0)"; developer vẫn ở team cũ → "Policies (4)" —
+              ảnh chụp xác nhận cả 2 phía. Đồng thời làm rõ 1 hành vi tưởng là bug nhưng đúng thiết kế: Super Admin
+              xem được mọi team dù đang "act as" team nào (kế thừa qua org, switcher chỉ scope hành động GHI, không
+              giới hạn XEM). <strong>36 file/339 test pass</strong> (thêm 1 test cho fix), typecheck sạch,
+              <code>npm run build</code> ok, <code>npm audit</code> không CVE mới. Dọn sạch: trả auditor-1 về team
+              cũ, xoá team-security, dừng server + Docker. Chi tiết: <code>authz/README.md</code></td>
           </tr>
           <tr>
             <td>T-27</td>
             <td>🎯 Deadline: Multi-Team Authorization bằng OpenFGA hoạt động đầy đủ, có test, demo được cho
               Mentor</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>—</td>
             <td><span class="priority-high">High</span></td>
             <td>2026-08-09</td>
             <td>2026-08-09</td>
-            <td>Milestone của Sprint 3 — mục tiêu 4 ngày kể từ 2026-08-06</td>
+            <td><strong>ĐẠT sớm hơn lịch 2 ngày</strong> (hoàn thành 2026-08-07, mục tiêu 2026-08-09). Toàn bộ
+              T-19→T-26 Done. OpenFGA/ReBAC thật (không mock) chạy song song RBAC cũ qua feature flag
+              <code>GUARDIAN_AUTHZ_MODE</code>, migrate hết route, Team Management UI, Team switcher cho Super
+              Admin, 2 bộ test độc lập bảo vệ cả 2 nhánh (68 test RBAC cũ + 16 test tuple OpenFGA thật qua Docker),
+              đã QA thủ công qua browser thật cho cả 5 role và verify cách ly dữ liệu cross-team bằng mắt thường.
+              36 file/339 test pass, typecheck sạch, demo được ngay cho Mentor.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-07 · Sprint 3: T-19–T-25 done (đều sớm hơn lịch) — 36 file/338 test
-      pass · Đã thêm <code>CLAUDE.md</code> (Corporate Execution Rules — Role-play Matrix + quy trình 4 giai đoạn +
-      9-bước Definition of Done) áp dụng từ T-21 trở đi · Chi tiết thiết kế:
-      <code>reports/thiet-ke-multi-team-rbac.md</code>, tiến độ kỹ thuật: <code>authz/README.md</code> · 📦 Đã publish
-      <code>ai-dev-guardian@0.1.0</code> lên npm công khai · 🎯 Sprint 2 ĐẠT sớm hơn lịch 10 ngày (T-01→T-18 Done)</footer>
+    <footer>Cập nhật lần cuối: 2026-08-07 · 🎯 Sprint 3 ĐẠT sớm hơn lịch 2 ngày (T-19→T-27 Done, hoàn thành
+      2026-08-07, mục tiêu 2026-08-09) — 36 file/339 test pass · Đã thêm <code>CLAUDE.md</code> (Corporate
+      Execution Rules — Role-play Matrix + quy trình 4 giai đoạn + 9-bước Definition of Done) áp dụng từ T-21 trở
+      đi · Chi tiết thiết kế: <code>reports/thiet-ke-multi-team-rbac.md</code>, tiến độ kỹ thuật:
+      <code>authz/README.md</code> · 📦 Đã publish <code>ai-dev-guardian@0.1.0</code> lên npm công khai · 🎯 Sprint 2
+      ĐẠT sớm hơn lịch 10 ngày (T-01→T-18 Done)</footer>
   </div>
 </body>
 

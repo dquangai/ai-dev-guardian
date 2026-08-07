@@ -10,7 +10,10 @@ export function Sidebar() {
   const items = user ? navItemsFor(user.role, user.teamId) : []
   const hasItem = (to: string) => items.some((i) => i.to === to)
 
-  const { data: diagnostics } = useApi<SystemDiagnostics>('/system/diagnostics')
+  // T-26: same reasoning as Header.tsx — avoid a guaranteed 403 for org-wide Super Admin.
+  const { data: diagnostics } = useApi<SystemDiagnostics>('/system/diagnostics', [], {
+    enabled: !(user?.role === 'super-admin' && !user?.teamId),
+  })
   const { data: policies } = useApi<{ length: number }[]>('/policies', [], { enabled: hasItem('/policies') })
   const { data: history } = useApi<{ verdict: string }[]>('/audit/history', [], {
     enabled: hasItem('/findings'),
