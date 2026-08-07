@@ -1,0 +1,459 @@
+{
+    "schema_version": "1.1",
+    "type_definitions": [
+        {
+            "type": "user"
+        },
+        {
+            "metadata": {
+                "relations": {
+                    "super_admin": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    }
+                }
+            },
+            "relations": {
+                "super_admin": {
+                    "this": {}
+                }
+            },
+            "type": "organization"
+        },
+        {
+            "metadata": {
+                "relations": {
+                    "admin": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    },
+                    "auditor": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    },
+                    "developer": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    },
+                    "member": {},
+                    "org": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "organization"
+                            }
+                        ]
+                    },
+                    "senior_dev": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    }
+                }
+            },
+            "relations": {
+                "admin": {
+                    "union": {
+                        "child": [
+                            {
+                                "this": {}
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "super_admin"
+                                    },
+                                    "tupleset": {
+                                        "relation": "org"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "auditor": {
+                    "this": {}
+                },
+                "developer": {
+                    "this": {}
+                },
+                "member": {
+                    "union": {
+                        "child": [
+                            {
+                                "computedUserset": {
+                                    "relation": "admin"
+                                }
+                            },
+                            {
+                                "computedUserset": {
+                                    "relation": "senior_dev"
+                                }
+                            },
+                            {
+                                "computedUserset": {
+                                    "relation": "developer"
+                                }
+                            },
+                            {
+                                "computedUserset": {
+                                    "relation": "auditor"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "org": {
+                    "this": {}
+                },
+                "senior_dev": {
+                    "this": {}
+                }
+            },
+            "type": "team"
+        },
+        {
+            "metadata": {
+                "relations": {
+                    "can_approve": {},
+                    "can_edit_direct": {},
+                    "can_propose": {},
+                    "can_view": {},
+                    "team": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "team"
+                            }
+                        ]
+                    }
+                }
+            },
+            "relations": {
+                "can_approve": {
+                    "union": {
+                        "child": [
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "admin"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "senior_dev"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "can_edit_direct": {
+                    "tupleToUserset": {
+                        "computedUserset": {
+                            "relation": "admin"
+                        },
+                        "tupleset": {
+                            "relation": "team"
+                        }
+                    }
+                },
+                "can_propose": {
+                    "tupleToUserset": {
+                        "computedUserset": {
+                            "relation": "senior_dev"
+                        },
+                        "tupleset": {
+                            "relation": "team"
+                        }
+                    }
+                },
+                "can_view": {
+                    "tupleToUserset": {
+                        "computedUserset": {
+                            "relation": "member"
+                        },
+                        "tupleset": {
+                            "relation": "team"
+                        }
+                    }
+                },
+                "team": {
+                    "this": {}
+                }
+            },
+            "type": "policy"
+        },
+        {
+            "metadata": {
+                "relations": {
+                    "can_view": {},
+                    "owner": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    },
+                    "team": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "team"
+                            }
+                        ]
+                    }
+                }
+            },
+            "relations": {
+                "can_view": {
+                    "union": {
+                        "child": [
+                            {
+                                "computedUserset": {
+                                    "relation": "owner"
+                                }
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "admin"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "senior_dev"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "auditor"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "owner": {
+                    "this": {}
+                },
+                "team": {
+                    "this": {}
+                }
+            },
+            "type": "audit_record"
+        },
+        {
+            "metadata": {
+                "relations": {
+                    "can_approve": {},
+                    "can_request": {},
+                    "can_view": {},
+                    "requester": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    },
+                    "team": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "team"
+                            }
+                        ]
+                    }
+                }
+            },
+            "relations": {
+                "can_approve": {
+                    "union": {
+                        "child": [
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "admin"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "senior_dev"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "can_request": {
+                    "tupleToUserset": {
+                        "computedUserset": {
+                            "relation": "developer"
+                        },
+                        "tupleset": {
+                            "relation": "team"
+                        }
+                    }
+                },
+                "can_view": {
+                    "union": {
+                        "child": [
+                            {
+                                "computedUserset": {
+                                    "relation": "requester"
+                                }
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "admin"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "senior_dev"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "auditor"
+                                    },
+                                    "tupleset": {
+                                        "relation": "team"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "requester": {
+                    "this": {}
+                },
+                "team": {
+                    "this": {}
+                }
+            },
+            "type": "bypass_request"
+        },
+        {
+            "metadata": {
+                "relations": {
+                    "can_edit": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    },
+                    "can_view": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "user"
+                            }
+                        ]
+                    },
+                    "org": {
+                        "directly_related_user_types": [
+                            {
+                                "type": "organization"
+                            }
+                        ]
+                    }
+                }
+            },
+            "relations": {
+                "can_edit": {
+                    "union": {
+                        "child": [
+                            {
+                                "this": {}
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "super_admin"
+                                    },
+                                    "tupleset": {
+                                        "relation": "org"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "can_view": {
+                    "union": {
+                        "child": [
+                            {
+                                "this": {}
+                            },
+                            {
+                                "tupleToUserset": {
+                                    "computedUserset": {
+                                        "relation": "super_admin"
+                                    },
+                                    "tupleset": {
+                                        "relation": "org"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "org": {
+                    "this": {}
+                }
+            },
+            "type": "engine_config"
+        }
+    ]
+}

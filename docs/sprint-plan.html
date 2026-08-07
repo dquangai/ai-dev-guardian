@@ -853,13 +853,30 @@
             <td>Viết lại bộ test route-level dùng tuple thay vì chỉ JWT role (mở rộng pattern T-11) — đặc biệt test
               Super Admin tự động kế thừa quyền admin trên team chưa từng gán tuple trực tiếp, và test cách ly
               cross-team (Admin Team A không đụng được resource Team B)</td>
-            <td><span class="badge status-todo">To Do</span></td>
+            <td><span class="badge status-done">Done</span></td>
             <td>5</td>
             <td><span class="priority-high">High</span></td>
             <td>2026-08-09</td>
             <td>2026-08-09</td>
-            <td>Có thể chạy OpenFGA dưới dạng test-container (Testcontainers) trong CI, không cần OpenFGA instance
-              thật khi chạy <code>vitest</code></td>
+            <td>Làm sớm hơn lịch (hoàn thành 2026-08-07). <strong>BA</strong>: mô tả gốc nói "thay thế
+              rbacIntegration.test.ts" — hỏi lại user trước khi làm theo nghĩa đen, vì
+              <code>GUARDIAN_AUTHZ_MODE</code> mặc định (unset) vẫn là chế độ chạy thật của package đã publish lên
+              npm, xoá <code>rbac.ts</code> sẽ phá sản phẩm cho người dùng không tự dựng OpenFGA. Chốt: giữ nguyên
+              <code>rbac.ts</code>/<code>rbacIntegration.test.ts</code> vĩnh viễn, T-25 = bộ test MỚI hoàn toàn bổ
+              sung (<code>test/tupleRouteIntegration.test.ts</code>). Dựng OpenFGA thật qua Docker trong
+              <code>beforeAll</code> (không mock quan hệ), model nạp từ <code>authz/model.json</code> (sinh 1 lần
+              bằng <code>fga model transform</code>, không đoán schema JSON tay), user tổng hợp (không dùng
+              DEMO_USERS cố định) để test 2 admin khác team song song. Tự skip nếu thiếu Docker — đã verify thật
+              (giả lập daemon không kết nối được, xác nhận 16 skipped, không fail).
+              <strong>Bug thật phát hiện lúc viết test</strong>: <code>authzGate()</code> đọc
+              <code>GUARDIAN_AUTHZ_MODE</code> một lần lúc router đăng ký (không phải mỗi request) — bản đầu
+              <code>createApp()</code> ở module scope chạy trước khi <code>beforeAll</code> kịp set flag, khiến
+              toàn bộ test vô tình chạy trên RBAC cũ (các case cùng-team "tình cờ" đúng, che giấu vấn đề tới khi
+              case cách ly cross-team fail rõ). Sửa bằng dynamic import sau khi set flag — re-run xác nhận đúng.
+              16 test mới, <strong>36 file/338 test pass</strong>. Chạy qua <code>npm run test:tuples</code> hoặc tự
+              động trong <code>npm test</code>. <code>npm audit</code>: phát hiện 2 CVE mới không liên quan tới
+              T-25 (brace-expansion qua madge, js-yaml qua gray-matter — CVE công bố mới giữa các lần audit trong
+              ngày, không do thay đổi code) — ghi nhận, không tự ý fix. Chi tiết: <code>authz/README.md</code></td>
           </tr>
           <tr>
             <td>T-26</td>
@@ -887,7 +904,7 @@
       </table>
     </div>
 
-    <footer>Cập nhật lần cuối: 2026-08-06 · Sprint 3: T-19, T-20, T-21, T-22, T-23, T-24 done (đều sớm hơn lịch) — 35 file/322 test
+    <footer>Cập nhật lần cuối: 2026-08-07 · Sprint 3: T-19–T-25 done (đều sớm hơn lịch) — 36 file/338 test
       pass · Đã thêm <code>CLAUDE.md</code> (Corporate Execution Rules — Role-play Matrix + quy trình 4 giai đoạn +
       9-bước Definition of Done) áp dụng từ T-21 trở đi · Chi tiết thiết kế:
       <code>reports/thiet-ke-multi-team-rbac.md</code>, tiến độ kỹ thuật: <code>authz/README.md</code> · 📦 Đã publish
