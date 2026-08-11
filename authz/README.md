@@ -387,3 +387,25 @@ không đụng `vitest`/`vite`): `js-yaml` 3.15.0 → 3.15.1, `brace-expansion` 
 5 vulnerability (chuỗi `esbuild`/`vite`/`vitest` cũ, cần `--force` và nâng `vitest` breaking) —
 **cố tình chưa vá**, giữ nguyên baseline đã biết từ trước. Verify sau khi vá: `tsc --noEmit` sạch,
 36 file/339 test pass, `npm run build` (frontend) thành công.
+
+## Dựng nhanh môi trường demo Multi-Team (`authz/demo-up.ts`)
+
+**Phát hiện lúc rehearsal demo cho mentor**: chạy `npm run dev`/`guardian dashboard` bình thường
+KHÔNG bật OpenFGA — team isolation hoàn toàn không có tác dụng trong chế độ đó (Auditor vẫn thấy
+hết mọi policy bất kể team), vì `GUARDIAN_AUTHZ_MODE=fga` chỉ được đọc **một lần lúc router đăng ký
+(khi server khởi động)**, không phải mặc định. Đây không phải bug — nhưng dễ quên trước mỗi lần
+demo, và trước đó phải tự tay dựng Docker + cài `fga` CLI + tạo store + chạy migrate mỗi lần.
+
+`npm run authz:demo-up` gộp toàn bộ bước đó thành 1 lệnh:
+1. Khởi động (hoặc dùng lại) container OpenFGA qua Docker
+2. Tạo store mới + ghi Authorization Model — đọc từ `authz/model.json` (JSON đã sinh sẵn từ T-25,
+   qua `@openfga/sdk` trực tiếp) — **không cần cài `fga` CLI**, chỉ cần Docker
+3. Chạy `migrateTeamDefault()` thật (import trực tiếp, không phải subprocess) — gán 4 demo user +
+   super-admin + link mọi policy file thật hiện có vào `team-default`
+4. In ra đúng lệnh (kèm `FGA_API_URL`/`FGA_STORE_ID`/`FGA_MODEL_ID`/`GUARDIAN_AUTHZ_MODE=fga`) để
+   dừng server hiện tại rồi khởi động lại — **phải khởi động lại**, vì flag chỉ có tác dụng lúc
+   server start, không đổi được khi server đang chạy.
+
+**Lưu ý khi demo**: đừng restart server giữa chừng — mọi thao tác gán/xoá team qua UI trong lúc
+demo chỉ cập nhật `teamId` của demo user **trong bộ nhớ** (giống hành vi đã ghi nhận ở T-23/T-26),
+restart sẽ làm mất, phải gán lại từ đầu.
