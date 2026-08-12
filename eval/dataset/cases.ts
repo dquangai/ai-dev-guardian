@@ -72,7 +72,7 @@ export const EVAL_CASES: EvalCase[] = [
     "eval-samples/tp-02-generic-api-key.ts",
     [
       "export function createPaymentClient() {",
-      '  const apiKey = "sk_live_9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c";',
+      '  const apiKey = "sk_live_EXAMPLE1234567890";',
       "  return new PaymentClient(apiKey);",
       "}",
     ]
@@ -915,7 +915,7 @@ export const EVAL_CASES: EvalCase[] = [
       "FROM node:20-alpine",
       "WORKDIR /app",
       "COPY . .",
-      "ENV STRIPE_SECRET_KEY=sk_live_51Hxyzabcdefghijklmnopqrstuvwxyz1234",
+      "ENV STRIPE_SECRET_KEY=sk_live_EXAMPLE51Hxyzabc",
       "RUN npm ci --omit=dev",
       'CMD ["node", "dist/server.js"]',
     ]
@@ -930,7 +930,7 @@ export const EVAL_CASES: EvalCase[] = [
     [SECURITY],
     "eval-samples/fp-11-secret-in-test-fixture/test/fixtures/stripeFixtures.ts",
     [
-      'export const FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";',
+      'export const FAKE_STRIPE_TEST_KEY = "sk_test_EXAMPLE1234567890";',
       "",
       "export function mockStripeCharge() {",
       '  return { status: "succeeded", key: FAKE_STRIPE_TEST_KEY };',
@@ -1371,7 +1371,7 @@ export const EVAL_CASES: EvalCase[] = [
     [SECURITY],
     "eval-samples/fp-34-python-test-fixture-fake-key/tests/fixtures/stripe_fixtures.py",
     [
-      'FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"',
+      'FAKE_STRIPE_TEST_KEY = "sk_test_EXAMPLE1234567890"',
       "",
       "",
       "def mock_stripe_charge():",
