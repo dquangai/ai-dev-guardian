@@ -283,6 +283,167 @@ describe("checkPoliciesWithLLM", () => {
     expect(violations).toHaveLength(1);
   });
 
+  it("vẫn giữ violation nếu evidenceSnippet khớp dòng code thật nhưng khác khoảng trắng (whitespace-tolerant grounding)", async () => {
+    const policy = makePolicy({ id: "conv.md", scope: [] });
+    const { client } = recordingClient(() => [
+      {
+        reasoning: "code thực sự khai báo kiểu any, model trích lại nhưng gõ lại khoảng trắng",
+        errorWhat: "dùng any thật",
+        policyId: "conv.md",
+        riskLevel: "low",
+        why: "vì",
+        howToFix: "sửa",
+        // Cùng token, khác cách căn khoảng trắng so với dòng thật trong diff bên dưới (2 space thay
+        // vì 1, không có dấu chấm phẩy cuối dòng bị đổi vị trí do model re-wrap).
+        evidenceSnippet: "const x:  any = 1;",
+      },
+    ]);
+    const diff: DiffResult = {
+      diffText: [
+        "diff --git a/x.ts b/x.ts",
+        "--- a/x.ts",
+        "+++ b/x.ts",
+        "@@ -1,1 +1,2 @@",
+        "+// some unrelated comment",
+        "+const x: any = 1;",
+      ].join("\n"),
+      changedFiles: ["x.ts"],
+    };
+
+    const violations = await checkPoliciesWithLLM(diff, [policy], {
+      resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
+      cwd: FIXTURES_CWD,
+    });
+
+    expect(violations).toHaveLength(1);
+  });
+
+  it("policy với allowCommentEvidence: true giữ violation dù evidenceSnippet chỉ khớp dòng comment (ví dụ code đã bị comment-out)", async () => {
+    const policy = makePolicy({ id: "security.md", scope: [], allowCommentEvidence: true });
+    const { client } = recordingClient(() => [
+      {
+        reasoning: "auth check đã bị comment out",
+        errorWhat: "Tắt xác thực bằng cách comment-out",
+        policyId: "security.md",
+        riskLevel: "medium",
+        why: "vì",
+        howToFix: "sửa",
+        evidenceSnippet: '// if (req.user?.role !== "admin") return res.status(403).send("Forbidden");',
+      },
+    ]);
+    const diff: DiffResult = {
+      diffText: [
+        "diff --git a/x.ts b/x.ts",
+        "--- a/x.ts",
+        "+++ b/x.ts",
+        "@@ -1,1 +1,2 @@",
+        '+// if (req.user?.role !== "admin") return res.status(403).send("Forbidden");',
+        "+next();",
+      ].join("\n"),
+      changedFiles: ["x.ts"],
+    };
+
+    const violations = await checkPoliciesWithLLM(diff, [policy], {
+      resolveLLMClient: fakeResolver(client),
+      resolveJudgeClient: () => null,
+      cwd: FIXTURES_CWD,
+    });
+
+    expect(violations).toHaveLength(1);
+  });
+
+  describe("loại violation mà chính reasoning tự phủ nhận (case thật đã xảy ra ở --split-policies)", () => {
+    const SELF_NEGATE_DIFF: DiffResult = {
+      diffText: [
+        "diff --git a/x.ts b/x.ts",
+        "--- a/x.ts",
+        "+++ b/x.ts",
+        "@@ -1,1 +1,1 @@",
+        '+export const FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";',
+      ].join("\n"),
+      changedFiles: ["x.ts"],
+    };
+
+    it("loại bỏ violation nếu reasoning (tiếng Anh) tự kết luận 'does not violate' / 'is compliant'", async () => {
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const { client } = recordingClient(() => [
+        {
+          reasoning:
+            "This is a hardcoded test key, but this does not violate the specific policies provided, as the policies focus on other concerns. Therefore, this is not a violation of the given policies.",
+          errorWhat: "Hardcoded test key found.",
+          policyId: "conv.md",
+          riskLevel: "low",
+          why: "vì",
+          howToFix: "sửa",
+          evidenceSnippet: 'export const FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";',
+        },
+      ]);
+
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const violations = await checkPoliciesWithLLM(SELF_NEGATE_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(violations).toEqual([]);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("loại bỏ violation nếu reasoning (tiếng Việt) tự kết luận 'không vi phạm' / 'tuân thủ đúng'", async () => {
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const { client } = recordingClient(() => [
+        {
+          reasoning:
+            "Tên hằng số FAKE_STRIPE_TEST_KEY dùng UPPER_SNAKE_CASE, tuân thủ đúng quy ước — không vi phạm quy tắc nào.",
+          errorWhat: "Đặt tên hằng số.",
+          policyId: "conv.md",
+          riskLevel: "low",
+          why: "vì",
+          howToFix: "sửa",
+          evidenceSnippet: 'export const FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";',
+        },
+      ]);
+
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const violations = await checkPoliciesWithLLM(SELF_NEGATE_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(violations).toEqual([]);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("vẫn giữ violation thật có reasoning kết luận rõ ràng LÀ vi phạm (không tự phủ nhận)", async () => {
+      const policy = makePolicy({ id: "conv.md", scope: [] });
+      const { client } = recordingClient(() => [
+        {
+          reasoning:
+            "The constant holds a real-looking secret key hardcoded directly in source, which violates the policy against hardcoding credentials.",
+          errorWhat: "Hardcoded secret key.",
+          policyId: "conv.md",
+          riskLevel: "low",
+          why: "vì",
+          howToFix: "sửa",
+          evidenceSnippet: 'export const FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";',
+        },
+      ]);
+
+      const violations = await checkPoliciesWithLLM(SELF_NEGATE_DIFF, [policy], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(violations).toHaveLength(1);
+    });
+  });
+
   describe("self-consistency cho vi phạm critical", () => {
     const CRITICAL_DIFF: DiffResult = {
       diffText: "diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1,1 +1,1 @@\n-a\n+b",
@@ -675,5 +836,118 @@ describe("checkPoliciesWithLLM", () => {
     expect(violations).toEqual([]);
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  describe("splitPolicies (diagnostic-only per-policy execution, xem eval/runSuite.ts --split-policies)", () => {
+    const SPLIT_DIFF: DiffResult = {
+      diffText: [
+        "diff --git a/x.ts b/x.ts",
+        "--- a/x.ts",
+        "+++ b/x.ts",
+        "@@ -1,2 +1,2 @@",
+        "+lineA",
+        "+lineB",
+      ].join("\n"),
+      changedFiles: ["x.ts"],
+    };
+
+    function violationFor(policyId: string, evidenceSnippet: string): RawViolation {
+      return {
+        reasoning: "lý do",
+        errorWhat: `vi phạm ${policyId}`,
+        policyId,
+        riskLevel: "low",
+        why: "vì",
+        howToFix: "sửa",
+        evidenceSnippet,
+      };
+    }
+
+    it("mặc định (splitPolicies không set) gộp mọi policy khớp file vào 1 lần gọi report_violations duy nhất", async () => {
+      const policyA = makePolicy({ id: "policy-a.md", scope: [] });
+      const policyB = makePolicy({ id: "policy-b.md", scope: [] });
+      const { client, calls } = recordingClient(() => []);
+
+      await checkPoliciesWithLLM(SPLIT_DIFF, [policyA, policyB], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].policyIds.sort()).toEqual(["policy-a.md", "policy-b.md"]);
+    });
+
+    it("splitPolicies: true gọi report_violations riêng biệt cho từng policy khớp file, không gộp chung 1 prompt", async () => {
+      const policyA = makePolicy({ id: "policy-a.md", scope: [] });
+      const policyB = makePolicy({ id: "policy-b.md", scope: [] });
+      const { client, calls } = recordingClient((recordedCalls) => {
+        const currentPolicyId = recordedCalls[recordedCalls.length - 1].policyIds[0];
+        return [violationFor(currentPolicyId, currentPolicyId === "policy-a.md" ? "lineA" : "lineB")];
+      });
+
+      const violations = await checkPoliciesWithLLM(SPLIT_DIFF, [policyA, policyB], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+        splitPolicies: true,
+      });
+
+      expect(calls).toHaveLength(2);
+      expect(calls.map((c) => c.policyIds)).toEqual(
+        expect.arrayContaining([["policy-a.md"], ["policy-b.md"]])
+      );
+      expect(violations).toHaveLength(2);
+    });
+
+    it("splitPolicies: true — judge pass vẫn chỉ chạy đúng 1 lần cho toàn bộ survivor gộp từ các call tách riêng", async () => {
+      const policyA = makePolicy({ id: "policy-a.md", scope: [] });
+      const policyB = makePolicy({ id: "policy-b.md", scope: [] });
+      const { client } = recordingClient((recordedCalls) => {
+        const currentPolicyId = recordedCalls[recordedCalls.length - 1].policyIds[0];
+        return [violationFor(currentPolicyId, currentPolicyId === "policy-a.md" ? "lineA" : "lineB")];
+      });
+      const { client: judgeClient, calls: judgeCalls } = recordingJudgeClient(() => [
+        { index: 0, reasoning: "ok", claimIsTrue: true },
+        { index: 1, reasoning: "ok", claimIsTrue: true },
+      ]);
+
+      const violations = await checkPoliciesWithLLM(SPLIT_DIFF, [policyA, policyB], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: fakeJudgeResolver(judgeClient),
+        cwd: FIXTURES_CWD,
+        splitPolicies: true,
+      });
+
+      expect(judgeCalls).toHaveLength(1);
+      expect(judgeCalls[0].claimCount).toBe(2);
+      expect(violations).toHaveLength(2);
+    });
+
+    it("splitPolicies: true — 1 policy call lỗi không làm mất violation của policy call khác cùng file (fail-open theo từng call)", async () => {
+      const policyA = makePolicy({ id: "policy-a.md", scope: [] });
+      const policyB = makePolicy({ id: "policy-b.md", scope: [] });
+      const client: LLMClient = {
+        async reportViolations(_prompt, policyIds) {
+          if (policyIds[0] === "policy-a.md") throw new Error("lỗi mạng giả lập cho policy-a");
+          return [violationFor("policy-b.md", "lineB")];
+        },
+        async judgeClaims() {
+          throw new Error("judgeClaims không nên được gọi trong test này");
+        },
+      };
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const violations = await checkPoliciesWithLLM(SPLIT_DIFF, [policyA, policyB], {
+        resolveLLMClient: fakeResolver(client),
+        resolveJudgeClient: () => null,
+        cwd: FIXTURES_CWD,
+        splitPolicies: true,
+      });
+
+      expect(violations).toHaveLength(1);
+      expect(violations[0].errorWhat).toContain("policy-b.md");
+      consoleErrorSpy.mockRestore();
+    });
   });
 });

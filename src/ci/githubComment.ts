@@ -19,7 +19,8 @@ function authHeaders(ctx: GitHubContext): Record<string, string> {
 
 async function findExistingComment(
   ctx: GitHubContext,
-  fetchImpl: typeof fetch
+  fetchImpl: typeof fetch,
+  marker: string
 ): Promise<GitHubIssueComment | undefined> {
   const url = `${GITHUB_API}/repos/${ctx.owner}/${ctx.repo}/issues/${ctx.prNumber}/comments`;
   const res = await fetchImpl(url, { headers: authHeaders(ctx) });
@@ -27,23 +28,27 @@ async function findExistingComment(
     throw new Error(`Không đọc được danh sách comment của PR #${ctx.prNumber}: ${res.status} ${res.statusText}`);
   }
   const comments = (await res.json()) as GitHubIssueComment[];
-  return comments.find((c) => c.body.startsWith(GUARDIAN_REPORT_MARKER));
+  return comments.find((c) => c.body.startsWith(marker));
 }
 
 /**
- * Posts `body` as the Guardian check comment on the PR, or edits the run's
- * own previous comment (found via GUARDIAN_REPORT_MARKER) in place — so
+ * Posts `body` as a PR comment, or edits the run's own previous comment
+ * (found via `marker`, which `body` must itself start with) in place — so
  * pushing new commits updates one comment instead of stacking a fresh one
- * every time.
+ * every time. `marker` defaults to GUARDIAN_REPORT_MARKER (the `guardian
+ * check --ci` report comment); callers that post a different kind of
+ * report (e.g. eval/report.ts) pass their own marker so the two never
+ * collide or overwrite each other.
  *
  * `fetchImpl` defaults to the global fetch (Node >=18); overridable in tests.
  */
 export async function postOrUpdateComment(
   ctx: GitHubContext,
   body: string,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  marker: string = GUARDIAN_REPORT_MARKER
 ): Promise<void> {
-  const existing = await findExistingComment(ctx, fetchImpl);
+  const existing = await findExistingComment(ctx, fetchImpl, marker);
 
   const url = existing
     ? `${GITHUB_API}/repos/${ctx.owner}/${ctx.repo}/issues/comments/${existing.id}`

@@ -21,6 +21,8 @@
     "prepublishOnly": "npm run build:all",
     "test": "vitest run",
     "test:tuples": "vitest run test/tupleRouteIntegration.test.ts",
+    "eval": "tsx eval/runEval.ts",
+    "eval:matrix": "tsx eval/runBenchmark.ts",
     "cli": "tsx src/cli.ts",
     "authz:migrate": "tsx src/server/authz/migrateTeamDefault.ts",
     "authz:demo-up": "tsx authz/demo-up.ts",

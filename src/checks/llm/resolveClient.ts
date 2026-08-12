@@ -1,11 +1,18 @@
-import { createAnthropicClient } from "./anthropicClient";
-import { createOpenAIClient } from "./openaiClient";
+import { createAnthropicClient, DEFAULT_ANTHROPIC_MODEL } from "./anthropicClient";
+import { createOpenAIClient, DEFAULT_OPENAI_MODEL } from "./openaiClient";
 import type { LLMClient } from "./types";
 
 export type ProviderName = "anthropic" | "openai";
 
 export interface ResolvedLLMClient {
   provider: ProviderName;
+  /**
+   * The actual model string in use — resolves the same default-fallback
+   * `createXClient` applies internally, so callers (e.g. eval history
+   * snapshots) can record exactly which model produced a result without
+   * duplicating that fallback logic themselves.
+   */
+  model: string;
   client: LLMClient;
 }
 
@@ -21,15 +28,17 @@ function detectProvider(): ProviderName | null {
 /** Builds a client for `provider` if its API key is present; returns null otherwise (never throws). */
 function resolveClientForProvider(
   provider: ProviderName | null,
-  model: string | undefined
+  modelOverride: string | undefined
 ): ResolvedLLMClient | null {
   if (provider === "anthropic") {
     if (!process.env.ANTHROPIC_API_KEY) return null;
-    return { provider, client: createAnthropicClient(model) };
+    const model = modelOverride || DEFAULT_ANTHROPIC_MODEL;
+    return { provider, model, client: createAnthropicClient(model) };
   }
   if (provider === "openai") {
     if (!process.env.OPENAI_API_KEY) return null;
-    return { provider, client: createOpenAIClient(model) };
+    const model = modelOverride || DEFAULT_OPENAI_MODEL;
+    return { provider, model, client: createOpenAIClient(model) };
   }
   return null;
 }

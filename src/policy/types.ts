@@ -29,4 +29,15 @@ export interface Policy {
    * See checks/dependencyRulesCheck.ts.
    */
   dependencyAllowlist: string[];
+  /**
+   * When true, comment-only diff lines are kept as valid evidence for
+   * violations of THIS policy (see isEvidenceGrounded in llmPolicyCheck.ts,
+   * which otherwise strips every comment-only line from the grounding pool
+   * by default). Only set this on policies whose violation is legitimately
+   * the comment itself — e.g. commented-out code, a disabled check left as a
+   * comment — never on policies where a comment merely *describing* a
+   * concept must not be mistaken for code exhibiting it (the default/false
+   * behavior exists specifically to prevent that class of false positive).
+   */
+  allowCommentEvidence: boolean;
 }

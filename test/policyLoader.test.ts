@@ -30,6 +30,11 @@ describe("loadPolicies", () => {
     expect(policies.some((p) => p.id === "not-a-policy.txt")).toBe(false);
   });
 
+  it("bỏ qua file bắt đầu bằng _ (template/draft, không phải policy đang áp dụng)", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    expect(policies.some((p) => p.id === "_template.policy.md")).toBe(false);
+  });
+
   it("trả về mảng rỗng nếu thư mục không tồn tại", () => {
     expect(loadPolicies(path.join(FIXTURES_DIR, "does-not-exist"))).toEqual([]);
   });

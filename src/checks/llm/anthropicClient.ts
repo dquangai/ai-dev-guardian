@@ -13,6 +13,13 @@ import {
 
 export const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5";
 
+// Low, non-zero temperature: the default (1.0) was adding arbitrary sampling noise to a
+// classification-style task, both diluting the self-consistency re-check (critical findings were
+// being lost to sampling variance, not genuine model disagreement — see eval/results history) and
+// making eval runs hard to compare run-to-run. Not 0 — a self-consistency check run at temperature
+// 0 would be near-vestigial (same input converges to ~the same answer, wasting the 2nd call).
+const CHECK_TEMPERATURE = 0.2;
+
 export function createAnthropicClient(model: string = DEFAULT_ANTHROPIC_MODEL): LLMClient {
   const client = new Anthropic();
 
@@ -21,6 +28,7 @@ export function createAnthropicClient(model: string = DEFAULT_ANTHROPIC_MODEL): 
       const response = await client.messages.create({
         model,
         max_tokens: 4096,
+        temperature: CHECK_TEMPERATURE,
         tools: [
           {
             name: REPORT_VIOLATIONS_TOOL_NAME,
@@ -44,6 +52,7 @@ export function createAnthropicClient(model: string = DEFAULT_ANTHROPIC_MODEL): 
       const response = await client.messages.create({
         model,
         max_tokens: 4096,
+        temperature: CHECK_TEMPERATURE,
         tools: [
           {
             name: JUDGE_CLAIMS_TOOL_NAME,

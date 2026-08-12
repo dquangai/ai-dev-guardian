@@ -43,16 +43,24 @@ function parsePolicyFile(filePath: string, id: string): Policy {
     body: content.trim(),
     rules: parseRules(data.rules),
     dependencyAllowlist: toStringArray(data.dependencyAllowlist),
+    allowCommentEvidence: data.allowCommentEvidence === true,
   };
 }
 
-/** Loads every .md policy file under policyDir. Returns [] if the directory doesn't exist. */
+/**
+ * Loads every .md policy file under policyDir, except files starting with "_"
+ * (e.g. `_template.policy.md`) — the leading underscore marks a template/draft
+ * meant for teams to copy, not an active policy to enforce. Without this
+ * exclusion, any such file would be silently loaded and applied for real by
+ * every `guardian check` run, same as a genuine policy. Returns [] if the
+ * directory doesn't exist.
+ */
 export function loadPolicies(policyDir: string = DEFAULT_POLICY_DIR): Policy[] {
   if (!fs.existsSync(policyDir)) return [];
 
   return fs
     .readdirSync(policyDir)
-    .filter((file) => file.endsWith(".md"))
+    .filter((file) => file.endsWith(".md") && !file.startsWith("_"))
     .map((file) => parsePolicyFile(path.join(policyDir, file), file))
     .sort((a, b) => a.id.localeCompare(b.id));
 }

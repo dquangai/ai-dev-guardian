@@ -7,7 +7,7 @@ import { resolveLLMClient, resolveJudgeClient } from "./llm/resolveClient";
 import { buildPromptToFix } from "../report/promptToFix";
 import { readFileContextSafe, readSatelliteFiles, type SatelliteFile } from "./llm/fileContext";
 import { annotateForLLM } from "./llm/annotate";
-import type { RawViolation } from "./llm/types";
+import type { LLMClient, RawViolation } from "./llm/types";
 
 const BINARY_DIFF_MARKER = "Binary files";
 const CRITICAL_RISK_LEVEL = "critical";
@@ -23,27 +23,79 @@ const COMMENT_ONLY_LINE_PATTERN = /^[+\- ]?\s*(\/\/|\/\*|\*\/?|#)/;
  * diff text, line by line — grounding for the free-text part of a
  * violation, the same way policyId grounding works via the schema enum.
  *
- * Comment-only diff lines are excluded from the pool of valid evidence.
- * Without this, a JSDoc sentence like "Fail-safe: any madge error..." grounds
- * successfully (the text is real) for a claim like "uses the `any` type" —
- * the model quoted a real line, but that line is prose describing the code,
- * not code using `any`. Grounding proves the quote is real; it doesn't prove
- * the quote means what the model says it means. Restricting evidence to
- * non-comment lines closes that specific gap (observed in practice — see the
- * project's own commit history around this function).
+ * By default, comment-only diff lines are excluded from the pool of valid
+ * evidence. Without this, a JSDoc sentence like "Fail-safe: any madge
+ * error..." grounds successfully (the text is real) for a claim like "uses
+ * the `any` type" — the model quoted a real line, but that line is prose
+ * describing the code, not code using `any`. Grounding proves the quote is
+ * real; it doesn't prove the quote means what the model says it means.
+ * Restricting evidence to non-comment lines closes that specific gap
+ * (observed in practice — see the project's own commit history around this
+ * function).
+ *
+ * `allowCommentEvidence` (Policy field, opt-in per policy) turns that
+ * exclusion off — for policies whose violation legitimately IS a comment
+ * (commented-out code, a disabled check left as a comment), stripping
+ * comments from the evidence pool makes the one honest piece of evidence
+ * ungroundable, producing a false negative instead of preventing a false
+ * positive. Only policies that explicitly opt in get this looser check.
+ *
+ * Comparison is whitespace-insensitive (all whitespace stripped from both
+ * sides before comparing): the model sometimes re-wraps/re-indents a quoted
+ * line (collapsing double spaces, retyping a tab as spaces) without changing
+ * its actual tokens — that's still the real line, just not a byte-identical
+ * substring. Stripping whitespace instead of trimming/collapsing it keeps the
+ * check simple while closing that gap; it doesn't loosen what counts as
+ * "real" any further than that (still the same tokens, same order).
  */
-function isEvidenceGrounded(evidenceSnippet: string, fileDiffText: string): boolean {
-  const codeLines = fileDiffText
-    .split("\n")
-    .filter((line) => !COMMENT_ONLY_LINE_PATTERN.test(line))
-    .join("\n");
+function stripWhitespace(text: string): string {
+  return text.replace(/\s+/g, "");
+}
+
+function isEvidenceGrounded(
+  evidenceSnippet: string,
+  fileDiffText: string,
+  allowCommentEvidence: boolean
+): boolean {
+  const codeLines = stripWhitespace(
+    (allowCommentEvidence
+      ? fileDiffText.split("\n")
+      : fileDiffText.split("\n").filter((line) => !COMMENT_ONLY_LINE_PATTERN.test(line))
+    ).join("\n")
+  );
 
   const snippetLines = evidenceSnippet
     .split("\n")
-    .map((line) => line.trim())
+    .map((line) => stripWhitespace(line))
     .filter(Boolean);
 
   return snippetLines.length > 0 && snippetLines.every((line) => codeLines.includes(line));
+}
+
+// Observed in practice (most reproducibly under `splitPolicies` — see LLMPolicyCheckDeps — where
+// narrowing a call to one low-signal policy seems to pressure the model into reporting SOMETHING):
+// the model's own `reasoning` concludes the code is compliant/doesn't violate the policy, but the
+// entry is still added to the violations array anyway — a self-contradiction the prompt's explicit
+// "return an empty array if compliant" instruction alone doesn't reliably prevent. Deterministic
+// safety net, same idea as isEvidenceGrounded: don't just ask nicely in the prompt, verify.
+// Deliberately narrow (whole-phrase patterns anchored around "violat(e/ion)"/"compliant", not a bare
+// "không" or "not") to avoid rejecting a real violation whose reasoning legitimately discusses ONE
+// non-violated rule while concluding a DIFFERENT one IS violated.
+const SELF_NEGATING_REASONING_PATTERNS = [
+  /\bdoes\s+not\s+violate\b/i,
+  /\bis\s+not\s+a\s+violation\b/i,
+  /\bnot\s+a\s+violation\s+of\b/i,
+  /\bno\s+violation\b/i,
+  /\bis\s+compliant\b/i,
+  /\bcomplies\s+with\s+the\s+polic/i,
+  /\bno\s+changes?\s+(?:are\s+)?needed\b/i,
+  /\bkhông\s+vi\s+phạm\s+(?:policy|quy\s+tắc|chính\s+sách)/i,
+  /\btuân\s+thủ\s+đúng\b/i,
+  /\bkhông\s+cần\s+(?:sửa|thay\s+đổi)\s+gì\b/i,
+];
+
+function isSelfNegatingReasoning(reasoning: string): boolean {
+  return SELF_NEGATING_REASONING_PATTERNS.some((pattern) => pattern.test(reasoning));
 }
 
 function buildSatelliteSection(satelliteFiles: SatelliteFile[]): string {
@@ -106,7 +158,15 @@ ${fileDiffText}
 \`\`\`
 
 Gọi tool report_violations với danh sách vi phạm tìm được (mảng rỗng nếu diff tuân thủ đầy đủ).
-Với mỗi vi phạm, "policyId" PHẢI là một trong các id đã liệt kê ở trên.`;
+Với mỗi vi phạm, "policyId" PHẢI là một trong các id đã liệt kê ở trên.
+
+QUAN TRỌNG: nếu sau khi phân tích (trường "reasoning") kết luận code TUÂN THỦ policy — dù chỉ với 1
+policy trong danh sách được giao — thì KHÔNG được thêm entry đó vào mảng violations trả về, kể cả
+khi bạn muốn ghi nhận rằng đã kiểm tra qua policy đó. Một entry có "reasoning"/"errorWhat" kết luận
+kiểu "tuân thủ đúng convention", "không cần sửa gì", "compliant" NHƯNG vẫn được thêm vào violations
+là một lỗi tự mâu thuẫn — không được làm vậy. Chỉ được kiểm tra ÍT policy hơn (thậm chí chỉ 1 policy
+duy nhất) không phải lý do để "cố" báo cáo một phát hiện nào đó — mảng rỗng là kết quả HOÀN TOÀN hợp
+lệ và được kỳ vọng khi không có vi phạm thật.`;
 }
 
 /**
@@ -154,8 +214,19 @@ ${claimsList}
 
 Với mỗi claim, TỰ đối chiếu lại bằng chứng và nội dung file/diff thật ở trên — đừng tin lại
 reasoning gốc hay số liệu model trước đã đưa ra. Nếu claim liên quan tới số lượng (số dòng, số
-ký tự, số lần xuất hiện...), tự đếm lại chính xác. Gọi tool judge_claims với verdict cho từng
-claim theo đúng index đã liệt kê ở trên.`;
+ký tự, số lần xuất hiện...), tự đếm lại chính xác.
+
+Phân biệt rõ hai loại claim khi ra verdict: (1) claim về một SỰ KIỆN QUAN SÁT ĐƯỢC trực tiếp trong
+diff/file (một con số cụ thể, một lời gọi hàm/token có tồn tại hay không, tên một biến) — loại này
+phải đối chiếu chính xác, sai là false. (2) claim là một SUY LUẬN HỢP LÝ về hành vi/ý nghĩa của code
+(ví dụ "handler này có thể truy cập được mà không cần xác thực", "giá trị này cuối cùng bị log ra")
+mà diff không thể hiện đầy đủ mọi bước — với loại này, nếu suy luận đó là cách đọc HỢP LÝ NHẤT dựa
+trên những gì diff/file THẬT SỰ cho thấy, hãy xác nhận true dù không nhìn thấy toàn bộ luồng gọi bên
+ngoài diff. Chỉ bác bỏ (false) một claim suy luận khi nội dung thật sự hiển thị MÂU THUẪN với nó,
+hoặc suy luận đó đòi hỏi một bước nhảy phi lý — không bác bỏ chỉ vì nó dựa vào ngữ cảnh không nằm
+trong diff.
+
+Gọi tool judge_claims với verdict cho từng claim theo đúng index đã liệt kê ở trên.`;
 }
 
 export interface LLMPolicyCheckDeps {
@@ -168,6 +239,130 @@ export interface LLMPolicyCheckDeps {
    * does the same for "no provider configured" — this covers "provider configured but the call
    * itself failed"). */
   onLLMCheckError?: (file: string, error: unknown) => void;
+  /**
+   * Diagnostic-only flag, currently wired only from eval/runSuite.ts (see `npm run eval --
+   * --split-policies`) — not exposed on the real `guardian check` CLI path yet, since it multiplies
+   * paid API calls per file (one report_violations call, plus its own critical self-consistency
+   * re-check if triggered, PER MATCHED POLICY instead of once for all of them combined) and hasn't
+   * been validated as a net win outside the golden dataset. Exists to test the hypothesis that
+   * bundling ~9-11 policies into one prompt causes context saturation on files matched by many
+   * policies. The judge pass is unaffected either way — it always runs exactly once per file, over
+   * every survivor gathered regardless of how many underlying calls produced them (see
+   * collectSurvivors/checkPoliciesWithLLM below).
+   */
+  splitPolicies?: boolean;
+}
+
+/**
+ * Runs one report_violations call scoped to `policySet` (either every policy matched to `file`, or
+ * — under `splitPolicies` — just one), then grounds and self-consistency-checks its raw violations.
+ * Factored out of checkPoliciesWithLLM so the same logic can run once per file (default) or once per
+ * matched policy (split mode) without duplicating the grounding/self-consistency rules in two places.
+ * Fails open per-call: an error here (network, invalid key, rate limit) only drops THIS policy set's
+ * contribution, not the whole file's — a split-mode file where one of several policy calls fails
+ * still keeps the survivors from the calls that succeeded.
+ */
+async function collectSurvivors(
+  file: string,
+  fileDiffText: string,
+  fileContent: string | null,
+  satelliteFiles: SatelliteFile[],
+  policySet: Policy[],
+  client: LLMClient,
+  deps: Partial<LLMPolicyCheckDeps>
+): Promise<{ violation: Violation; raw: RawViolation }[]> {
+  const policyById = new Map(policySet.map((p) => [p.id, p]));
+  const policyIds = policySet.map((p) => p.id);
+  const prompt = buildPrompt(file, fileDiffText, fileContent, satelliteFiles, policySet);
+
+  let rawViolations: RawViolation[];
+  try {
+    rawViolations = await client.reportViolations(prompt, policyIds);
+  } catch (error) {
+    // Fail-open: a network error, invalid/expired key, or rate limit here must not crash the
+    // whole check (it used to — this file's LLM result is skipped, other files/checks still
+    // run). onLLMCheckError tells the caller not to trust the overall verdict as fully
+    // LLM-verified (see the cache-skip guard this feeds in orchestrator.ts).
+    console.error(
+      `[guardian] LLM policy check lỗi cho file ${file} — bỏ qua LLM check cho file này (fail-open, KHÔNG tính là đã verify sạch). Lỗi: ${error instanceof Error ? error.message : error}`
+    );
+    deps.onLLMCheckError?.(file, error);
+    return [];
+  }
+
+  // Self-consistency re-check: a `critical` verdict blocks the push, so
+  // before trusting one, ask the same question again and only keep it if
+  // the model agrees with itself both times. Only fires when the first
+  // pass actually found a critical violation, so a normal push (no
+  // critical findings) still costs exactly one call.
+  let confirmedCriticalPolicyIds: Set<string> | null = null;
+  if (rawViolations.some((v) => v.riskLevel === CRITICAL_RISK_LEVEL)) {
+    try {
+      const secondPass = await client.reportViolations(prompt, policyIds);
+      confirmedCriticalPolicyIds = new Set(secondPass.map((v) => v.policyId));
+    } catch (error) {
+      // Can't confirm — fail-safe: treat as "none confirmed" so the unconfirmed critical
+      // violation(s) get dropped below, same as a real self-consistency disagreement. Still
+      // signals degraded so a resulting empty violation list isn't cached as verified-clean.
+      console.error(
+        `[guardian] Lượt xác nhận thứ 2 (critical) lỗi cho file ${file} — bỏ qua vi phạm critical chưa xác nhận được. Lỗi: ${error instanceof Error ? error.message : error}`
+      );
+      deps.onLLMCheckError?.(file, error);
+      confirmedCriticalPolicyIds = new Set();
+    }
+  }
+
+  const survivors: { violation: Violation; raw: RawViolation }[] = [];
+  for (const v of rawViolations) {
+    const policy = policyById.get(v.policyId);
+    if (!policy) {
+      console.error(
+        `[guardian] LLM trả về policyId không hợp lệ ("${v.policyId}") cho file ${file} — bỏ qua vi phạm này.`
+      );
+      continue;
+    }
+    if (!isEvidenceGrounded(v.evidenceSnippet, fileDiffText, policy.allowCommentEvidence)) {
+      console.error(
+        `[guardian] Vi phạm "${v.policyId}" cho file ${file} thiếu bằng chứng khớp với diff thật — bỏ qua. Evidence model trích: "${v.evidenceSnippet}". Reasoning của model: ${v.reasoning}`
+      );
+      continue;
+    }
+    if (isSelfNegatingReasoning(v.reasoning)) {
+      console.error(
+        `[guardian] Vi phạm "${v.policyId}" cho file ${file} bị bỏ qua vì chính reasoning của model tự kết luận KHÔNG vi phạm (tự mâu thuẫn với việc được thêm vào violations). Reasoning: ${v.reasoning}`
+      );
+      continue;
+    }
+    if (v.riskLevel === CRITICAL_RISK_LEVEL && !confirmedCriticalPolicyIds?.has(v.policyId)) {
+      console.error(
+        `[guardian] Vi phạm critical "${v.policyId}" cho file ${file} không được xác nhận lại ở lượt kiểm tra thứ 2 — bỏ qua để tránh false positive.`
+      );
+      continue;
+    }
+    const policyViolated = `${policy.category} (${policy.id})`;
+    survivors.push({
+      raw: v,
+      violation: {
+        errorWhat: v.errorWhat,
+        policyViolated,
+        riskLevel: v.riskLevel,
+        why: v.why,
+        howToFix: v.howToFix,
+        location: file,
+        promptToFix: buildPromptToFix({
+          location: file,
+          policyName: policyViolated,
+          riskLevel: v.riskLevel,
+          errorWhat: v.errorWhat,
+          why: v.why,
+          howToFix: v.howToFix,
+        }),
+        source: "llm-policy-check" as const,
+      },
+    });
+  }
+
+  return survivors;
 }
 
 /**
@@ -227,91 +422,17 @@ export async function checkPoliciesWithLLM(
 
       const fileContent = readFileContextSafe(file, cwd);
       const satelliteFiles = readSatelliteFiles(file, fileContent, cwd);
-      const policyById = new Map(filePolicies.map((p) => [p.id, p]));
 
-      const prompt = buildPrompt(file, fileDiffText, fileContent, satelliteFiles, filePolicies);
-      const policyIds = filePolicies.map((p) => p.id);
-
-      let rawViolations: RawViolation[];
-      try {
-        rawViolations = await client.reportViolations(prompt, policyIds);
-      } catch (error) {
-        // Fail-open: a network error, invalid/expired key, or rate limit here must not crash the
-        // whole check (it used to — this file's LLM result is skipped, other files/checks still
-        // run). onLLMCheckError tells the caller not to trust the overall verdict as fully
-        // LLM-verified (see the cache-skip guard this feeds in orchestrator.ts).
-        console.error(
-          `[guardian] LLM policy check lỗi cho file ${file} — bỏ qua LLM check cho file này (fail-open, KHÔNG tính là đã verify sạch). Lỗi: ${error instanceof Error ? error.message : error}`
-        );
-        deps.onLLMCheckError?.(file, error);
-        return [];
-      }
-
-      // Self-consistency re-check: a `critical` verdict blocks the push, so
-      // before trusting one, ask the same question again and only keep it if
-      // the model agrees with itself both times. Only fires when the first
-      // pass actually found a critical violation, so a normal push (no
-      // critical findings) still costs exactly one call.
-      let confirmedCriticalPolicyIds: Set<string> | null = null;
-      if (rawViolations.some((v) => v.riskLevel === CRITICAL_RISK_LEVEL)) {
-        try {
-          const secondPass = await client.reportViolations(prompt, policyIds);
-          confirmedCriticalPolicyIds = new Set(secondPass.map((v) => v.policyId));
-        } catch (error) {
-          // Can't confirm — fail-safe: treat as "none confirmed" so the unconfirmed critical
-          // violation(s) get dropped below, same as a real self-consistency disagreement. Still
-          // signals degraded so a resulting empty violation list isn't cached as verified-clean.
-          console.error(
-            `[guardian] Lượt xác nhận thứ 2 (critical) lỗi cho file ${file} — bỏ qua vi phạm critical chưa xác nhận được. Lỗi: ${error instanceof Error ? error.message : error}`
-          );
-          deps.onLLMCheckError?.(file, error);
-          confirmedCriticalPolicyIds = new Set();
-        }
-      }
-
-      const survivors: { violation: Violation; raw: RawViolation }[] = [];
-      for (const v of rawViolations) {
-        const policy = policyById.get(v.policyId);
-        if (!policy) {
-          console.error(
-            `[guardian] LLM trả về policyId không hợp lệ ("${v.policyId}") cho file ${file} — bỏ qua vi phạm này.`
-          );
-          continue;
-        }
-        if (!isEvidenceGrounded(v.evidenceSnippet, fileDiffText)) {
-          console.error(
-            `[guardian] Vi phạm "${v.policyId}" cho file ${file} thiếu bằng chứng khớp với diff thật — bỏ qua. Reasoning của model: ${v.reasoning}`
-          );
-          continue;
-        }
-        if (v.riskLevel === CRITICAL_RISK_LEVEL && !confirmedCriticalPolicyIds?.has(v.policyId)) {
-          console.error(
-            `[guardian] Vi phạm critical "${v.policyId}" cho file ${file} không được xác nhận lại ở lượt kiểm tra thứ 2 — bỏ qua để tránh false positive.`
-          );
-          continue;
-        }
-        const policyViolated = `${policy.category} (${policy.id})`;
-        survivors.push({
-          raw: v,
-          violation: {
-            errorWhat: v.errorWhat,
-            policyViolated,
-            riskLevel: v.riskLevel,
-            why: v.why,
-            howToFix: v.howToFix,
-            location: file,
-            promptToFix: buildPromptToFix({
-              location: file,
-              policyName: policyViolated,
-              riskLevel: v.riskLevel,
-              errorWhat: v.errorWhat,
-              why: v.why,
-              howToFix: v.howToFix,
-            }),
-            source: "llm-policy-check" as const,
-          },
-        });
-      }
+      // Default: one combined call across every matched policy. Split mode (diagnostic-only, see
+      // LLMPolicyCheckDeps.splitPolicies): one call per policy instead — each keeps its own
+      // grounding + critical self-consistency, gathered together below before a single judge pass.
+      const policySets = deps.splitPolicies ? filePolicies.map((p) => [p]) : [filePolicies];
+      const survivorGroups = await Promise.all(
+        policySets.map((policySet) =>
+          collectSurvivors(file, fileDiffText, fileContent, satelliteFiles, policySet, client, deps)
+        )
+      );
+      const survivors = survivorGroups.flat();
 
       // Judge pass: an independent, differently-framed re-check of every
       // surviving claim — catches what grounding can't (the model quoting

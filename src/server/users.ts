@@ -19,31 +19,31 @@ export interface DemoUser {
 const DEFAULT_TEAM_ID = "team-default";
 
 export const DEMO_USERS: Record<Role, DemoUser> = {
-  admin: { id: "admin-1", name: "Alex Morgan", email: "admin@guardian.dev", role: "admin", teamId: DEFAULT_TEAM_ID },
+  admin: { id: "admin-1", name: "Nguyễn Văn An", email: "admin@guardian.dev", role: "admin", teamId: DEFAULT_TEAM_ID },
   // T-21: org-wide role (Sprint 3 multi-team) — not scoped to any single team, see authz/model.fga.
   "super-admin": {
     id: "super-admin-1",
-    name: "Taylor Nguyen",
+    name: "Trần Minh Đức",
     email: "super.admin@guardian.dev",
     role: "super-admin",
   },
   "senior-dev": {
     id: "senior-dev-1",
-    name: "Jordan Lee",
+    name: "Lê Thị Hương",
     email: "senior.dev@guardian.dev",
     role: "senior-dev",
     teamId: DEFAULT_TEAM_ID,
   },
   developer: {
     id: "developer-1",
-    name: "Sam Rivera",
+    name: "Phạm Quang Huy",
     email: "dev@guardian.dev",
     role: "developer",
     teamId: DEFAULT_TEAM_ID,
   },
   auditor: {
     id: "auditor-1",
-    name: "Riley Chen",
+    name: "Vũ Thị Lan",
     email: "auditor@guardian.dev",
     role: "auditor",
     teamId: DEFAULT_TEAM_ID,

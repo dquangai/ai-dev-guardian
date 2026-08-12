@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { Briefcase, Eye, EyeOff, LayoutGrid, Lock, Mail } from 'lucide-react'
 import { DemoModeSelector } from '../components/auth/DemoModeSelector'
 import { LoginHero } from '../components/auth/LoginHero'
 import { useAuth } from '../context/AuthContext'
@@ -57,8 +57,8 @@ export function Login() {
     <div className="flex min-h-screen bg-[#FAFAFA] font-sans antialiased selection:bg-[#9E0B10] selection:text-white">
       <LoginHero />
 
-      {/* Right Form Panel */}
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-[#FAFAFA] bg-[radial-gradient(#e5e7eb_1.2px,transparent_1.2px)] [background-size:24px_24px] px-6 py-12">
+      {/* Right Form Panel with Soft Red Dot Matrix Background */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-[#FAFAFA] bg-[radial-gradient(rgba(158,11,16,0.15)_1.2px,transparent_1.2px)] [background-size:24px_24px] px-6 py-12">
         <div className="w-full max-w-md">
           <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgba(158,11,16,0.06)]">
             {/* Logo & Headline */}
@@ -67,17 +67,25 @@ export function Login() {
               <p className="mt-1.5 text-xs text-gray-500">Cổng xác thực dự án AI Dev Guardian</p>
             </div>
 
-            {/* Login Tabs */}
-            <div className="mb-6 flex border-b border-gray-200 text-sm">
-              <span className="border-b-2 border-[#9E0B10] px-2 pb-2.5 font-semibold text-[#9E0B10] cursor-pointer">
-                Email doanh nghiệp
-              </span>
-              <span
-                title="Microsoft Single Sign-On chưa kết nối"
-                className="ml-6 cursor-not-allowed px-2 pb-2.5 text-gray-300 font-medium"
+            {/* Login Tabs with Icons */}
+            <div className="mb-6 flex items-center border-b border-gray-200 text-sm">
+              <button
+                type="button"
+                className="flex items-center gap-2 border-b-2 border-[#9E0B10] px-3 pb-2.5 text-sm font-semibold text-[#9E0B10] cursor-pointer bg-transparent border-t-0 border-x-0"
               >
-                Microsoft 365
-              </span>
+                <Briefcase size={16} className="text-[#9E0B10]" />
+                <span>Email doanh nghiệp</span>
+              </button>
+
+              <button
+                type="button"
+                disabled
+                title="Microsoft Single Sign-On (chưa kết nối)"
+                className="ml-4 flex items-center gap-2 px-3 pb-2.5 text-sm font-medium text-slate-400 cursor-not-allowed bg-transparent border-0"
+              >
+                <LayoutGrid size={16} className="text-slate-400" />
+                <span>Microsoft 365</span>
+              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
