@@ -360,7 +360,7 @@ describe("checkPoliciesWithLLM", () => {
         "--- a/x.ts",
         "+++ b/x.ts",
         "@@ -1,1 +1,1 @@",
-        '+export const FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";',
+        '+export const FAKE_STRIPE_TEST_KEY = "sk_test_EXAMPLE1234567890";',
       ].join("\n"),
       changedFiles: ["x.ts"],
     };
@@ -376,7 +376,7 @@ describe("checkPoliciesWithLLM", () => {
           riskLevel: "low",
           why: "vì",
           howToFix: "sửa",
-          evidenceSnippet: 'export const FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";',
+          evidenceSnippet: 'export const FAKE_STRIPE_TEST_KEY = "sk_test_EXAMPLE1234567890";',
         },
       ]);
 
@@ -403,7 +403,7 @@ describe("checkPoliciesWithLLM", () => {
           riskLevel: "low",
           why: "vì",
           howToFix: "sửa",
-          evidenceSnippet: 'export const FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";',
+          evidenceSnippet: 'export const FAKE_STRIPE_TEST_KEY = "sk_test_EXAMPLE1234567890";',
         },
       ]);
 
@@ -430,7 +430,7 @@ describe("checkPoliciesWithLLM", () => {
           riskLevel: "low",
           why: "vì",
           howToFix: "sửa",
-          evidenceSnippet: 'export const FAKE_STRIPE_TEST_KEY = "sk_test_4eC39HqLyjWDarjtT1zdp7dc";',
+          evidenceSnippet: 'export const FAKE_STRIPE_TEST_KEY = "sk_test_EXAMPLE1234567890";',
         },
       ]);
 
