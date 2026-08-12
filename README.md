@@ -201,6 +201,49 @@ claim. A violation is dropped only if the judge explicitly returns `claimIsTrue:
   times before this layer existed): the judge re-counted the real code and correctly rejected the
   claim, flipping the verdict from `BLOCK` to `PASS`.
 
+## Evaluation: measuring the LLM check against a golden dataset
+
+Every mechanism above (grounding, judge, self-consistency) is a claim about how the LLM check
+*should* behave — `eval/` is what actually measures it, against 100 hand-written cases
+(`eval/dataset/cases.ts`: 51 `true-positive` cases seeded with a real violation, 49
+`false-positive-trap` cases that closely resemble a violation but are actually compliant, each
+modeled on one of the policy files' own "Ví dụ KHÔNG vi phạm" examples). Every case is a synthetic
+diff (`DiffResult`) fed straight into the real `runGuardianCheck()` — no mock LLM provider; every
+run is real API calls against the real `.guardian/policies/*.md` files.
+
+```bash
+npm run eval                                    # full 100-case run, real API calls
+npm run eval -- --case=tp-01-aws-secret         # just one case, cheap iteration while debugging
+npm run eval -- --case=tp-01-aws-secret,fp-08-local-cli-no-auth-needed   # comma-separated, multiple
+npm run eval -- --split-policies                # diagnostic: 1 LLM call per matched policy, not
+                                                 # bundled per file — tests whether packing ~11
+                                                 # policies into one prompt causes context saturation
+npm run eval -- --ci                            # gate mode: exit 1 if below DEFAULT_THRESHOLDS
+npm run eval:matrix                             # same 100 cases across every configured provider/model
+```
+
+A `--case=...` or `--split-policies` run is diagnostic-only: it prints results but never writes
+`eval/results/` or a history snapshot, since a 1-2 case subset or a different execution mode isn't
+a real measurement of the full-suite baseline. A plain `npm run eval` writes
+`eval/results/latest.json`/`.md`, records an immutable snapshot under
+`eval/results/history/<timestamp>.json` (provider, model, commit SHA, full pass/fail list), and
+prints a colored Delta against the most recently recorded snapshot — so a regression from an
+unrelated prompt/policy edit is visible immediately, not just the final numbers.
+
+**Latest verified run** (`gpt-4o` via OpenAI, 100 cases, real API, 2026-08-12): **Recall 96.1%**
+(49/51 true-positive cases correctly caught), **Precision 94.2%**, **False Positive Rate 6.1%**
+(3/49 traps misfired). Recorded as an immutable snapshot under `eval/results/history/` (gitignored
+local run output, not checked in — every `npm run eval` writes its own; re-run it yourself to
+reproduce). `eval/checkThresholds.ts`'s `DEFAULT_THRESHOLDS` (Recall ≥ 85%, Precision ≥ 80%, FPR ≤
+25%) gate `--ci` mode; the default mode always exits `0` — informational only, since a single
+run's numbers carry real LLM sampling variance and shouldn't hard-fail CI on their own.
+
+`.github/workflows/eval.yml` runs the same suite on `workflow_dispatch`, a nightly `schedule`
+(catches drift from a provider-side model update even on a day nobody touches a policy file), and
+any PR touching `src/checks/llm/**`, `src/checks/llmPolicyCheck.ts`, `.guardian/policies/**`, or
+`eval/**` — posting/updating a single PR comment via `postOrUpdateComment` (same dedup-by-marker
+mechanism as Guardian's own check-report comment, parameterized so the two never collide).
+
 ## RAG-lite: per-language context retrieval
 
 Before the LLM call, `src/checks/llm/fileContext.ts` pulls in up to `MAX_SATELLITE_FILES = 3`
@@ -393,6 +436,7 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | Single-command dashboard launch | `guardian dashboard` serves the built UI and the API on one port, once `web/dist` exists |
 | Real auth for the dashboard | Signed JWT sessions (`POST /api/auth/login`), verified server-side on every request — replaced the `x-guardian-role` header the client used to self-assert |
 | Published to npm | [`ai-dev-guardian`](https://www.npmjs.com/package/ai-dev-guardian) is installable via `npm install -g ai-dev-guardian` or `npx ai-dev-guardian` — no local checkout or `npm link` required |
+| Evaluation Suite | 100-case golden dataset (`eval/`), real-API `npm run eval`, CI/CD quality gate (`--ci`), historical snapshots + Delta, `--split-policies` diagnostic — see [Evaluation](#evaluation-measuring-the-llm-check-against-a-golden-dataset) |
 
 ### Planned
 
