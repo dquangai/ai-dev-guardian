@@ -1,21 +1,26 @@
 ---
 category: Security Policy
 scope:
-  [
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.js",
-    "**/*.jsx",
-    "**/*.py",
-    "**/*.go",
-    "**/Dockerfile",
-    "**/Dockerfile.*",
-    "**/*.yml",
-    "**/*.yaml",
-  ]
+  - '**/*.ts'
+  - '**/*.tsx'
+  - '**/*.js'
+  - '**/*.jsx'
+  - '**/*.py'
+  - '**/*.go'
+  - '**/Dockerfile'
+  - '**/Dockerfile.*'
+  - '**/*.yml'
+  - '**/*.yaml'
 severity: critical
-tags: [security, authentication, authorization]
+tags:
+  - security
+  - authentication
+  - authorization
 allowCommentEvidence: true
+version: 1
+lastUpdated: '2026-08-13T03:52:02.727Z'
+updatedBy: admin-1
+changeSummary: ''
 ---
 
 # Disabled Security Control (Commented-Out)
