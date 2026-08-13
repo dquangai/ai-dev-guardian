@@ -126,7 +126,7 @@ export function deletePolicyFile(id: string): void {
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 }
 
-/** T-10: writes only ever touch the local filesystem — no auto commit/push (see docs/sprint-plan.html).
+/** T-10: writes only ever touch the local filesystem — no auto commit/push (see reports/sprint-plan.html).
  * Callers surface this hint to the client so a human commits the change themselves. */
 export function gitSyncHint(id: string, action: "write" | "delete"): string {
   const filePath = policyPath(id);

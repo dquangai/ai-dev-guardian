@@ -40,7 +40,7 @@ graph TD
   test suite thành công (thấy kết quả thật trong terminal, không suy đoán).
 - **Revert on Failure** — thử 1 hướng không chạy được thì dọn sạch (revert) trước khi thử hướng
   khác, không để lại code/file rác nửa vời.
-- **Documentation First** — cập nhật `docs/sprint-plan.html` (hoặc tài liệu liên quan) ngay khi
+- **Documentation First** — cập nhật `reports/sprint-plan.html` (hoặc tài liệu liên quan) ngay khi
   hoàn thành task, ghi rõ kết quả đã verify được cụ thể (số liệu, case pass/fail), không viết chung
   chung "đã làm xong".
 

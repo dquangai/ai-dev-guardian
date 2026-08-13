@@ -2,7 +2,11 @@
 
 ### AI Engineering Governance Agent — Người gác cổng chất lượng code trước mỗi lần `git push`
 
-*Phiên bản: MVP · Ngày cập nhật: 31/07/2026*
+*Phiên bản: v0.1.0 — Level 5 Enterprise Automation · Ngày cập nhật: 13/08/2026*
+
+> Đã publish công khai trên npm (`ai-dev-guardian@0.1.0`) · **Recall 96.1% / Precision 94.2% / FPR
+> 6.1%** đo thật trên Golden Dataset 100 case (Mục 4) · Dashboard quản trị + RBAC 4 vai trò +
+> phân quyền đa Team bằng OpenFGA/ReBAC đã chạy được (Mục 8) — không còn là MVP đơn lẻ CLI.
 
 ---
 
@@ -139,9 +143,79 @@ nhất ở mức nghiêm trọng nhất, lớp 5 chặn "trích dẫn thật nh�
 thể phát hiện. Đây chính là điều tách AI Dev Guardian ra khỏi một "AI reviewer" thông thường chỉ
 gọi LLM một lần rồi tin nguyên văn kết quả.
 
-## 4. Kiến trúc hệ thống đã triển khai
+## 4. Đo lường bằng số liệu thật — Evaluation Suite
 
-![Sơ đồ luồng hệ thống AI Dev Guardian](system-flow.svg)
+5 lớp khiên ở Mục 3 là *thiết kế lý thuyết*. Phần này là *bằng chứng đo được*: một bộ đánh giá độc
+lập, chạy API thật (không mock LLM), dùng để trả lời đúng câu hỏi mà mọi kỹ thuật chống ảo giác
+phải trả lời được — Agent có thật sự phát hiện đúng vi phạm hay không, tính bằng số chứ không phải
+cảm tính.
+
+### 4.1. Golden Dataset — 100 case cân bằng
+
+`eval/dataset/cases.ts` — 100 case viết tay, cân bằng gần tuyệt đối để không thể ăn gian chỉ số
+theo 1 chiều:
+
+- **51 True-Positive** — case chứa đúng 1 vi phạm thật (SQL Injection, Hardcoded Secrets, Auth
+  Bypass, N+1 Query, Invalid JWT Handling, Raw SSO SDK Leaking...).
+- **49 False-Positive-Trap** — case AN TOÀN nhưng cố tình giống vi phạm để bẫy báo nhầm (test
+  fixture, comment giải thích tiếng Việt, log không chứa dữ liệu nhạy cảm, decode JWT chỉ để hiển
+  thị UI...), mỗi case mô phỏng đúng theo ví dụ "KHÔNG vi phạm" viết sẵn trong chính file policy.
+
+Phủ 4 công nghệ đang vận hành ở V-ID: TypeScript/TSX, Python, Go, Dockerfile. Mỗi case là 1 diff
+tổng hợp (`DiffResult`) đưa thẳng vào `runGuardianCheck()` thật — không có LLM provider giả lập.
+
+### 4.2. Hành trình tinh chỉnh — 3 mốc đo, không phải 1 lần chạy đẹp
+
+| Mốc đo | Recall | Precision | FPR | Nguyên nhân chính đã xử lý |
+|---|---|---|---|---|
+| Baseline (72 case) | 81.1% | 73.2% | 31.4% | Chưa mở rộng dataset, policy chưa tinh câu chữ |
+| Sau mở rộng 100 case + tuning | 86.3% | 91.7% | 8.2% | Cụ thể hoá carve-out bằng ví dụ code thật |
+| **Kết quả cuối (verify sống)** | **96.1%** | **94.2%** | **6.1%** | Evidence Matcher whitespace-tolerant + OpenAI strict schema |
+
+Root cause đáng chú ý nhất: nhiều case "judge tự mâu thuẫn" hoá ra không phải lỗi logic mà do
+OpenAI function-calling chưa bật chế độ `strict` — field bắt buộc `claimIsTrue` có thể bị model bỏ
+sót dù phần `reasoning` đã kết luận đúng. Thêm `strict: true` + `additionalProperties: false` vào
+schema (`src/checks/llm/types.ts`, `openaiClient.ts`) giải quyết dứt điểm 5 case cùng lúc chỉ bằng
+1 chỗ sửa — một minh chứng cụ thể cho việc Lớp 1 (grounding theo schema, Mục 3) không chỉ là lý
+thuyết mà ảnh hưởng trực tiếp tới độ chính xác đo được.
+
+### 4.3. Kết quả cuối cùng đã verify sống
+
+*Nguồn: `eval/results/history/2026-08-12_164551.json` (commit `03e5f3b`, model `gpt-4o` via
+OpenAI, 100 case, gọi API thật).*
+
+| Chỉ số | Kết quả | Ngưỡng Quality Gate | Ngưỡng lý tưởng | Đánh giá |
+|---|---|---|---|---|
+| Recall | **96.1%** (49/51) | ≥ 85.0% | ≥ 90.0% | Vượt ngưỡng lý tưởng +6.1đ |
+| Precision | **94.2%** | ≥ 80.0% | ≥ 85.0% | Vượt ngưỡng lý tưởng +9.2đ |
+| False Positive Rate | **6.1%** (3/49) | ≤ 25.0% | ≤ 15.0% | Dưới target 8.9đ |
+
+**Minh bạch — 5 case chưa pass, không che giấu**: 2 case nhiễu sampling ở `temperature 0.2`
+(`tp-27`, `fp-27` — pass lại khi chạy riêng lẻ); 1 case nhiễu dai dẳng hơn, chưa xác định nguyên
+nhân gốc dứt điểm (`tp-28`); 1 carve-out chưa đủ ổn định qua nhiều lần chạy (`fp-24`); 1 giới hạn
+đã biết trước của secret scan tất định — regex khớp nhầm 1 AWS placeholder key nằm trong comment
+(`fp-12`), đây là giới hạn của lớp check regex (Mục 3), không sửa được bằng cách chỉnh policy.
+
+### 4.4. Đo lường liên tục sau khi merge
+
+`.github/workflows/eval.yml` đã wire và chạy tự động thật trên 3 điều kiện: thủ công
+(`workflow_dispatch`), theo lịch mỗi đêm (bắt drift khi provider tự cập nhật model, kể cả không ai
+đổi policy), và mọi PR đụng `src/checks/llm/**`, `.guardian/policies/**` hoặc `eval/**` — kết quả
+tự động post/update thành 1 comment trên PR.
+
+> ⚠️ **Điểm cần quyết định — chưa phải gate cứng**: workflow hiện chạy `npm run eval` (chế độ
+> thông tin, luôn `exit 0`) — chưa dùng cờ `--ci` (`eval/checkThresholds.ts`, đã code xong) vốn tự
+> chặn PR khi Recall < 85% hoặc FPR > 25%. Số liệu đã hiển thị tự động trên mọi PR liên quan,
+> nhưng chưa PR nào bị chặn cứng vì tụt điểm — bật cờ này là 1 quyết định còn treo (xem Mục 9).
+
+`eval/history.ts` ghi snapshot bất biến mỗi lần `npm run eval`, tự so Delta có màu với lần chạy gần
+nhất; `eval/runBenchmark.ts` (`npm run eval:matrix`) đối sánh `gpt-4o` với `gpt-4o-mini` trên cùng
+100 case để tối ưu chi phí API — cả 2 đều thao tác trên chính bộ 100 case ở Mục 4.1, không phải
+một bộ dữ liệu riêng cho mục đích trình diễn.
+
+## 5. Kiến trúc hệ thống đã triển khai
+
+![Sơ đồ luồng hệ thống AI Dev Guardian](../img/system-flow.svg)
 
 Sơ đồ trên mô tả đúng những gì **đã được cài đặt và chạy được**, chia thành 4 tầng rõ ràng:
 
@@ -158,7 +232,7 @@ Mọi khối trong sơ đồ tương ứng 1:1 với module thật trong `src/`:
 `src/orchestrator.ts`, `src/checks/*.ts`, `src/report/*.ts` — đây là ảnh chụp đúng trạng thái
 code hiện tại, không phải sơ đồ khái niệm.
 
-## 5. Cách hoạt động dựa trên sơ đồ kiến trúc
+## 6. Cách hoạt động dựa trên sơ đồ kiến trúc
 
 Theo đúng thứ tự trong sơ đồ:
 
@@ -175,7 +249,7 @@ Theo đúng thứ tự trong sơ đồ:
 6. **Reporter** — `Fix-prompt generator` build `promptToFix` cho từng vi phạm, sau đó
    `Terminal renderer` in khung màu kết quả cuối cùng cho dev.
 
-## 6. Lợi ích hiệu năng
+## 7. Lợi ích hiệu năng
 
 - **Chạy song song, không tuần tự** — tổng thời gian check giới hạn bởi checker chậm nhất
   (thường là LLM call), không phải tổng cộng cả 4.
@@ -188,7 +262,62 @@ Theo đúng thứ tự trong sơ đồ:
   mạng ở judge pass đều chỉ log cảnh báo và bỏ qua đúng bước đó, không bao giờ crash hay tự ý
   `BLOCK` một push hợp lệ.
 
-## 7. Lộ trình tương lai
+## 8. Quản trị & Vận hành nhiều Team
+
+Phần trên (Mục 1–7) mô tả engine kiểm tra diff — phần chạy trên máy từng dev. Từ đó, dự án được mở
+rộng thêm 1 lớp quản trị để vận hành được ở quy mô nhiều nhóm dev như V-ID, không chỉ 1 repo đơn lẻ.
+
+### 8.1. Web Dashboard & RBAC
+
+Dashboard (React/Vite/Tailwind) + API (Express) chạy chung 1 lệnh `guardian dashboard`, dành cho
+Tech Lead quản lý policy/audit mà không cần đọc terminal. 4 vai trò, 1 ma trận quyền dùng chung cả
+server lẫn web:
+
+| Vai trò | Có thể làm |
+|---|---|
+| **Admin** | Sửa/xoá policy trực tiếp, duyệt policy/bypass request, chỉnh Engine Config |
+| **Senior Dev-Lead** | Đề xuất thay đổi policy, duyệt policy/bypass request |
+| **Developer** | Chạy audit, xin bypass, chỉ đọc policy |
+| **Auditor** | Chỉ đọc toàn bộ — không duyệt, không sửa, không chạy |
+
+Đăng nhập cấp JWT ký thật (`src/server/token.ts`), không còn header client tự nhận role — mọi
+request sau đó xác thực qua `Authorization: Bearer <token>`, hết hạn/giả mạo đều bị chặn ở
+`requireAuth()`.
+
+### 8.2. Vòng đời thay đổi Policy có kiểm soát
+
+Vai trò không có quyền sửa trực tiếp đề xuất → tạo `PolicyChangeRequest` **pending**, không đụng
+file ngay → Admin/Senior Dev-Lead duyệt mới thực sự ghi/xoá file `.guardian/policies/*.md`.
+
+Quyết định kỹ thuật đáng chú ý: sau khi ghi/xoá file, hệ thống **không tự động `git commit`/`git
+push`** — rủi ro khó đảo ngược, dễ conflict giữa nhiều clone của nhiều dev. Server trả về
+`gitSyncHint`, Dashboard hiện nhắc qua toast, nhưng người duyệt vẫn phải tự đẩy lên Git — "đồng bộ
+policy trong team" bản chất là đồng bộ Git bình thường (`git pull`), không có kênh phân phối riêng
+nào chạy ngầm.
+
+### 8.3. Phân quyền đa Team bằng OpenFGA/ReBAC
+
+Ranh giới Team là **quan hệ (tuple)** kiểu Google Zanzibar, không phải cột `teamId` lọc thủ công:
+`organization → team → policy / audit_record / bypass_request`. Khi 1 policy được tạo/duyệt,
+`tagPolicyTeam()` tự ghi tuple `policy:<id>#team@team:<teamId>`.
+
+- **Super Admin tự động kế thừa quyền admin trên mọi Team** — không cần gán tay từng team, engine
+  tự suy luận từ Authorization Model (đã verify 11/11 case qua `fga query check` thật, đã demo cho
+  Mentor).
+- Admin Team A gọi API vào resource của Team B → luôn bị từ chối, dù cùng có relation `admin`.
+- Cơ chế trên chỉ **thật sự thực thi** khi biến môi trường `GUARDIAN_AUTHZ_MODE=fga` được bật.
+  Mặc định (không set), mọi route vẫn chạy RBAC phẳng cũ, **không lọc theo team** — ranh giới Team
+  hiển thị đúng trên UI nhưng chưa bị khoá ở tầng quyền cho tới khi Ops chủ động bật flag này
+  trong môi trường thật (xem Mục 9).
+
+### 8.4. Chuẩn hoá Policy Doanh nghiệp
+
+Toàn bộ 9 file policy đang áp dụng (`security`, `rbac`, `coding-convention`, `naming-convention`,
+`logging`, `import-rules`, `architecture`, `dependency`, `performance`) theo cấu trúc 5 phần
+Enterprise Standard, tham chiếu OWASP Top 10 / ISO 27001: Compliance Metadata → Executive Summary
+→ Normative Directives (ví dụ ❌/✅ code thật) → Approved Exceptions → Remediation & Escalation.
+
+## 9. Lộ trình tương lai
 
 ### Đã hoàn thành
 
@@ -211,18 +340,32 @@ Theo đúng thứ tự trong sơ đồ:
 | Architecture Rules (`from`/`forbid` trong policy, chặn import trái layer) | ✅ Done |
 | Policy-driven severity cho circular dependency (không còn hardcode `medium`) | ✅ Done |
 | Dependency Rules (`dependencyAllowlist` trong policy, chặn dependency mới chưa duyệt) | ✅ Done |
+| Web Dashboard (React/Vite/Tailwind) + API (Express) | ✅ Done |
+| RBAC 4 vai trò + xác thực JWT thật (thay header tự nhận role) | ✅ Done |
+| Policy Change Request / Bypass Request — vòng đời duyệt có kiểm soát | ✅ Done |
+| Multi-Team Authorization bằng OpenFGA/ReBAC (song song RBAC cũ qua feature flag) | ✅ Done |
+| Chuẩn hoá Policy Doanh nghiệp — cấu trúc 5 phần, 9 policy, OWASP/ISO 27001 | ✅ Done |
+| Evaluation Suite — Golden Dataset 100 case, đo Recall/Precision/FPR bằng API thật | ✅ Done |
+| CI/CD Quality Gate cho Evaluation (`eval/checkThresholds.ts`, cờ `--ci`) | ✅ Done (code) — chưa bật gate cứng trong workflow, xem Mục 4.4 |
+| Historical Analytics & Live Delta Engine cho Evaluation | ✅ Done |
+| Multi-Model Benchmark Matrix (`npm run eval:matrix`) | ✅ Done |
+| Publish công khai trên npm (`ai-dev-guardian@0.1.0`) | ✅ Done |
 
 ### Đang chờ / Kế hoạch
 
 | Tính năng | Mô tả |
 |---|---|
+| Bật cờ `--ci` làm gate cứng trong `eval.yml` | Hiện workflow chỉ chạy chế độ thông tin (luôn `exit 0`) — xem Mục 4.4 |
+| OpenFGA production & Dashboard tập trung | Đưa `GUARDIAN_AUTHZ_MODE=fga` sang môi trường thật; quyết định deploy 1 Dashboard dùng chung cho cả team hay mỗi dev tự chạy instance riêng |
+| Policy Studio & Pipeline Wizard | Upload PDF/Docx → auto-convert → Health Audit (0–100đ) → Conflict Check → Synthetic TestGen → Deploy |
+| Multi-Tenant RBAC mở rộng 5 vai trò | Security Admin (CISO), Tech Lead, Senior Dev, Dev, Auditor — kế thừa nền OpenFGA đã có |
 | Git Workflow policy category | Luật đặt tên branch, format commit message |
 | Testing Standards policy category | Luật yêu cầu file test tương ứng khi thêm code mới |
 | Business Requirements policy category | Gắn thay đổi code với yêu cầu sản phẩm (cơ chế cụ thể còn TBD) |
 | Jira integration | Tự động gắn violation vào ticket theo dõi |
 | Component ownership qua git blame | Gắn `promptToFix` với đúng người đã viết dòng code vi phạm |
 
-## 8. Phân tích FinOps & Định vị thị trường
+## 10. Phân tích FinOps & Định vị thị trường
 
 > **💡 Điểm nhấn tài chính (Key Takeaway)**
 >
@@ -242,7 +385,7 @@ của từng cent:
   Semgrep chạy hoàn toàn bằng Deterministic Engine nội bộ, không tốn một token nào. Trong khoảng
   ~75% số lượt check, không có vi phạm nào sống sót tới mức cần AI Judge xác minh thêm — tức phần
   lớn khối lượng công việc đã được lọc sạch trước khi chạm tới lớp tốn phí nhất.
-- **Cắt giảm ~30% API thừa** — Thuật toán diff-hash (SHA-256, xem Mục 6) ghi nhớ những diff đã
+- **Cắt giảm ~30% API thừa** — Thuật toán diff-hash (SHA-256, xem Mục 7) ghi nhớ những diff đã
   từng `PASS`, tự động bỏ qua lượt gọi LLM cho các lần push không đổi logic thật (chỉ sửa format,
   chuyển qua lại branch...), giúp TCO (tổng chi phí sở hữu) giảm khoảng 30%.
 - **Định tuyến model thông minh (Smart Routing)** — Lượt check chính dùng **Claude Sonnet 5**
@@ -279,4 +422,5 @@ hàng giờ) — và được kiểm soát chủ động bởi chính kiến tr�
 
 ---
 
-*Tài liệu tổng hợp từ `README.md` và trạng thái code thật của dự án tại thời điểm 31/07/2026.*
+*Tài liệu tổng hợp từ `README.md`, `reports/sprint-plan.html`, `eval/results/history/` và trạng
+thái code thật của dự án tại thời điểm 13/08/2026.*

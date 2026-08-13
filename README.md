@@ -22,7 +22,7 @@ being trusted, and the tool never writes code on your behalf — it only ever pr
 copy-paste-ready fix prompt.
 
 <div align="center">
-<img src="docs/img/demo-output.png" alt="guardian check --staged output: a BLOCK verdict with two CRITICAL violations found by the secret scanner, each in its own bordered box with a policy explanation and a ready-to-paste fix prompt." width="620">
+<img src="img/demo-output.png" alt="guardian check --staged output: a BLOCK verdict with two CRITICAL violations found by the secret scanner, each in its own bordered box with a policy explanation and a ready-to-paste fix prompt." width="620">
 </div>
 
 ## Install
@@ -94,7 +94,7 @@ policy check. Exit code `1` on `BLOCK` (any violation at `medium` severity or ab
 ## Architecture
 
 <div align="center">
-<img src="docs/system-flow.svg" alt="AI Dev Guardian system flow: CLI/Entrypoint reads the diff, Core Engine/Orchestrator routes policies and checks the diff-hash cache, fans out to the Checkers layer (Secret scan, Architecture, Semgrep, LLM + judge — cache hit bypasses only the LLM branch), fans back in to the Verdict Aggregator, then Reporter builds the fix prompt and renders the terminal output." width="520">
+<img src="img/system-flow.svg" alt="AI Dev Guardian system flow: CLI/Entrypoint reads the diff, Core Engine/Orchestrator routes policies and checks the diff-hash cache, fans out to the Checkers layer (Secret scan, Architecture, Semgrep, LLM + judge — cache hit bypasses only the LLM branch), fans back in to the Verdict Aggregator, then Reporter builds the fix prompt and renders the terminal output." width="520">
 </div>
 
 Layered top-down, matching the app's own lifecycle: **CLI/Entrypoint** reads the diff → **Core
