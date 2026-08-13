@@ -45,7 +45,7 @@ function ViolationRow({ violation }: { violation: Violation }) {
             <ChevronRight size={14} className="shrink-0 text-slate-500" />
           )}
           <div className="min-w-0">
-            <div className="truncate text-sm font-extrabold text-slate-900">{violation.errorWhat}</div>
+            <div className="truncate text-sm font-bold text-slate-900">{violation.errorWhat}</div>
             <div className="truncate text-xs font-mono font-semibold text-slate-500">{violation.location}</div>
           </div>
         </button>
@@ -55,7 +55,7 @@ function ViolationRow({ violation }: { violation: Violation }) {
           <button
             onClick={() => copyPrompt(buildCompactFixPrompt(violation))}
             title="Copy AI Fix Prompt"
-            className="flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50/80 px-3 py-1.5 text-xs font-extrabold text-[#9E0B10] hover:bg-[#9E0B10] hover:text-white shadow-2xs"
+            className="flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50/80 px-3 py-1.5 text-xs font-semibold text-[#9E0B10] hover:bg-[#9E0B10] hover:text-white shadow-2xs transition-colors"
           >
             <Clipboard size={12} />
             <span className="hidden sm:inline">Copy AI Fix Prompt</span>
@@ -65,23 +65,23 @@ function ViolationRow({ violation }: { violation: Violation }) {
       {open && (
         <div className="space-y-3.5 border-t border-slate-100 px-4 py-4 text-sm bg-slate-50/40">
           <div>
-            <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Policy violated</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Policy violated</div>
             <p className="mt-1 text-slate-900 font-semibold">{violation.policyViolated}</p>
           </div>
           <div>
-            <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Why it matters</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Why it matters</div>
             <p className="mt-1 text-slate-700 font-medium">{violation.why}</p>
           </div>
           <div>
-            <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500">How to fix</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">How to fix</div>
             <p className="mt-1 text-emerald-700 font-bold">{violation.howToFix}</p>
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Full prompt to fix</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Full prompt to fix</div>
               <button
                 onClick={() => copyPrompt(violation.promptToFix)}
-                className="text-xs font-extrabold text-[#9E0B10] hover:underline"
+                className="text-xs font-semibold text-[#9E0B10] hover:underline"
               >
                 Copy
               </button>

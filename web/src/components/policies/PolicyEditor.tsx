@@ -103,31 +103,34 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
   }
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5">
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <div className="flex h-full flex-col rounded-[8px] border border-[#E5E7EB] bg-white p-5 space-y-4 font-sans">
+      <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] pb-3">
         {isNew ? (
-          <input
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-            placeholder="my-policy.policy.md"
-            className="w-64 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium focus:border-blue-400 focus:outline-none"
-          />
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-xs font-semibold text-[#64748B]">Filename:</span>
+            <input
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+              placeholder="my-policy.policy.md"
+              className="w-72 rounded-[6px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-mono text-[#111827] focus:border-[#B40000] focus:outline-none"
+            />
+          </div>
         ) : (
-          <h3 className="text-sm font-semibold text-gray-900">{id}</h3>
+          <h3 className="text-sm font-bold text-[#111827] font-mono">{id}</h3>
         )}
         {!isNew && policy && (canEditDirect || canPropose) && (
           <button
             onClick={remove}
             disabled={busy}
-            className="flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+            className="flex items-center gap-1 rounded-[6px] border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-[#B91C1C] hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
           >
-            <Trash2 size={13} /> Delete
+            <Trash2 size={13} /> Delete Policy
           </button>
         )}
       </div>
 
       {!isNew && policy?.version !== undefined && (
-        <p className="mb-3 text-xs text-gray-400">
+        <p className="text-xs text-[#64748B] font-mono">
           v{policy.version}
           {policy.updatedBy ? ` · updated by ${policy.updatedBy}` : ''}
           {policy.lastUpdated ? ` · ${new Date(policy.lastUpdated).toLocaleString()}` : ''}
@@ -136,34 +139,40 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
       )}
 
       {!readOnly && (
-        <input
-          value={changeSummary}
-          onChange={(e) => setChangeSummary(e.target.value)}
-          placeholder="What changed? (shown to everyone on the notification bell)"
-          className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:border-blue-400 focus:outline-none"
-        />
+        <div>
+          <label className="block text-[11px] font-semibold text-[#64748B] mb-1">Change Summary / Commit Message</label>
+          <input
+            value={changeSummary}
+            onChange={(e) => setChangeSummary(e.target.value)}
+            placeholder="What changed? (shown to everyone on the notification bell)"
+            className="w-full rounded-[6px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs text-[#111827] focus:border-[#B40000] focus:outline-none"
+          />
+        </div>
       )}
 
-      <textarea
-        value={raw}
-        onChange={(e) => setRaw(e.target.value)}
-        readOnly={readOnly}
-        spellCheck={false}
-        className="min-h-[360px] flex-1 rounded-lg border border-gray-200 bg-gray-50 p-4 font-mono text-xs leading-relaxed text-gray-800 focus:border-blue-400 focus:outline-none"
-      />
+      <div className="flex-1">
+        <label className="block text-[11px] font-semibold text-[#64748B] mb-1">Policy Markdown Source</label>
+        <textarea
+          value={raw}
+          onChange={(e) => setRaw(e.target.value)}
+          readOnly={readOnly}
+          spellCheck={false}
+          className="w-full min-h-[380px] rounded-[6px] border border-[#E5E7EB] bg-[#FAFAFA] p-4 font-mono text-xs leading-relaxed text-[#111827] focus:border-[#B40000] focus:bg-white focus:outline-none transition-all"
+        />
+      </div>
 
       {readOnly && (
-        <p className="mt-2 text-xs text-amber-600">Your role has read-only access to policies.</p>
+        <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">Your role has read-only access to policies.</p>
       )}
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-      {status && <p className="mt-2 text-xs text-emerald-600">{status}</p>}
+      {error && <p className="text-xs text-red-700 bg-red-50 p-2 rounded border border-red-200">{error}</p>}
+      {status && <p className="text-xs text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200">{status}</p>}
 
-      <div className="mt-3 flex items-center gap-2">
+      <div className="flex items-center gap-2 pt-2 border-t border-[#E5E7EB]">
         {!readOnly && (
           <button
             onClick={save}
             disabled={busy || !raw.trim() || (isNew && !id.trim())}
-            className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="rounded-[6px] bg-[#B40000] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#C8102E] transition-colors disabled:cursor-not-allowed disabled:bg-gray-300 cursor-pointer"
           >
             {busy ? 'Saving…' : canEditDirect ? 'Save Policy' : 'Submit for Approval'}
           </button>
@@ -171,7 +180,7 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
         {isNew && (
           <button
             onClick={onCancelNew}
-            className="rounded-full border border-gray-200 px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            className="rounded-[6px] border border-[#E5E7EB] bg-white px-4 py-1.5 text-xs font-semibold text-[#64748B] hover:bg-[#F8F9FA] transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -180,3 +189,4 @@ export function PolicyEditor({ policy, isNew, onSaved, onDeleted, onCancelNew }:
     </div>
   )
 }
+

@@ -266,25 +266,25 @@ export function TeamManagement() {
             
             {/* Cell 1: Total Teams */}
             <div className="sm:px-5 py-1">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">TỔNG SỐ TEAM</p>
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">TỔNG SỐ TEAM</p>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{totalTeams}</span>
+                <span className="text-2xl font-bold text-slate-900 tracking-tight">{totalTeams}</span>
                 <span className="text-xs text-slate-500 font-medium">teams đang hoạt động</span>
               </div>
             </div>
 
             {/* Cell 2: System Accounts */}
             <div className="sm:px-5 py-1">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">THÀNH VIÊN HỆ THỐNG</p>
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">THÀNH VIÊN HỆ THỐNG</p>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{totalUsers}</span>
+                <span className="text-2xl font-bold text-slate-900 tracking-tight">{totalUsers}</span>
                 <span className="text-xs text-slate-500 font-medium">({assignedUsersCount}/{totalUsers} đã gán team)</span>
               </div>
             </div>
 
             {/* Cell 3: Authz Engine */}
             <div className="sm:px-5 py-1">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">MÔ HÌNH AUTHZ</p>
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">MÔ HÌNH AUTHZ</p>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-lg font-bold text-slate-900 tracking-tight">OpenFGA ReBAC</span>
                 <span className="text-xs font-semibold text-[#9E0B10]">(Org-wide)</span>
@@ -293,9 +293,9 @@ export function TeamManagement() {
 
             {/* Cell 4: Security Rules */}
             <div className="sm:px-5 py-1">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">QUY TẮC BẢO VỆ</p>
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">QUY TẮC BẢO VỆ</p>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{totalPoliciesCount}</span>
+                <span className="text-2xl font-bold text-slate-900 tracking-tight">{totalPoliciesCount}</span>
                 <span className="text-xs font-medium text-slate-500">
                   {blockAuditCount === 0 ? '• 0 vi phạm' : `• ${blockAuditCount} bị chặn`}
                 </span>

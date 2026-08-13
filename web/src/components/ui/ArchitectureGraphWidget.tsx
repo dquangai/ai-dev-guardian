@@ -183,17 +183,17 @@ export function ArchitectureGraphWidget({
             <ShieldCheck size={20} />
           </div>
           <div>
-            <h3 className="text-sm font-extrabold text-slate-900">Live Code Architecture Node Graph</h3>
+            <h3 className="text-sm font-semibold text-slate-900">Live Code Architecture Node Graph</h3>
             <p className="text-xs text-slate-500 font-medium">Luồng kiểm tra pre-push qua từng trạm gác bảo mật</p>
           </div>
         </div>
         {coreState ? (
-          <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${STATE_BADGE[coreState].className}`}>
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${STATE_BADGE[coreState].className}`}>
             {STATE_BADGE[coreState].icon}
             {coreState === 'compliant' ? '100% Compliant' : coreState === 'warning' ? 'Cảnh báo' : 'Merge Blocked'}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200/80 px-3 py-1 text-xs font-bold text-slate-500">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200/80 px-3 py-1 text-xs font-semibold text-slate-500">
             Chưa có audit
           </span>
         )}
@@ -284,14 +284,14 @@ export function ArchitectureGraphWidget({
               {current.icon}
             </span>
             <div>
-              <div className="text-xs font-extrabold text-slate-900">{current.label}</div>
+              <div className="text-xs font-semibold text-slate-900">{current.label}</div>
               <div className="text-[11px] text-slate-500 font-medium">
-                {current.type} • Status: <span className="font-bold text-slate-700">{current.status}</span>
+                {current.type} • Status: <span className="font-semibold text-slate-700">{current.status}</span>
               </div>
             </div>
           </div>
           {badge && (
-            <span className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border ${badge.className}`}>
+            <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border ${badge.className}`}>
               {badge.icon} {badge.label}
             </span>
           )}
@@ -302,7 +302,7 @@ export function ArchitectureGraphWidget({
             {current.violations.slice(0, 4).map((v, i) => (
               <li key={i} className="flex items-start gap-2 text-[11px] text-slate-700">
                 <span
-                  className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase ${
+                  className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${
                     BLOCKING_SEVERITIES.has(v.riskLevel) ? 'bg-red-100 text-[#9E0B10]' : 'bg-amber-100 text-amber-800'
                   }`}
                 >

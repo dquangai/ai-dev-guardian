@@ -1,138 +1,387 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
 
-  /* Redefine blue palette to Vingroup Premium Red theme colors */
-  /* This automatically themes the entire application's primary highlights, buttons, and badges */
-  --color-blue-50: rgba(158, 11, 16, 0.04);
-  --color-blue-100: rgba(158, 11, 16, 0.08);
-  --color-blue-200: rgba(158, 11, 16, 0.16);
-  --color-blue-300: rgba(158, 11, 16, 0.3);
-  --color-blue-400: #c00c12;
-  --color-blue-500: #b30f14;
-  --color-blue-600: #9E0B10; /* Corporate Vingroup Dark Red */
-  --color-blue-700: #80070B; /* Deep Red */
-  --color-blue-800: #590407;
-  --color-blue-900: #380103;
+  /* Enterprise Color Tokens specified by User */
+  --color-bg-main: #F4F5F7;
+  --color-sidebar-bg: #EAEBED;
+  --color-header-bg: #FFFFFF;
+  --color-main-text: #111111;
+  --color-secondary-text: #555555;
+  --color-muted-text: #777777;
+  --color-border-custom: #D9D9D9;
+  --color-hover-bg: #E5E7EB;
+  --color-active-bg: #D1D5DB;
+  --color-accent-qwoang: #C8102E;
+  --color-critical: #C8102E;
+  --color-success-custom: #18794E;
+  --color-warning-custom: #B54708;
+
+  /* Redefine blue palette to QWOANG Accent #C8102E */
+  --color-blue-50: rgba(200, 16, 46, 0.04);
+  --color-blue-100: rgba(200, 16, 46, 0.08);
+  --color-blue-200: rgba(200, 16, 46, 0.16);
+  --color-blue-300: rgba(200, 16, 46, 0.3);
+  --color-blue-400: #d31821;
+  --color-blue-500: #c20810;
+  --color-blue-600: #C8102E;
+  --color-blue-700: #8F0007;
+  --color-blue-800: #660005;
+  --color-blue-900: #400003;
+}
+
+:root {
+  --bg-main: #F4F5F7;
+  --sidebar-bg: #EAEBED;
+  --header-bg: #FFFFFF;
+  --text-main: #111111;
+  --text-secondary: #555555;
+  --text-muted: #777777;
+  --border-color: #D9D9D9;
+  --hover-bg: #E5E7EB;
+  --active-bg: #D1D5DB;
+  --accent-vinsmart: #C8102E;
+  --critical: #C8102E;
+  --success: #18794E;
+  --warning: #B54708;
+}
+
+/* Factory AI Dark Mode Global Tokens */
+html.dark {
+  --bg-main: #09090B;
+  --sidebar-bg: #18181B;
+  --header-bg: #09090B;
+  --text-main: #F4F4F5;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --border-color: #27272A;
+  --hover-bg: #27272A;
+  --active-bg: #3F3F46;
+  --accent-vinsmart: #E11D48;
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background-color: #F8F9FA;
-  color: #0F172A;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html.dark body {
+  background-color: #09090B;
+  color: #F4F4F5;
+}
+
+/* TECHNICAL GRID CARD / ENGINEERING DOCUMENTATION CARD */
+.tech-grid-card {
+  background-color: #FFFFFF;
+  background-image: 
+    linear-gradient(to right, rgba(229, 229, 229, 0.75) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(229, 229, 229, 0.75) 1px, transparent 1px);
+  background-size: 16px 16px;
+  border: 1px solid #D6D6D6;
+  border-radius: 4px;
+  position: relative;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.tech-grid-card:hover {
+  border-color: #BDBDBD;
+  background-image: 
+    linear-gradient(to right, rgba(215, 215, 215, 0.9) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(215, 215, 215, 0.9) 1px, transparent 1px);
+}
+
+html.dark .tech-grid-card {
+  background-color: #18181B;
+  background-image: 
+    linear-gradient(to right, rgba(63, 63, 70, 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(63, 63, 70, 0.5) 1px, transparent 1px);
+  border-color: #27272A;
+}
+
+html.dark .tech-grid-card:hover {
+  border-color: #52525B;
+  background-image: 
+    linear-gradient(to right, rgba(82, 82, 91, 0.7) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(82, 82, 91, 0.7) 1px, transparent 1px);
+}
+
+/* REUSABLE TECHNICAL FACTORY BUTTON */
+.tech-button {
+  background-color: #171717;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0,
+    rgba(255, 255, 255, 0.08) 1px,
+    transparent 1px,
+    transparent 5px
+  );
+  background-position: 0 0;
+  border: 1px solid #555555;
+  border-radius: 3px;
+  color: #FFFFFF;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background-color 220ms ease, border-color 220ms ease, background-position 220ms ease;
+  box-shadow: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.tech-button:hover:not(:disabled) {
+  background-color: #262626;
+  border-color: #787878;
+  background-position: 6px 0;
+}
+
+.tech-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* QWOANG LOGO WAVE HOVER ANIMATION */
+@keyframes logoWavePulse {
+  0% {
+    r: 10px;
+    opacity: 0.95;
+    stroke-width: 2px;
+  }
+  50% {
+    r: 45px;
+    opacity: 0.5;
+    stroke-width: 1.5px;
+  }
+  100% {
+    r: 85px;
+    opacity: 0;
+    stroke-width: 0.5px;
+  }
+}
+
+@keyframes logoWaveBracket {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.14);
+  }
+}
+
+@keyframes logoWaveStar {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.logo-wave-group:hover .logo-wave-ring-1 {
+  animation: logoWavePulse 1.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+.logo-wave-group:hover .logo-wave-ring-2 {
+  animation: logoWavePulse 1.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.4s infinite;
+}
+
+.logo-wave-group:hover .logo-wave-brackets {
+  animation: logoWaveBracket 1.3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.logo-wave-group:hover .logo-wave-star {
+  animation: logoWaveStar 1.3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* TECH LASER FLOW ANIMATION FOR HIERARCHY CONNECTIONS */
+@keyframes techLaserFlow {
+  0% {
+    background-position: 0% -200%;
+  }
+  100% {
+    background-position: 0% 200%;
+  }
+}
+
+@keyframes techLaserFlowHoriz {
+  0% {
+    background-position: -200% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+.tech-laser-line-v {
+  background: linear-gradient(
+    180deg,
+    #D6D6D6 0%,
+    #D6D6D6 30%,
+    #111111 50%,
+    #D6D6D6 70%,
+    #D6D6D6 100%
+  );
+  background-size: 100% 250%;
+  animation: techLaserFlow 1.8s ease-in-out infinite;
+}
+
+.tech-laser-line-h {
+  background: linear-gradient(
+    90deg,
+    #D6D6D6 0%,
+    #D6D6D6 30%,
+    #111111 50%,
+    #D6D6D6 70%,
+    #D6D6D6 100%
+  );
+  background-size: 250% 100%;
+  animation: techLaserFlowHoriz 2.2s ease-in-out infinite;
+}
+
+/* TECH CARD SCANNING SHINE HOVER */
+.tech-hover-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.tech-hover-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(23, 23, 23, 0.08) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+.tech-hover-card:hover::before {
+  left: 220%;
+  transition: left 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* TERMINAL SCANLINE ANIMATION */
+@keyframes terminalScanline {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.35;
+  }
+  100% {
+    top: 100%;
+    opacity: 0.8;
+  }
+}
+
+.terminal-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(24, 121, 78, 0.4) 25%,
+    rgba(200, 16, 46, 0.6) 75%,
+    transparent 100%
+  );
+  animation: terminalScanline 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Utility Class for Black Button with White Text */
+.btn-black {
+  background-color: #111111;
+  color: #FFFFFF;
+  border: 1px solid #111111;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-black:hover {
+  background-color: #000000;
+  border-color: #000000;
+}
+
+html.dark .btn-black {
+  background-color: #F4F4F5;
+  color: #09090B;
+  border-color: #F4F4F5;
+}
+
+html.dark .btn-black:hover {
+  background-color: #FFFFFF;
+  border-color: #FFFFFF;
 }
 
 .white-card {
   background: #FFFFFF;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  border-radius: 0.75rem;
+}
+
+html.dark .white-card {
+  background: #18181B;
+  border-color: #27272A;
 }
 
 .white-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease-in-out;
 }
 
 .white-card-hover:hover {
-  border-color: rgba(254, 202, 202, 0.8);
-  box-shadow: 0 10px 30px rgba(158, 11, 16, 0.08);
-  transform: translateY(-2px);
-}
-
-.red-gradient {
-  background: linear-gradient(135deg, #8B0000 0%, #9E0B10 50%, #C8102E 100%);
+  border-color: var(--border-color);
+  background-color: var(--hover-bg);
 }
 
 .glass-input {
   background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  color: #0F172A;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+html.dark .glass-input {
+  background: #18181B;
+  border-color: #27272A;
+  color: #F4F4F5;
 }
 
 .glass-input:focus {
-  border-color: #9E0B10;
-  box-shadow: 0 0 0 3px rgba(158, 11, 16, 0.12);
+  border-color: #C8102E;
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.12);
   outline: none;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F8F9FA;
+  background: var(--bg-main);
 }
 ::-webkit-scrollbar-thumb {
-  background-color: #CBD5E1;
+  background-color: var(--border-color);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #94A3B8;
-}
-
-/* Login page micro-interactions — see web/src/pages/Login.tsx and components/auth/*.tsx */
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s ease-out both;
-}
-
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-.animate-spin-slow {
-  animation: spin-slow 40s linear infinite;
-}
-
-/* Live Code Architecture Node Graph "solar system" orbit — see components/ui/ArchitectureGraphWidget.tsx.
-   Two-part trick: the spoke line just rotates around the sun; the planet at its far end runs the
-   opposite rotation on the same clock so its icon/label stay upright while it revolves. */
-@keyframes orbit-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.animate-orbit-spoke {
-  animation: orbit-spin var(--orbit-duration, 26s) linear infinite;
-  animation-delay: var(--orbit-delay, 0s);
-}
-
-@keyframes orbit-counter-spin {
-  from { transform: translateX(var(--orbit-radius)) rotate(0deg); }
-  to { transform: translateX(var(--orbit-radius)) rotate(-360deg); }
-}
-.animate-orbit-counter {
-  animation: orbit-counter-spin var(--orbit-duration, 26s) linear infinite;
-  animation-delay: var(--orbit-delay, 0s);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-up,
-  .animate-spin-slow,
-  .animate-orbit-spoke,
-  .animate-orbit-counter {
-    animation: none;
-  }
-  /* Freeze each planet at its evenly-spaced angle instead of collapsing every node to 0deg. */
-  .animate-orbit-spoke {
-    transform: rotate(var(--orbit-static-angle, 0deg));
-  }
-  .animate-orbit-counter {
-    transform: translateX(var(--orbit-radius)) rotate(calc(-1 * var(--orbit-static-angle, 0deg)));
-  }
+  background-color: var(--text-secondary);
 }

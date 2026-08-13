@@ -1,5 +1,4 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { useAuth } from '../../context/AuthContext'
 import { navItemsFor } from '../../lib/navigation'
@@ -22,22 +21,17 @@ export function AppLayout() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  // Header title follows the role's own nav label (e.g. "My Findings" for a developer)
-  // rather than a fixed page name, so it doesn't contradict what the sidebar just called it.
   const roleNavItem = user
     ? navItemsFor(user.role, user.teamId).find((item) => item.to === location.pathname)
     : undefined
   const title = roleNavItem?.label ?? FALLBACK_TITLES[location.pathname] ?? 'AI Dev Guardian'
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#F8F9FA] text-slate-900 font-sans">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={title} onRefresh={() => navigate(0)} />
-        <main className="flex-1 overflow-y-auto px-8 py-6">
-          <Outlet />
-        </main>
-      </div>
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#F4F5F7] dark:bg-[#09090B] text-[#111111] dark:text-[#F4F4F5] font-sans transition-colors">
+      <Header title={title} onRefresh={() => navigate(0)} />
+      <main className="flex-1 overflow-y-auto px-8 py-6">
+        <Outlet />
+      </main>
     </div>
   )
 }

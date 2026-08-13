@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { ShieldAlert, ShieldCheck } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useApi } from '../lib/useApi'
 import type { AuditRecord, SystemDiagnostics } from '../lib/types'
@@ -9,6 +9,7 @@ import { StatusPill, verdictVariant } from '../components/ui/StatusPill'
 import { useAuth } from '../context/AuthContext'
 import { RequestBypassForm } from '../components/RequestBypassForm'
 import { engineShortName } from '../lib/engineLabel'
+import { TechButton } from '../components/ui/TechButton'
 
 export function CodeAudit() {
   const { can } = useAuth()
@@ -32,24 +33,25 @@ export function CodeAudit() {
 
   return (
     <div className="space-y-6">
-      <Panel title="Run a Guardian Audit" icon={<ShieldCheck size={16} className="text-gray-400" />}>
-        <p className="text-sm text-gray-500">
-          Runs the same checks as <code className="rounded bg-gray-100 px-1 py-0.5">guardian check --staged</code>
+      <Panel title="Run a Guardian Audit" icon={<ShieldCheck size={16} className="text-[#111111]" />}>
+        <p className="text-xs text-[#555555] leading-relaxed">
+          Runs the same checks as <code className="rounded bg-[#F4F5F7] border border-[#D6D6D6] px-1.5 py-0.5 font-mono text-[11px] text-[#111111]">guardian check --staged</code>
           {' '}against your currently staged changes: secret scanning, architecture/circular-dependency
           analysis, Semgrep, and {engineShortName(diagnostics?.llm)} policy reasoning.
         </p>
-        <button
-          onClick={runAudit}
-          disabled={!can('audit:run') || running}
-          className="mt-4 flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-        >
-          <Play size={15} fill="currentColor" />
-          {running ? 'Running audit…' : 'Launch Code Audit'}
-        </button>
+        <div className="mt-4">
+          <TechButton
+            onClick={runAudit}
+            disabled={!can('audit:run') || running}
+            className="px-5 py-2.5 text-xs"
+          >
+            {running ? 'RUNNING AUDIT…' : 'LAUNCH CODE AUDIT'}
+          </TechButton>
+        </div>
         {!can('audit:run') && (
-          <p className="mt-2 text-xs text-amber-600">Your role cannot trigger audit runs.</p>
+          <p className="mt-2.5 text-xs text-[#B54708] font-medium bg-amber-50 border border-amber-200 p-2.5 rounded-[6px]">Your role cannot trigger audit runs.</p>
         )}
-        {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        {error && <p className="mt-2.5 text-xs text-[#C8102E] font-medium bg-rose-50 border border-rose-200 p-2.5 rounded-[6px]">{error}</p>}
       </Panel>
 
       {result && (

@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { ArrowRight, Code, Crown, Globe2, Network, Shield, UserCheck, X } from 'lucide-react'
+import { Code, Crown, Globe2, Network, Shield, UserCheck, X } from 'lucide-react'
 import type { Role } from '../../lib/rbac'
+
+import { TechButton } from '../ui/TechButton'
 
 interface DemoRoleNode {
   role: Role
@@ -26,8 +28,8 @@ const ORG_HIERARCHY: {
     label: 'Super Admin',
     titleVi: 'Quản trị viên Tổ chức',
     description: 'Quản lý toàn bộ Team trong tổ chức, chuyển đổi ngữ cảnh làm việc theo từng Team qua Team switcher',
-    badgeColor: 'bg-slate-800 text-white border-slate-700',
-    borderColor: 'border-slate-800 hover:bg-slate-50',
+    badgeColor: 'bg-[#111111] text-white border-[#111111]',
+    borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
   },
   level1: {
     role: 'admin',
@@ -35,8 +37,8 @@ const ORG_HIERARCHY: {
     label: 'Administrator',
     titleVi: 'Quản trị viên Hệ thống',
     description: 'Toàn quyền cấu hình AI Engine (kể cả quản lý Cache), chỉnh sửa & phê duyệt Chính sách trực tiếp, phê duyệt Yêu cầu Bypass',
-    badgeColor: 'bg-red-100 text-[#9E0B10] border-red-200',
-    borderColor: 'border-[#9E0B10] hover:bg-red-50/50',
+    badgeColor: 'bg-[#111111] text-white border-[#111111]',
+    borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
   },
   level2: {
     role: 'senior-dev',
@@ -44,8 +46,8 @@ const ORG_HIERARCHY: {
     label: 'Senior Dev Lead',
     titleVi: 'Trưởng nhóm Phát triển',
     description: 'Đề xuất & phê duyệt Chính sách mới, phê duyệt Yêu cầu Bypass mã nguồn',
-    badgeColor: 'bg-amber-100 text-amber-900 border-amber-200',
-    borderColor: 'border-amber-500 hover:bg-amber-50/50',
+    badgeColor: 'bg-white text-[#111111] border-[#D6D6D6]',
+    borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
   },
   level3: [
     {
@@ -54,8 +56,8 @@ const ORG_HIERARCHY: {
       label: 'Developer',
       titleVi: 'Lập trình viên',
       description: 'Chạy kiểm định Pre-Push AI Guard, gửi Yêu cầu Bypass khi cần thiết',
-      badgeColor: 'bg-blue-100 text-blue-900 border-blue-200',
-      borderColor: 'border-blue-400 hover:bg-blue-50/50',
+      badgeColor: 'bg-white text-[#111111] border-[#D6D6D6]',
+      borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
     },
     {
       role: 'auditor',
@@ -63,8 +65,8 @@ const ORG_HIERARCHY: {
       label: 'Auditor',
       titleVi: 'Chuyên viên Kiểm toán',
       description: 'Chế độ Chỉ đọc: Giám sát Chính sách, Nhật ký kiểm định & cấu hình AI Engine',
-      badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-200',
-      borderColor: 'border-emerald-400 hover:bg-emerald-50/50',
+      badgeColor: 'bg-white text-[#111111] border-[#D6D6D6]',
+      borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
     },
   ],
 }
@@ -90,44 +92,43 @@ export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorPro
         type="button"
         disabled={disabled}
         onClick={() => setModalOpen(true)}
-        className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-slate-50/60 to-red-50/40 p-4 shadow-sm hover:border-[#9E0B10]/50 hover:shadow-md transition-all duration-200 cursor-pointer text-left disabled:opacity-60"
+        className="group flex w-full items-center justify-between gap-3 rounded-[12px] border border-[#D6D6D6] bg-white p-4 shadow-xs hover:border-[#111111] hover:bg-[#F8F9FA] transition-all duration-200 cursor-pointer text-left disabled:opacity-60"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-[#9E0B10] group-hover:bg-[#9E0B10] group-hover:text-white transition-colors shadow-xs">
-            <Network size={20} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#F4F5F7] text-[#111111] border border-[#E5E7EB] group-hover:bg-[#111111] group-hover:text-white transition-colors shadow-xs">
+            <Network size={18} />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-900 group-hover:text-[#9E0B10] transition-colors">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-[#111111] transition-colors">
               Explore Demo Mode
             </p>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">Sơ đồ phân cấp vai trò từ cao đến thấp</p>
+            <p className="text-xs text-[#666666] font-medium mt-0.5">Sơ đồ phân cấp vai trò từ cao đến thấp</p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 rounded-xl bg-[#9E0B10] px-3.5 py-2 text-xs font-bold text-white shadow-sm group-hover:bg-[#80070B] transition-colors">
-          <span>Xem sơ đồ</span>
-          <ArrowRight size={14} />
-        </div>
+        <TechButton size="sm">
+          Xem sơ đồ
+        </TechButton>
       </button>
 
       {/* Org Hierarchy Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-2xl rounded-[20px] border border-[#D6D6D6] bg-white p-6 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+            <div className="flex items-start justify-between border-b border-[#E5E7EB] pb-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-[#9E0B10]">
-                  <Network size={22} />
+                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#F4F5F7] text-[#111111] border border-[#E5E7EB]">
+                  <Network size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">Sơ Đồ Phân Cấp Vai Trò (Role Hierarchy)</h3>
-                  <p className="text-xs text-slate-500">Bấm vào bất kỳ chức vụ nào để đăng nhập tức thì vào giao diện tương ứng</p>
+                  <h3 className="text-base font-extrabold text-[#111111] tracking-tight">Sơ Đồ Phân Cấp Vai Trò (Role Hierarchy)</h3>
+                  <p className="text-xs text-[#666666]">Bấm vào bất kỳ chức vụ nào để tự động điền Email công việc và Mật khẩu tương ứng</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                className="rounded-lg p-1 text-[#777777] hover:bg-[#F4F5F7] hover:text-[#111111] transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -140,76 +141,77 @@ export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorPro
                 <button
                   type="button"
                   onClick={() => handleSelect(ORG_HIERARCHY.level0.role)}
-                  className={`group relative flex w-full flex-col gap-2 rounded-2xl border-2 ${ORG_HIERARCHY.level0.borderColor} bg-white p-4 text-left shadow-xs transition-colors duration-150 hover:shadow-md cursor-pointer`}
+                  className={`tech-hover-card group relative flex w-full flex-col gap-2 rounded-[14px] border ${ORG_HIERARCHY.level0.borderColor} bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${ORG_HIERARCHY.level0.badgeColor}`}>
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold ${ORG_HIERARCHY.level0.badgeColor}`}>
                       {ORG_HIERARCHY.level0.level}
                     </span>
-                    <Globe2 size={18} className="text-slate-800" />
+                    <Globe2 size={18} className="text-[#111111]" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-slate-700 transition-colors">
-                      {ORG_HIERARCHY.level0.label} <span className="text-xs font-semibold text-slate-500">({ORG_HIERARCHY.level0.titleVi})</span>
+                    <h4 className="text-sm font-extrabold text-[#111111] transition-colors">
+                      {ORG_HIERARCHY.level0.label} <span className="text-xs font-semibold text-[#666666]">({ORG_HIERARCHY.level0.titleVi})</span>
                     </h4>
-                    <p className="mt-1 text-xs text-slate-600 leading-relaxed">{ORG_HIERARCHY.level0.description}</p>
+                    <p className="mt-1 text-xs text-[#555555] leading-relaxed">{ORG_HIERARCHY.level0.description}</p>
                   </div>
                 </button>
               </div>
 
-              <div className="h-6 w-0.5 bg-slate-300" />
+              {/* Animated Laser Flow Line 1 */}
+              <div className="h-6 w-0.5 tech-laser-line-v rounded-full" />
 
               {/* Level 1: Admin */}
               <div className="w-full max-w-md">
                 <button
                   type="button"
                   onClick={() => handleSelect(ORG_HIERARCHY.level1.role)}
-                  className={`group relative flex w-full flex-col gap-2 rounded-2xl border-2 ${ORG_HIERARCHY.level1.borderColor} bg-white p-4 text-left shadow-xs transition-colors duration-150 hover:shadow-md cursor-pointer`}
+                  className={`tech-hover-card group relative flex w-full flex-col gap-2 rounded-[14px] border ${ORG_HIERARCHY.level1.borderColor} bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${ORG_HIERARCHY.level1.badgeColor}`}>
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold ${ORG_HIERARCHY.level1.badgeColor}`}>
                       {ORG_HIERARCHY.level1.level}
                     </span>
-                    <Crown size={18} className="text-[#9E0B10]" />
+                    <Crown size={18} className="text-[#111111]" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-[#9E0B10] transition-colors">
-                      {ORG_HIERARCHY.level1.label} <span className="text-xs font-semibold text-slate-500">({ORG_HIERARCHY.level1.titleVi})</span>
+                    <h4 className="text-sm font-extrabold text-[#111111] transition-colors">
+                      {ORG_HIERARCHY.level1.label} <span className="text-xs font-semibold text-[#666666]">({ORG_HIERARCHY.level1.titleVi})</span>
                     </h4>
-                    <p className="mt-1 text-xs text-slate-600 leading-relaxed">{ORG_HIERARCHY.level1.description}</p>
+                    <p className="mt-1 text-xs text-[#555555] leading-relaxed">{ORG_HIERARCHY.level1.description}</p>
                   </div>
                 </button>
               </div>
 
-              {/* Connecting Line 1 */}
-              <div className="h-6 w-0.5 bg-slate-300" />
+              {/* Animated Laser Flow Line 2 */}
+              <div className="h-6 w-0.5 tech-laser-line-v rounded-full" />
 
               {/* Level 2: Senior Dev Lead */}
               <div className="w-full max-w-md">
                 <button
                   type="button"
                   onClick={() => handleSelect(ORG_HIERARCHY.level2.role)}
-                  className={`group relative flex w-full flex-col gap-2 rounded-2xl border-2 ${ORG_HIERARCHY.level2.borderColor} bg-white p-4 text-left shadow-xs transition-colors duration-150 hover:shadow-md cursor-pointer`}
+                  className={`tech-hover-card group relative flex w-full flex-col gap-2 rounded-[14px] border ${ORG_HIERARCHY.level2.borderColor} bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${ORG_HIERARCHY.level2.badgeColor}`}>
+                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold ${ORG_HIERARCHY.level2.badgeColor}`}>
                       {ORG_HIERARCHY.level2.level}
                     </span>
-                    <UserCheck size={18} className="text-amber-600" />
+                    <UserCheck size={18} className="text-[#111111]" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-amber-800 transition-colors">
-                      {ORG_HIERARCHY.level2.label} <span className="text-xs font-semibold text-slate-500">({ORG_HIERARCHY.level2.titleVi})</span>
+                    <h4 className="text-sm font-extrabold text-[#111111] transition-colors">
+                      {ORG_HIERARCHY.level2.label} <span className="text-xs font-semibold text-[#666666]">({ORG_HIERARCHY.level2.titleVi})</span>
                     </h4>
-                    <p className="mt-1 text-xs text-slate-600 leading-relaxed">{ORG_HIERARCHY.level2.description}</p>
+                    <p className="mt-1 text-xs text-[#555555] leading-relaxed">{ORG_HIERARCHY.level2.description}</p>
                   </div>
                 </button>
               </div>
 
-              {/* Connecting Line 2 Split */}
+              {/* Animated Laser Flow Line 3 Split */}
               <div className="relative flex w-full max-w-lg justify-center">
-                <div className="h-5 w-0.5 bg-slate-300" />
-                <div className="absolute top-5 h-0.5 w-3/4 bg-slate-300" />
+                <div className="h-5 w-0.5 tech-laser-line-v rounded-full" />
+                <div className="absolute top-5 h-0.5 w-3/4 tech-laser-line-h rounded-full" />
               </div>
 
               {/* Level 3: Developer & Auditor */}
@@ -221,19 +223,19 @@ export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorPro
                       key={node.role}
                       type="button"
                       onClick={() => handleSelect(node.role)}
-                      className={`group relative flex flex-col gap-2 rounded-2xl border-2 ${node.borderColor} bg-white p-4 text-left shadow-xs transition-colors duration-150 hover:shadow-md cursor-pointer`}
+                      className={`tech-hover-card group relative flex flex-col gap-2 rounded-[14px] border ${node.borderColor} bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${node.badgeColor}`}>
+                        <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold ${node.badgeColor}`}>
                           {node.level}
                         </span>
-                        <Icon size={18} className={node.role === 'developer' ? 'text-blue-600' : 'text-emerald-600'} />
+                        <Icon size={18} className="text-[#111111]" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-[#9E0B10] transition-colors">
-                          {node.label} <span className="text-xs font-semibold text-slate-500">({node.titleVi})</span>
+                        <h4 className="text-sm font-extrabold text-[#111111] transition-colors">
+                          {node.label} <span className="text-xs font-semibold text-[#666666]">({node.titleVi})</span>
                         </h4>
-                        <p className="mt-1 text-xs text-slate-600 leading-relaxed">{node.description}</p>
+                        <p className="mt-1 text-xs text-[#555555] leading-relaxed">{node.description}</p>
                       </div>
                     </button>
                   )

@@ -4,10 +4,12 @@ export function StatCard({
   label,
   value,
   icon,
-  iconClassName = 'text-gray-400',
+  iconClassName = 'text-[#C8102E]',
   sub,
-  subClassName = 'text-gray-500',
+  subClassName = 'text-[#666666]',
   progress,
+  actionLabel,
+  onAction,
 }: {
   label: string
   value: ReactNode
@@ -16,21 +18,56 @@ export function StatCard({
   sub?: ReactNode
   subClassName?: string
   progress?: number
+  actionLabel?: string
+  onAction?: () => void
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(158,11,16,0.08)] hover:border-red-200">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>
-        <span className={`p-2.5 rounded-xl bg-red-50 border border-red-100 shadow-2xs ${iconClassName}`}>{icon}</span>
+    <div className="tech-grid-card group relative p-4 flex flex-col justify-between select-none h-full">
+      {/* Technical Corner Brackets (Corner Marks) */}
+      <div className="absolute top-[6px] left-[6px] w-[8px] h-[8px] border-t border-l border-[#C8102E] pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute top-[6px] right-[6px] w-[8px] h-[8px] border-t border-r border-[#C8102E] pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute bottom-[6px] left-[6px] w-[8px] h-[8px] border-b border-l border-[#C8102E] pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute bottom-[6px] right-[6px] w-[8px] h-[8px] border-b border-r border-[#C8102E] pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity" />
+
+      {/* Header: Small Icon + Monospace Label */}
+      <div>
+        <div className="flex items-center justify-between gap-1.5">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#666666] dark:text-[#A1A1AA] truncate">
+            {label}
+          </span>
+          <span className={`shrink-0 ${iconClassName}`}>{icon}</span>
+        </div>
+
+        {/* Value */}
+        <div className="mt-2 text-xl font-bold font-mono tracking-tight text-[#111111] dark:text-[#F4F4F5]">
+          {value}
+        </div>
+
+        {/* Subtext */}
+        {sub && <div className={`mt-1 text-[11px] font-sans ${subClassName}`}>{sub}</div>}
+
+        {/* Progress bar */}
+        {progress !== undefined && (
+          <div className="mt-3.5 h-1.5 w-full overflow-hidden rounded-full bg-[#E5E5E5] dark:bg-[#27272A]">
+            <div
+              className="h-full bg-[#C8102E] transition-all"
+              style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+            />
+          </div>
+        )}
       </div>
-      <div className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">{value}</div>
-      {sub && <div className={`mt-1 text-xs font-semibold ${subClassName}`}>{sub}</div>}
-      {progress !== undefined && (
-        <div className="mt-3.5 h-2 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200/60">
-          <div
-            className="h-full rounded-full red-gradient shadow-xs"
-            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-          />
+
+      {/* Action link */}
+      {actionLabel && (
+        <div className="mt-3 pt-2 flex items-center justify-between border-t border-[#E5E5E5]/60 dark:border-[#27272A]">
+          <button
+            type="button"
+            onClick={onAction}
+            className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-[#111111] dark:text-[#F4F4F5] hover:text-[#C8102E] dark:hover:text-rose-400 uppercase tracking-wider group-hover:translate-x-0.5 transition-all bg-transparent border-0 cursor-pointer p-0"
+          >
+            <span>{actionLabel}</span>
+            <span>→</span>
+          </button>
         </div>
       )}
     </div>

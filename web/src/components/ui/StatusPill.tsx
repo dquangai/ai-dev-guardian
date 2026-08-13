@@ -1,9 +1,9 @@
 const VARIANTS = {
-  green: 'bg-emerald-50 text-emerald-800 border-emerald-200/80 font-bold',
-  red: 'bg-red-50 text-[#9E0B10] border-red-200/80 font-extrabold shadow-2xs',
-  amber: 'bg-amber-50 text-amber-800 border-amber-200/80 font-bold',
-  blue: 'bg-blue-50 text-blue-800 border-blue-200/80 font-bold',
-  violet: 'bg-purple-50 text-purple-800 border-purple-200/80 font-bold',
+  green: 'bg-emerald-50 text-emerald-800 border-emerald-200/80 font-semibold',
+  red: 'bg-red-50 text-[#9E0B10] border-red-200/80 font-semibold shadow-2xs',
+  amber: 'bg-amber-50 text-amber-800 border-amber-200/80 font-semibold',
+  blue: 'bg-blue-50 text-blue-800 border-blue-200/80 font-semibold',
+  violet: 'bg-purple-50 text-purple-800 border-purple-200/80 font-semibold',
   gray: 'bg-slate-100 text-slate-700 border-slate-200/80 font-semibold',
 } as const
 

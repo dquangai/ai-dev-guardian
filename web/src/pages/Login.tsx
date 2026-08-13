@@ -3,12 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Briefcase, Eye, EyeOff, LayoutGrid, Lock, Mail } from 'lucide-react'
 import { DemoModeSelector } from '../components/auth/DemoModeSelector'
 import { LoginHero } from '../components/auth/LoginHero'
+import { TechButton } from '../components/ui/TechButton'
 import { useAuth } from '../context/AuthContext'
 import { defaultRouteForRole, pageAllowedForRole } from '../lib/navigation'
 import type { Role } from '../lib/rbac'
 
 export function Login() {
-  const { user, loginWithCredentials, loginAsDemo } = useAuth()
+  const { user, loginWithCredentials } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -41,15 +42,20 @@ export function Login() {
     }
   }
 
-  async function handleDemoLogin(role: Role) {
-    setError(null)
-    setSubmitting(true)
-    try {
-      await loginAsDemo(role)
-    } catch {
-      setError('Không thể kết nối đến máy chủ — Vui lòng thử lại sau.')
-    } finally {
-      setSubmitting(false)
+  const DEMO_CREDENTIALS: Record<Role, { email: string; pass: string }> = {
+    'super-admin': { email: 'super.admin@guardian.dev', pass: 'demo1234' },
+    admin: { email: 'admin@guardian.dev', pass: 'demo1234' },
+    'senior-dev': { email: 'senior.dev@guardian.dev', pass: 'demo1234' },
+    developer: { email: 'dev@guardian.dev', pass: 'demo1234' },
+    auditor: { email: 'auditor@guardian.dev', pass: 'demo1234' },
+  }
+
+  function handleSelectDemoRole(role: Role) {
+    const creds = DEMO_CREDENTIALS[role]
+    if (creds) {
+      setEmail(creds.email)
+      setPassword(creds.pass)
+      setError(null)
     }
   }
 
@@ -143,13 +149,14 @@ export function Login() {
                 </div>
               )}
 
-              <button
+              <TechButton
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-lg bg-[#9E0B10] py-2.5 text-sm font-semibold text-white shadow-md shadow-red-950/10 hover:bg-[#80070B] disabled:opacity-60 disabled:pointer-events-none"
+                fullWidth
+                size="lg"
               >
-                {submitting ? 'Đang xác thực…' : 'Đăng nhập'}
-              </button>
+                {submitting ? 'ĐANG XÁC THỰC…' : 'ĐĂNG NHẬP'}
+              </TechButton>
             </form>
 
             <div className="my-6 flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">
@@ -177,7 +184,7 @@ export function Login() {
 
         {/* Demo Mode Container */}
         <div className="w-full max-w-md">
-          <DemoModeSelector onSelectRole={handleDemoLogin} disabled={submitting} />
+          <DemoModeSelector onSelectRole={handleSelectDemoRole} disabled={submitting} />
         </div>
 
         <p className="text-center text-[10px] font-medium tracking-wide text-gray-400">
