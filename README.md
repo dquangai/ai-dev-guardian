@@ -25,23 +25,49 @@ copy-paste-ready fix prompt.
 <img src="img/demo-output.png" alt="guardian check --staged output: a BLOCK verdict with two CRITICAL violations found by the secret scanner, each in its own bordered box with a policy explanation and a ready-to-paste fix prompt." width="620">
 </div>
 
+<details>
+<summary><strong>Table of Contents</strong></summary>
+
+- [Install](#install)
+  - [Development setup (working on Guardian itself)](#development-setup-working-on-guardian-itself)
+- [Quick Start](#quick-start)
+- [CI/CD Integration](#cicd-integration)
+- [Architecture](#architecture)
+- [Checks](#checks)
+- [LLM reasoning: 5 layers against hallucination](#llm-reasoning-5-layers-against-hallucination)
+- [AST annotation: comment vs. code](#ast-annotation-comment-vs-code)
+- [LLM-as-a-Judge: second opinion on every violation](#llm-as-a-judge-second-opinion-on-every-violation)
+- [Evaluation: measuring the LLM check against a golden dataset](#evaluation-measuring-the-llm-check-against-a-golden-dataset)
+- [RAG-lite: per-language context retrieval](#rag-lite-per-language-context-retrieval)
+- [Circular dependency detection](#circular-dependency-detection)
+- [Optional Semgrep integration](#optional-semgrep-integration)
+- [Policy as Code](#policy-as-code)
+- [Web Dashboard](#web-dashboard)
+  - [RBAC](#rbac)
+  - [Multi-team authorization (OpenFGA)](#multi-team-authorization-openfga)
+  - [Policy approval workflow](#policy-approval-workflow)
+  - [Bypass requests](#bypass-requests)
+  - [Audit history](#audit-history)
+- [Caching](#caching)
+- [Prompt-as-a-Fix](#prompt-as-a-fix)
+- [Interactive git hook](#interactive-git-hook)
+- [Roadmap](#roadmap)
+  - [Shipped](#shipped)
+  - [Planned](#planned)
+- [Contributing](#contributing)
+
+</details>
+
 ## Install
 
-`ai-dev-guardian` is [published on npm](https://www.npmjs.com/package/ai-dev-guardian) — install it
-globally in whichever project you want to gate:
+`ai-dev-guardian` is [published on npm](https://www.npmjs.com/package/ai-dev-guardian):
 
 ```bash
 npm install -g ai-dev-guardian
-guardian install-hook
-guardian dashboard
 ```
 
-Or run it without a global install via `npx`:
-
-```bash
-npx ai-dev-guardian install-hook
-npx ai-dev-guardian dashboard
-```
+Or run it without a global install by prefixing every command with `npx`, e.g. `npx
+ai-dev-guardian install-hook`. See [Quick Start](#quick-start) below for what to run next.
 
 ### Development setup (working on Guardian itself)
 
@@ -97,6 +123,49 @@ No LLM key set is fine — Guardian still runs the 3 deterministic checks (secre
 circular-dependency check, and Semgrep if installed), logs a warning, and skips the LLM-powered
 policy check. Exit code `1` on `BLOCK` (any violation at `medium` severity or above), `0` on
 `PASS` — safe to wire in as a required CI check.
+
+## CI/CD Integration
+
+`guardian check --ci` is the same check as above, wired for a GitHub Actions PR gate: it diffs
+`origin/<base>...HEAD` instead of the push range, and posts/updates a single PR comment with the
+result via `postOrUpdateComment` (`src/ci/githubComment.ts`). Add this workflow to your own repo —
+it isn't auto-installed, `guardian install-hook` only handles the local pre-push hook:
+
+```yaml
+# .github/workflows/guardian.yml
+name: Guardian
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  guardian-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history — needed to diff origin/<base>...HEAD
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install -g ai-dev-guardian
+      - run: guardian check --ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+Exit code `1` on `BLOCK` fails the job — add `guardian-check` to your branch's required status
+checks (Settings → Branches → Branch protection rule) to actually block the merge, not just show a
+red X. `GITHUB_TOKEN` is provided automatically by Actions; only the LLM key(s) need to be added as
+repo secrets, and even those are optional (missing key → LLM check skipped, not a failure).
 
 ## Architecture
 
@@ -334,6 +403,10 @@ possibly apply to it.
 
 ## Web Dashboard
 
+<div align="center">
+<img src="img/dashboard-mac.png" alt="QWOANG AI Dev Guardian — Authentication & Web Dashboard login screen styled in macOS window frame." width="720">
+</div>
+
 A React + Vite + Tailwind dashboard (`web/`) backed by an Express API (`src/server/`), for a Dev
 Team Lead who wants to manage policies and review audit history without reading terminal output.
 
@@ -344,18 +417,35 @@ npm run dev            # dev mode: API on :4000 (plain tsx, no watch — see not
 guardian dashboard      # API + built UI on one port, single command
 ```
 
+The dashboard's **NoteBook** page (`/notebook`, linked from the Login screen, no login required to
+view it) has a fuller walkthrough aimed at a team rolling Guardian out on their own project: setup,
+writing custom policies, wiring the CI/CD gate, the bypass workflow, RBAC, and demo accounts — this
+README stays focused on how Guardian itself works internally.
+
 ### RBAC
 
-Four roles, one permission matrix (`src/server/rbac.ts`, mirrored read-only in
+Five roles, one permission matrix (`src/server/rbac.ts`, mirrored read-only in
 `web/src/lib/rbac.ts` for the frontend to gate buttons — but every permission is re-checked
 server-side in `authMiddleware.ts`'s `requirePermission()`, never only hidden in the UI):
 
 | Role | Can |
 |---|---|
-| **Admin** | Edit/delete policies directly, approve policy change requests, run audits, edit engine config |
+| **Super Admin** | Same permission set as Admin, but org-wide instead of team-scoped — inherits access across every team via the OpenFGA `organization` relation, not a per-team assignment |
+| **Admin** | Edit/delete policies directly, approve policy change requests, run audits, edit engine config — scoped to their own team |
 | **Senior Dev-Lead** | Propose policy changes, approve policy change requests and bypass requests |
 | **Developer** | Run audits, request bypasses, read-only on policies |
 | **Auditor** | Read-only everywhere — no approve, no edit, no run |
+
+### Multi-team authorization (OpenFGA)
+
+Beyond the flat permission matrix above, team-scoped and cross-team access is checked as a real
+relationship, not a role string: `authzGate()`/`requireRelation()` (`src/server/authz/`) call
+OpenFGA (model in `authz/model.fga`) to check things like "is this user a `developer` on *this*
+audit's team" before a route runs. This is what makes Admin on Team A unable to edit Team B's
+policies, while Super Admin can — verified with 11 real `check()` calls against a live OpenFGA
+instance, not just unit-tested against a mock (see `authz/README.md` for the full matrix and
+`reports/thiet-ke-multi-team-rbac.md` for the design). `./authz/setup.sh` spins up OpenFGA via
+Docker and re-runs all 11 checks locally.
 
 Login issues a signed JWT (`src/server/token.ts`), not a role the client asserts. `POST
 /api/auth/login` checks email + `GUARDIAN_DEMO_PASSWORD` (see `.env.example`) against the demo
@@ -439,17 +529,19 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | Optional Semgrep integration | `p/security-audit` ruleset by default (`GUARDIAN_SEMGREP_CONFIG` overridable), findings filtered to added diff lines |
 | Interactive pre-push git hook | `Y/n` in a real TTY, fail-open (always runs) in CI/non-interactive scripts |
 | Web dashboard | React/Vite/Tailwind UI + Express API (`web/`, `src/server/`) for managing policies and reviewing audit history without the terminal |
-| RBAC + approval workflows | 4-role permission matrix, policy change requests, and bypass-request review — see [Web Dashboard](#web-dashboard) |
+| RBAC + approval workflows | 5-role permission matrix, policy change requests, and bypass-request review — see [Web Dashboard](#web-dashboard) |
+| Multi-team authorization (OpenFGA) | Team-scoped + org-wide access as real ReBAC relationships (`authz/model.fga`), not role strings — cross-team isolation and Super Admin org-wide inheritance verified against a live OpenFGA instance — see [Multi-team authorization](#multi-team-authorization-openfga) |
 | Single-command dashboard launch | `guardian dashboard` serves the built UI and the API on one port, once `web/dist` exists |
 | Real auth for the dashboard | Signed JWT sessions (`POST /api/auth/login`), verified server-side on every request — replaced the `x-guardian-role` header the client used to self-assert |
 | Published to npm | [`ai-dev-guardian`](https://www.npmjs.com/package/ai-dev-guardian) is installable via `npm install -g ai-dev-guardian` or `npx ai-dev-guardian` — no local checkout or `npm link` required |
 | Evaluation Suite | 100-case golden dataset (`eval/`), real-API `npm run eval`, CI/CD quality gate (`--ci`), historical snapshots + Delta, `--split-policies` diagnostic — see [Evaluation](#evaluation-measuring-the-llm-check-against-a-golden-dataset) |
+| CI/CD PR gate | `guardian check --ci` + a copy-pasteable `guardian.yml` workflow — diffs the PR, posts/updates a comment, exit code 1 on `BLOCK` — see [CI/CD Integration](#cicd-integration) |
 
 ### Planned
 
 | Feature | What it would look like |
 |---|---|
-| **CI / GitHub Action gate** | A `guardian-action` that runs `runGuardianCheck` against a PR's diff and posts a comment, plus a git-versioned baseline artifact (mirroring the diff-hash cache but shared across a team instead of local `.git/`) so PRs don't re-pay for a diff a teammate already got `PASS`'d elsewhere |
+| **Reusable GitHub Action** | Publish the [CI/CD Integration](#cicd-integration) workflow as `uses: dquangai/guardian-action@v1` so a team adds one line instead of copy-pasting the full YAML, plus a git-versioned baseline artifact (mirroring the diff-hash cache but shared across a team instead of local `.git/`) so PRs don't re-pay for a diff a teammate already got `PASS`'d elsewhere |
 | **Architecture Rules policy category** | Policy-driven dependency-direction rules beyond circular-dependency detection — e.g. `forbid: ["src/core/** -> src/cli/**"]` in policy frontmatter, checked deterministically by reusing the same local-import extraction RAG-lite already does, no LLM call needed |
 | **Git Workflow policy category** | Branch naming, commit message format, merge-strategy rules — deterministic, checked against `diff`/git metadata rather than file content |
 | **Testing Standards policy category** | Coverage-delta and test-file-presence rules (e.g. "a new `src/**/*.ts` file must have a matching `test/**/*.test.ts`") |
