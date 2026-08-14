@@ -45,26 +45,7 @@ npx ai-dev-guardian dashboard
 
 ### Development setup (working on Guardian itself)
 
-To build and run this repo's own source instead of the published package, there are two
-equivalent ways to onboard — automated or manual.
-
-**Automated — one command:**
-
-```bash
-npm run setup
-```
-
-Runs `scripts/setup.mjs`: `npm install` (root + web) → `npm run build:all` → creates `.env` from
-`.env.example` and prompts for an LLM API key if none is set yet → `npm link` → `guardian
-install-hook` → a final `guardian check --staged` to verify. Safe to re-run any time (idempotent);
-skips the API key prompt automatically when it detects a non-interactive shell (e.g. run by an
-agent) instead of hanging on it.
-
-Using [Claude Code](https://claude.com/claude-code) on this repo, `/setup-guardian` does the same
-thing — it asks for your API key in chat first (writes it straight into `.env`, never echoes it
-back), then runs `npm run setup` for you.
-
-**Manual — same steps by hand:**
+To build and run this repo's own source instead of the published package:
 
 ```bash
 npm install
