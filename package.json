@@ -16,6 +16,7 @@
     "node": ">=18"
   },
   "scripts": {
+    "setup": "node scripts/setup.mjs",
     "build": "tsc",
     "build:all": "npm run build && npm run web:build",
     "prepublishOnly": "npm run build:all",
