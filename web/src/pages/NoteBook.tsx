@@ -60,8 +60,8 @@ jobs:
 const SETUP_DEMO_STEPS: { comment: string; cmd: string }[] = [
   { comment: '# 1. Cài CLI', cmd: 'npm install -g ai-dev-guardian' },
   { comment: '# 2. Khai báo API key vào .env', cmd: 'echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env' },
-  { comment: '# 3. Cài git pre-push hook', cmd: 'guardian install-hook' },
-  { comment: '# 4. Kiểm tra staged changes', cmd: 'guardian check --staged' },
+  { comment: '# 3. Kiểm tra staged changes', cmd: 'guardian check --staged' },
+  { comment: '# 4. Cài git pre-push hook', cmd: 'guardian install-hook' },
   { comment: '# 5. Mở Dashboard quản lý', cmd: 'guardian dashboard' },
 ]
 
@@ -334,9 +334,9 @@ export function NoteBook() {
                 {/* Cmd 3 */}
                 <div className="p-4 rounded bg-[#0D1117] text-[#F0F6FC] border border-[#30363D] space-y-2">
                   <div className="flex items-center justify-between text-[#8B949E]">
-                    <span>3. Cài git pre-push hook — mỗi lần `git push` tự hỏi và chạy check</span>
+                    <span>3. Kiểm tra tay staged changes trước khi commit (không cần chờ push)</span>
                     <button
-                      onClick={() => handleCopy('guardian install-hook', 'cmd3')}
+                      onClick={() => handleCopy('guardian check --staged', 'cmd3')}
                       className="inline-flex items-center gap-1.5 text-[11px] text-[#58A6FF] hover:underline cursor-pointer border-0 bg-transparent"
                     >
                       {copiedCmd === 'cmd3' ? <Check size={12} /> : <Copy size={12} />}
@@ -344,16 +344,16 @@ export function NoteBook() {
                     </button>
                   </div>
                   <code className="block text-[#3FB950] font-bold text-sm">
-                    guardian install-hook
+                    guardian check --staged
                   </code>
                 </div>
 
                 {/* Cmd 4 */}
                 <div className="p-4 rounded bg-[#0D1117] text-[#F0F6FC] border border-[#30363D] space-y-2">
                   <div className="flex items-center justify-between text-[#8B949E]">
-                    <span>4. Kiểm tra tay staged changes trước khi commit (không cần chờ push)</span>
+                    <span>4. Cài git pre-push hook — mỗi lần `git push` tự hỏi và chạy check</span>
                     <button
-                      onClick={() => handleCopy('guardian check --staged', 'cmd4')}
+                      onClick={() => handleCopy('guardian install-hook', 'cmd4')}
                       className="inline-flex items-center gap-1.5 text-[11px] text-[#58A6FF] hover:underline cursor-pointer border-0 bg-transparent"
                     >
                       {copiedCmd === 'cmd4' ? <Check size={12} /> : <Copy size={12} />}
@@ -361,7 +361,7 @@ export function NoteBook() {
                     </button>
                   </div>
                   <code className="block text-[#3FB950] font-bold text-sm">
-                    guardian check --staged
+                    guardian install-hook
                   </code>
                 </div>
 
