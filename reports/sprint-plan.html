@@ -1082,6 +1082,50 @@
               <li>Chưa chạy sống (tốn ~144 lượt gọi trả phí, để user tự quyết)</li>
             </ul></td>
           </tr>
+          <tr>
+            <td>T-41</td>
+            <td>Đánh giá tích hợp DeepEval TS SDK (<code>deepeval@0.9.10</code>) — G-Eval chấm chất lượng
+              <code>why</code>/<code>howToFix</code> do LLM sinh ra, bổ sung cho Recall/Precision/FPR hiện có
+              (chỉ đo binary detection, không đo chất lượng giải thích)</td>
+            <td><span class="badge status-blocked">Blocked — Reverted</span></td>
+            <td>3</td>
+            <td><span class="priority-low">Low</span></td>
+            <td>2026-08-14</td>
+            <td>2026-08-14</td>
+            <td><ul>
+              <li>BA/SA breakdown trước khi code: xác định 3 trong 4 tính năng DeepEval đề xuất (caching, concurrency,
+                G-Eval thay binary check) xung đột trực tiếp với thiết kế cố ý hiện có của <code>eval/</code>
+                (<code>runSuite.ts</code> tắt cache/chạy tuần tự có chủ đích để đo drift thật + giữ rate-limit dự
+                đoán được) — chỉ giữ lại 1 hướng có giá trị thật: G-Eval chấm <code>why</code>/<code>howToFix</code>
+                (51 case true-positive có sẵn field này, chưa từng được đo)</li>
+              <li>Cài <code>deepeval@0.9.10</code> (pin cứng, không dùng <code>^</code> — bản Beta): <code>npm audit</code>
+                phát hiện 2 critical + 1 high CVE thật do package này gây ra
+                (<code>protobufjs</code> 8.0.0-8.6.5 RCE/prototype-pollution — pin cứng qua
+                <code>@opentelemetry/otlp-transformer@0.211.0</code>; <code>nanoid</code> DoS) — xử lý bằng
+                <code>overrides.protobufjs: "^8.7.2"</code> + <code>npm audit fix</code>, xác nhận qua git diff
+                lockfile rằng 1 critical/1 high còn lại (chuỗi <code>vitest</code>/<code>vite</code>/<code>esbuild</code>)
+                đã tồn tại từ trước, không liên quan tới thay đổi này</li>
+              <li>Verify sống phát hiện thêm 2 bug lõi của bản Beta, không phải lỗi cấu hình:
+                (1) <code>deepeval/metrics</code> <code>require("@sentry/node")</code> không điều kiện ở
+                <code>telemetry.js</code> nhưng package không hề khai báo <code>@sentry/node</code> ở bất kỳ đâu
+                (dependencies/peerDependencies/optionalDependencies) — crash ngay khi import;
+                (2) sau khi thêm <code>@sentry/node</code> để qua được bước import, gọi <code>GEval.measure()</code>
+                đúng theo API doc công khai vẫn crash: <code>telemetry_1.inComponentScope is not a function</code>
+                — grep thẳng source xác nhận hàm này không tồn tại/không được export ở đâu trong
+                <code>telemetry.js</code></li>
+              <li>Phát hiện thêm (không phải lý do revert, chỉ ghi nhận): package hardcode API key thật của
+                PostHog + New Relic, gửi telemetry mặc định trừ khi set <code>DEEPEVAL_TELEMETRY_OPT_OUT=1</code>
+                — đáng lưu ý với 1 tool định vị là bảo mật/governance nếu sau này thử lại</li>
+              <li><strong>Quyết định: revert toàn bộ</strong> — gỡ <code>deepeval</code>/<code>@sentry/node</code>
+                khỏi <code>package.json</code>, xoá <code>eval/explanationQuality.test.ts</code> và
+                <code>eval/vitest.quality.config.ts</code>, <code>git checkout</code> khôi phục
+                <code>package.json</code>/<code>package-lock.json</code>. Verify sau revert:
+                <code>git status</code>/<code>git diff</code> sạch, <code>tsc --noEmit</code> sạch, 374/374 test
+                pass — đúng baseline trước khi bắt đầu task</li>
+              <li>Không đóng hẳn ý tưởng — có thể thử lại khi DeepEval TS SDK ra khỏi Beta và fix 2 bug lõi nêu
+                trên; không tự ý patch trực tiếp vào <code>node_modules</code> của 1 dependency Beta chưa ổn định</li>
+            </ul></td>
+          </tr>
           <tr class="epic-row epic-gray">
             <td colspan="8">
               <div>EPIC 4: ENTERPRISE POLICY LIFECYCLE STUDIO &amp; RBAC PIPELINE (BACKLOG)</div>
@@ -1134,7 +1178,7 @@
 
     <footer>
       <ul>
-        <li>Cập nhật lần cuối: 2026-08-12</li>
+        <li>Cập nhật lần cuối: 2026-08-14 — T-41 Blocked/Reverted (DeepEval TS SDK Beta: 2 bug lõi thật, xem chi tiết trong bảng)</li>
         <li>Sprint 2 ĐẠT sớm hơn lịch 10 ngày (T-01→T-18 Done)</li>
         <li>Sprint 3 ĐẠT sớm hơn lịch 2 ngày (T-19→T-27 Done) — <code>CLAUDE.md</code> Corporate Execution Rules áp dụng từ T-21</li>
         <li>Sprint 4: T-28/T-29 Done — Evaluation Suite 100 case + chuẩn hoá 9 policy theo Enterprise Standard</li>
