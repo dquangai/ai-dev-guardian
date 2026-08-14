@@ -60,6 +60,10 @@ ai-dev-guardian` in the linked project, then `npm unlink` in this repo.
 
 ## Quick Start
 
+<div align="center">
+<img src="img/setup-demo.gif" alt="Terminal demo cycling through the 5 setup steps: npm install -g ai-dev-guardian, writing an API key to .env, guardian install-hook, guardian check --staged, guardian dashboard." width="620">
+</div>
+
 ```bash
 # 1. Configure an LLM key — create .env at the project root (already gitignored)
 echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env   # or OPENAI_API_KEY=sk-...
