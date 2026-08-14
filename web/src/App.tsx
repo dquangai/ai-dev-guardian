@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { useAuth } from './context/AuthContext'
 import { defaultRouteForRole } from './lib/navigation'
 import { Login } from './pages/Login'
+import { NoteBook } from './pages/NoteBook'
 import { Overview } from './pages/Overview'
 import { CodeAudit } from './pages/CodeAudit'
 import { Findings } from './pages/Findings'
@@ -28,6 +29,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/notebook" element={<NoteBook />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>

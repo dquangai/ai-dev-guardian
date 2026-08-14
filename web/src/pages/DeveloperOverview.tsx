@@ -537,9 +537,9 @@ Please:
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-[#111111] dark:text-[#F4F4F5] font-sans">
-                    Lý do ngoại lệ *
+                <div className="pt-2 space-y-2">
+                  <label className="block text-xs font-semibold text-[#111111] dark:text-[#F4F4F5] font-sans">
+                    Lý do ngoại lệ <span className="text-[#C8102E]">*</span>
                   </label>
                   <textarea
                     required
@@ -547,7 +547,7 @@ Please:
                     value={bypassReason}
                     onChange={(e) => setBypassReason(e.target.value)}
                     placeholder="Nhập lý do chi tiết cho Tech Lead..."
-                    className="w-full rounded border border-[#D6D6D6] dark:border-[#27272A] p-3 text-xs text-[#111111] dark:text-[#F4F4F5] focus:border-[#111111] focus:ring-1 focus:ring-[#111111] outline-none font-sans bg-[#FFFFFF] dark:bg-[#09090B]"
+                    className="w-full rounded border border-[#D6D6D6] dark:border-[#27272A] p-3 text-xs text-[#111111] dark:text-[#F4F4F5] focus:border-[#111111] focus:ring-1 focus:ring-[#111111] outline-none font-sans bg-[#FFFFFF] dark:bg-[#09090B] shadow-xs"
                   />
                 </div>
 

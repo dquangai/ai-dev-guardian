@@ -111,34 +111,61 @@ html.dark .tech-grid-card:hover {
 }
 
 /* REUSABLE TECHNICAL FACTORY BUTTON */
+@keyframes techStripeFlow {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 28.28px 0;
+  }
+}
+
 .tech-button {
+  position: relative;
   background-color: #171717;
   background-image: repeating-linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.08) 0,
-    rgba(255, 255, 255, 0.08) 1px,
-    transparent 1px,
-    transparent 5px
+    -45deg,
+    rgba(255, 255, 255, 0.08) 0px,
+    rgba(255, 255, 255, 0.08) 2px,
+    transparent 2px,
+    transparent 10px
   );
-  background-position: 0 0;
-  border: 1px solid #555555;
-  border-radius: 3px;
+  border: 1px solid #444444;
+  border-radius: 4px;
   color: #FFFFFF;
   font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  transition: background-color 220ms ease, border-color 220ms ease, background-position 220ms ease;
-  box-shadow: none;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 100ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   outline: none;
   cursor: pointer;
+  user-select: none;
 }
 
-.tech-button:hover:not(:disabled) {
-  background-color: #262626;
-  border-color: #787878;
-  background-position: 6px 0;
+.tech-button:hover:not(:disabled),
+.tech-button:active:not(:disabled),
+.tech-button:focus-visible:not(:disabled),
+.tech-button.is-active {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(0, 0, 0, 0.15) 0px,
+    rgba(0, 0, 0, 0.15) 2.5px,
+    transparent 2.5px,
+    transparent 10px
+  ) !important;
+  animation: techStripeFlow 0.6s linear infinite !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.tech-button:active:not(:disabled) {
+  transform: scale(0.98);
+  animation-duration: 0.35s !important;
 }
 
 .tech-button:disabled {

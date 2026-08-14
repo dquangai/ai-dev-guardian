@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Briefcase, Eye, EyeOff, LayoutGrid, Lock, Mail } from 'lucide-react'
+import { BookOpen, Briefcase, Eye, EyeOff, LayoutGrid, Lock, Mail } from 'lucide-react'
 import { DemoModeSelector } from '../components/auth/DemoModeSelector'
 import { LoginHero } from '../components/auth/LoginHero'
 import { TechButton } from '../components/ui/TechButton'
@@ -67,10 +67,22 @@ export function Login() {
       <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-[#FAFAFA] bg-[radial-gradient(rgba(158,11,16,0.15)_1.2px,transparent_1.2px)] [background-size:24px_24px] px-6 py-12">
         <div className="w-full max-w-md">
           <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgba(158,11,16,0.06)]">
-            {/* Logo & Headline */}
-            <div className="mb-6 flex flex-col items-center text-center">
-              <h2 className="text-xl font-bold text-gray-900 tracking-tight">Đăng nhập hệ thống</h2>
-              <p className="mt-1.5 text-xs text-gray-500">Cổng xác thực dự án AI Dev Guardian</p>
+            {/* Logo, Headline & NoteBook Button */}
+            <div className="mb-6 flex items-start justify-between border-b border-gray-100 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 tracking-tight">Đăng nhập hệ thống</h2>
+                <p className="mt-1 text-xs text-gray-500">Cổng xác thực dự án AI Dev Guardian</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate('/notebook')}
+                title="Xem sổ tay hướng dẫn sử dụng hệ thống"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50/60 px-3 py-1.5 text-xs font-semibold text-[#9E0B10] hover:bg-[#9E0B10] hover:text-white transition-all cursor-pointer shadow-2xs group shrink-0"
+              >
+                <BookOpen size={14} className="text-[#9E0B10] group-hover:text-white transition-colors" />
+                <span className="font-mono font-bold tracking-tight">NoteBook</span>
+              </button>
             </div>
 
             {/* Login Tabs with Icons */}

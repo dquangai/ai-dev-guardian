@@ -65,16 +65,19 @@ ai-dev-guardian` in the linked project, then `npm unlink` in this repo.
 </div>
 
 ```bash
-# 1. Configure an LLM key — create .env at the project root (already gitignored)
-echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env   # or OPENAI_API_KEY=sk-...
+# 1. Install AI Dev Guardian CLI globally
+npm install -g ai-dev-guardian
 
-# 2. Check staged changes by hand, before committing
-guardian check --staged
+# 2. Configure an LLM key — create .env at the project root (already gitignored)
+echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env   # or OPENAI_API_KEY=sk-...
 
 # 3. Install the pre-push hook — every `git push` prompts and runs `guardian check`
 guardian install-hook
 
-# 4. Optional: manage policies/audits from a web dashboard instead of the terminal
+# 4. Check staged changes by hand, before committing
+guardian check --staged
+
+# 5. Optional: manage policies/audits from a web dashboard instead of the terminal
 guardian dashboard   # serves API + UI on one port — see Web Dashboard below
 ```
 
