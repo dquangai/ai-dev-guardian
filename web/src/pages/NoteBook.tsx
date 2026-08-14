@@ -60,8 +60,8 @@ jobs:
 const SETUP_DEMO_STEPS: { comment: string; cmd: string }[] = [
   { comment: '# 1. Cài CLI', cmd: 'npm install -g ai-dev-guardian' },
   { comment: '# 2. Khai báo API key vào .env', cmd: 'echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env' },
-  { comment: '# 3. Kiểm tra staged changes', cmd: 'guardian check --staged' },
-  { comment: '# 4. Cài git pre-push hook', cmd: 'guardian install-hook' },
+  { comment: '# 3. Cài git pre-push hook', cmd: 'guardian install-hook' },
+  { comment: '# 4. Kiểm tra staged changes', cmd: 'guardian check --staged' },
   { comment: '# 5. Mở Dashboard quản lý', cmd: 'guardian dashboard' },
 ]
 
