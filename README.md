@@ -129,8 +129,45 @@ policy check. Exit code `1` on `BLOCK` (any violation at `medium` severity or ab
 
 `guardian check --ci` is the same check as above, wired for a GitHub Actions PR gate: it diffs
 `origin/<base>...HEAD` instead of the push range, and posts/updates a single PR comment with the
-result via `postOrUpdateComment` (`src/ci/githubComment.ts`). Add this workflow to your own repo —
-it isn't auto-installed, `guardian install-hook` only handles the local pre-push hook:
+result via `postOrUpdateComment` (`src/ci/githubComment.ts`). It isn't auto-installed —
+`guardian install-hook` only handles the local pre-push hook — so add one of the two workflows
+below to your own repo.
+
+### Option A — reusable Action (recommended, one line)
+
+`action.yml` at the root of this repo packages checkout + setup-node + install + the check itself
+into a single composite Action, including the [shared diff-hash baseline](#caching) below:
+
+```yaml
+# .github/workflows/guardian.yml
+name: Guardian
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  guardian-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dquangai/ai-dev-guardian@v1
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+```
+
+The Action does its own `actions/checkout` (full history) and `actions/setup-node` internally — do
+not add separate checkout/setup-node steps before it, that just repeats the same work. `contents:
+read` + `pull-requests: write` above still has to be declared by *your* workflow — a permission a
+job grants its `GITHUB_TOKEN` isn't something a composite Action can set on the caller's behalf.
+
+### Option B — copy the raw steps (full control)
+
+Equivalent to Option A spelled out, for teams that need to add their own steps in between or can't
+depend on a third-party Action:
 
 ```yaml
 # .github/workflows/guardian.yml
@@ -163,10 +200,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-Exit code `1` on `BLOCK` fails the job — add `guardian-check` to your branch's required status
-checks (Settings → Branches → Branch protection rule) to actually block the merge, not just show a
-red X. `GITHUB_TOKEN` is provided automatically by Actions; only the LLM key(s) need to be added as
-repo secrets, and even those are optional (missing key → LLM check skipped, not a failure).
+Both options: exit code `1` on `BLOCK` fails the job — add `guardian-check` to your branch's
+required status checks (Settings → Branches → Branch protection rule) to actually block the merge,
+not just show a red X. `GITHUB_TOKEN` is provided automatically by Actions; only the LLM key(s)
+need to be added as repo secrets, and even those are optional (missing key → LLM check skipped,
+not a failure).
 
 ## Architecture
 
@@ -506,6 +544,14 @@ just the most recent entry — the LLM policy check is skipped entirely (secret 
 circular-dependency check, and Semgrep still run; they're free). This survives switching between
 branches: a diff that passed on branch A is still cached if you check out branch B and back. A
 `BLOCK` verdict is never cached, so a fixed diff is always re-checked.
+
+In CI, each job runs on a fresh checkout — there's no local `.git/` to persist between runs. The
+[reusable Action](#cicd-integration) (`action.yml`) restores/saves that same `.git/guardian_cache.json`
+via `actions/cache`, keyed with the run id and a shared `guardian-baseline-` prefix so a restore
+always finds the most recently saved cache (the standard pattern for an ever-growing cache — see
+GitHub's own `actions/cache` docs). The effect: if a teammate's PR already got a `PASS` on the exact
+same diff (a rebase, or the same fix landed in two branches), this PR's job reuses that instead of
+paying for the LLM call again — a team-shared version of the same local mechanism above.
 
 ## Prompt-as-a-Fix
 

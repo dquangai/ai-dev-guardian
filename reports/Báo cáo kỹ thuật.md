@@ -370,6 +370,7 @@ Enterprise Standard, tham chiếu OWASP Top 10 / ISO 27001: Compliance Metadata 
 | Smoke-test QWOANG UI trên browser thật | ✅ Done (17/08/2026) — phát hiện + sửa 1 bug hydration thật (`DemoModeSelector.tsx` lồng `<button>`), xem `bao_cao_dot_2.md` Phần V mục 2 |
 | Component ownership qua git blame | ✅ Done (17/08/2026) — `src/git/blame.ts` (`findEvidenceLine` + `blameLine`), gắn `author` vào violation cho secret-scan + LLM policy check (2 nguồn chiếm đa số vi phạm thật); `evidenceSnippet` dùng để tra dòng bị strip trước khi trả về, không lộ ra `audit-history.json`/API. Chưa làm cho architecture/dependency check (vi phạm không gắn với đúng 1 dòng, xem ghi chú trong code). |
 | Git Workflow policy category | ✅ Done (17/08/2026) — `src/checks/gitWorkflowCheck.ts`, policy khai báo `gitWorkflow: [{ branchPattern, exemptBranches, commitPattern }]` trong frontmatter (`.guardian/policies/git-workflow.policy.md`), kiểm tra tất định qua `git rev-parse`/`git log -1` (`src/git/gitMeta.ts`), không qua LLM. `exemptBranches: ["master", "main"]` để không tự chặn dogfooding trên chính branch làm việc hiện tại. |
+| Reusable GitHub Action + shared diff-hash baseline dùng chung team | ✅ Done code (17/08/2026) — `action.yml` ở root repo, composite action đóng gói checkout+setup-node+install+check; baseline dùng chung qua `actions/cache/restore` + `actions/cache/save` với key `guardian-baseline-${{ github.run_id }}` + `restore-keys` prefix (pattern chuẩn GitHub cho cache tăng dần), cache đúng file `.git/guardian_cache.json` đã có sẵn — không đổi cơ chế cache cục bộ. **Chưa verify được bằng 1 lần chạy GitHub Actions thật** (môi trường phiên làm việc này không có quyền trigger workflow thật trên GitHub) — chỉ validate được YAML hợp lệ (`js-yaml`) + đối chiếu đúng schema `action.yml` (inputs/runs/steps, `shell: bash` trên mọi step `run:`). Publish tag `v1` trên repo GitHub thật (`old-origin`) là bước thủ công còn lại, cần bạn tự làm — không phải việc tôi tự ý thực thi được từ đây. |
 
 ### Đang chờ / Kế hoạch
 
@@ -378,14 +379,20 @@ trước, Tier 3 (Dashboard/OpenFGA) chờ Mentor chốt hướng thay vì làm 
 
 **Ưu tiên làm tiếp — rẻ, thuộc Tier 1 & 2, không phụ thuộc quyết định nào đang treo:**
 
-4 việc rẻ nhất trong nhóm này (bật `--ci` gate cứng, smoke-test QWOANG UI, component ownership qua
-git blame, Git Workflow policy category) đã xong 17/08/2026 — chuyển vào bảng "Đã hoàn thành" ở
-trên. Còn lại 2 việc:
+5 việc rẻ nhất trong nhóm này đã xong 17/08/2026 — chuyển vào bảng "Đã hoàn thành" ở trên. Còn lại
+1 việc:
 
 | Tính năng | Mô tả | Vì sao ưu tiên |
 |---|---|---|
-| Reusable GitHub Action + shared diff-hash baseline dùng chung team | Publish workflow thành 1 GitHub Action, PR không phải trả phí quét lại diff đồng đội đã `PASS` | Giảm ma sát cài CI Gate (đúng lời hứa Tier 1 "1 dòng thay vì copy YAML"), baseline dùng chung là bước đệm tự nhiên tới Tier 2 |
 | Testing Standards policy category | Luật yêu cầu file test tương ứng khi thêm code mới | Tất định, rẻ, củng cố đúng văn hoá "phải có test" của chính team |
+
+> ⚠️ **Lưu ý khi đọc mục "Reusable GitHub Action" ở bảng Đã hoàn thành phía trên:** đây là tính năng
+> cho bản npm public trên GitHub (`old-origin`, org `dquangai`) — repo V-ID nội bộ đang dùng
+> **GitLab** (`gitlab.vinsmartfuture.tech`) làm `origin` thật, chưa có `.gitlab-ci.yml`. `.github/
+> workflows/*.yml` trong repo này (kể cả cờ `--ci` mới bật ở mục trên) **không tự chạy** trên GitLab
+> — xác nhận đã hỏi lại và chốt: GitHub chỉ phục vụ bản public, không liên quan vận hành V-ID. Nếu
+> sau này team V-ID cần CI Gate thật trên GitLab, đó là 1 việc khác (viết `.gitlab-ci.yml`), chưa
+> nằm trong phạm vi các mục đã Done ở đây.
 
 **Hold — chờ Mentor chốt hướng Dashboard trước khi làm (Mục 8.0, Tier 3):**
 

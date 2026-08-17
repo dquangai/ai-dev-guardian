@@ -1,0 +1,78 @@
+name: "AI Dev Guardian Check"
+description: >-
+  Pre-push AI code governance gate for a pull request: evidence-grounded LLM policy check, secret
+  scan, and architecture rules on the PR diff. Posts/updates a single PR comment with the result
+  and fails the job on a BLOCK verdict.
+author: "dquangai"
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  anthropic-api-key:
+    description: >-
+      Anthropic API key for the LLM policy check. Optional — omit if using openai-api-key instead;
+      missing both keys skips only the LLM check (fail-open), the 3 deterministic checks still run.
+    required: false
+  openai-api-key:
+    description: "OpenAI API key for the LLM policy check. Optional — see anthropic-api-key."
+    required: false
+  github-token:
+    description: "Token used to post/update the PR comment with results."
+    required: false
+    default: ${{ github.token }}
+  node-version:
+    description: "Node.js version to install before running the check."
+    required: false
+    default: "20"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout (full history — needed to diff origin/<base>...HEAD)
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    # Shared diff-hash baseline (src/cache.ts's SHA-256 diff-hash, same mechanism as the local
+    # .git/guardian_cache.json a solo dev gets): restores the most recently saved cache under the
+    # "guardian-baseline-" prefix (this run's own key never matches on restore since it includes
+    # github.run_id, so this always falls through to the newest prior save — the standard GitHub
+    # Actions pattern for an ever-growing cache). If a teammate's PR already got a PASS on this
+    # exact diff (byte-identical, e.g. a rebase or the same fix landed twice), guardian check
+    # skips the paid LLM call for it — see runGuardianCheck's cacheHit branch in src/orchestrator.ts.
+    - name: Restore shared diff-hash baseline
+      uses: actions/cache/restore@v4
+      with:
+        path: .git/guardian_cache.json
+        key: guardian-baseline-${{ github.run_id }}
+        restore-keys: |
+          guardian-baseline-
+
+    - name: Install Guardian
+      run: npm install -g ai-dev-guardian
+      shell: bash
+
+    - name: Run Guardian check
+      run: guardian check --ci
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+
+    # Runs even when the check step above failed (BLOCK exits 1, which the job still reports as
+    # failed overall — this step doesn't change that) — a BLOCK never calls writeCache() internally
+    # (see src/orchestrator.ts: only a verified-clean PASS is cached), so saving here after a BLOCK
+    # just re-saves the same prior content; harmless, simpler than branching on the verdict here.
+    - name: Save shared diff-hash baseline
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: .git/guardian_cache.json
+        key: guardian-baseline-${{ github.run_id }}
