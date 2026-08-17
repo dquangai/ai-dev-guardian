@@ -146,6 +146,25 @@ export function readLocalConfig(configPath: string): AppConfig {
 }
 ```
 
+**Phân biệt quan trọng — hash để LƯU TRỮ password vs. digest để SO SÁNH constant-time:** yêu cầu
+dùng thuật toán chậm có chi phí tính toán cao (bcrypt/scrypt/argon2) chỉ áp dụng khi hash được
+**lưu trữ lâu dài** để sau này so khớp với password người dùng nhập vào (mục đích: làm brute-force
+ngoại tuyến tốn kém). Khi 2 giá trị ĐÃ CÓ SẴN trong bộ nhớ tại cùng thời điểm (không phải so với 1
+hash lưu trữ) chỉ cần so sánh **constant-time** để tránh timing attack — `crypto.createHash('sha256')`
++ `crypto.timingSafeEqual()` là pattern chuẩn được Node.js khuyến nghị cho đúng trường hợp này,
+KHÔNG cần bcrypt (bcrypt chậm có chủ đích, dùng sai chỗ chỉ làm chậm request mà không thêm bảo mật
+thật). Ví dụ KHÔNG vi phạm:
+
+```ts
+// So sánh 2 giá trị đã có sẵn (không phải hash lưu trữ chờ so khớp sau) — bcrypt không áp dụng ở đây.
+function checkPassword(password: string): boolean {
+  const expected = process.env.SHARED_DEMO_SECRET;
+  if (!expected) return false;
+  const digest = (v: string) => crypto.createHash("sha256").update(v).digest();
+  return crypto.timingSafeEqual(digest(password), digest(expected)); // chống timing attack, không phải KDF
+}
+```
+
 ### 2.5 Không hạ cấp thuật toán mã hoá/hash hoặc tắt xác thực TLS
 
 Không tự ý hạ cấp thuật toán mã hoá/hash (ví dụ dùng MD5/SHA1 cho mật khẩu) hoặc tắt xác thực
@@ -323,6 +342,20 @@ await db.sessions.insert({ userId, refreshTokenHash: tokenHash });
   tất, verdict:", report.verdict)`) không tính là vi phạm 2.2, kể cả khi biến log ra có tên nghe
   "nhạy cảm" (`report`, `result`...) — chỉ đánh giá GIÁ TRỊ thực sự được log, không đánh giá theo
   tên biến.
+- Một hằng số dùng chung cho TOÀN BỘ tài khoản demo (không phải secret riêng của 1 user), đã được
+  công khai tài liệu hoá trong chính sản phẩm (ví dụ hiển thị nguyên văn ở trang NoteBook/UI cho bất
+  kỳ ai xem), và chỉ dùng để tự động điền vào form đăng nhập demo (không tự cấp quyền truy cập, xác
+  thực thật vẫn luôn đi qua server) — KHÔNG tính là vi phạm 2.1, dù regex/LLM có thể nhận diện đúng
+  đây là 1 giá trị dạng "password/token". Phân biệt với secret thật: giá trị demo này được THIẾT KẾ
+  để công khai, đổi được qua biến môi trường phía server, và không bảo vệ dữ liệu/tài nguyên thật.
+  Ví dụ KHÔNG vi phạm:
+  ```ts
+  // Giống hệt giá trị hiển thị công khai ở NoteBook "Tài khoản Demo" — không phải secret thật.
+  const DEMO_LOGIN_VALUE = 'demo1234';
+  function handleSelectDemoUser(email: string) {
+    setPassword(DEMO_LOGIN_VALUE); // chỉ autofill form, server vẫn tự xác thực qua GUARDIAN_DEMO_PASSWORD
+  }
+  ```
 
 ## 4. Automated Enforcement
 

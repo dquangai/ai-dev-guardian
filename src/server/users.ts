@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { isValidRole, type Role } from "./rbac";
 import { createUser, getUser, getUserByEmail, listUsers, updateUserTeam, SEED_USER_IDS, type StoredUser } from "./store/userStore";
 
@@ -37,8 +38,12 @@ export function setUserTeam(userId: string, teamId: string | undefined): void {
 
 /** All demo accounts share one password (GUARDIAN_DEMO_PASSWORD, root .env) — there's nothing
  * per-user to hash here, the env var itself is the secret, so a direct compare doesn't trade away
- * any real security versus bcrypt-ing a single shared plaintext value. */
+ * any real security versus bcrypt-ing a single shared plaintext value. Digests are compared with
+ * `timingSafeEqual` (fixed-length, so unequal input lengths don't throw) purely as defense in
+ * depth against timing side-channels — not because the shared plaintext itself needs hashing. */
 export function checkPassword(password: string): boolean {
   const expected = process.env.GUARDIAN_DEMO_PASSWORD;
-  return Boolean(expected) && password === expected;
+  if (!expected) return false;
+  const digest = (value: string) => crypto.createHash("sha256").update(value).digest();
+  return crypto.timingSafeEqual(digest(password), digest(expected));
 }

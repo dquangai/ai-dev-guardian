@@ -108,6 +108,31 @@ const role = await authz.resolveRole(req.session.userId);
 if (role === "admin") return res.json(invoiceService.getAllInvoicesAcrossTeams());
 ```
 
+**Phân biệt quan trọng:** quy tắc này chỉ áp dụng khi role/teamId do client gửi được dùng để
+**quyết định quyền truy cập** (authorization decision). Khi `role`/`teamId` chỉ là 1 trường DỮ LIỆU
+trong body của request TẠO MỚI 1 tài nguyên (ví dụ tạo user mới, gán role cho user đó) — và chính
+route đó tự xác thực người GỌI API qua middleware tập trung (`req.role` đã được `requireAuth()` xác
+thực từ token, không phải client tự khai) + validate lại giá trị role/teamId gửi lên (whitelist role
+hợp lệ, kiểm tra team có tồn tại) trước khi ghi — đây KHÔNG vi phạm 2.2, vẫn là REST bình thường.
+Ví dụ KHÔNG vi phạm:
+
+```ts
+// web/src/pages/TeamManagement.tsx — role/teamId chỉ là DỮ LIỆU cho user MỚI, không phải quyền của
+// người đang gọi API.
+await api.post('/teams/users', { name, email, role: newUserRole, teamId: newUserTeamId });
+```
+
+```ts
+// src/server/routes/teams.ts — người gọi API được xác thực qua middleware tập trung (không tin
+// role tự khai), giá trị role/teamId gửi lên bị validate lại trước khi ghi.
+teamsRouter.post("/users", requireAuth, requireSuperAdmin, (req, res) => {
+  const { role, teamId } = req.body ?? {};
+  if (!isValidRole(role) || role === "super-admin") return res.status(400).json({ error: "invalid_role" });
+  if (teamId && !getTeam(teamId)) return res.status(404).json({ error: "team_not_found" });
+  // ... tạo user mới với role/teamId đã validate
+});
+```
+
 ### 2.3 Route mới mặc định deny-by-default
 
 Route/endpoint mới xử lý dữ liệu nhạy cảm mặc định phải yêu cầu xác thực + phân quyền
@@ -189,7 +214,10 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 ## 3. Approved Exceptions & Carve-outs
 
 - Route xử lý dữ liệu công khai, không nhạy cảm (health-check, danh sách công khai) không bắt buộc
-  qua lớp phân quyền.
+  qua lớp phân quyền. Ví dụ cụ thể: 1 route `GET` liệt kê danh mục tài khoản DEMO (tên/email/role,
+  không phải user thật, không chứa password) để phục vụ màn hình đăng nhập demo hiển thị "chọn 1 tài
+  khoản để thử" — bắt buộc phải public vì đây đúng là dữ liệu cần thấy TRƯỚC khi đăng nhập, không
+  phải rò rỉ dữ liệu người dùng thật. KHÔNG vi phạm miễn route không bao giờ trả về password/token.
 - Comment/code review note CẢNH BÁO hoặc HƯỚNG DẪN dev tránh một anti-pattern (ví dụ giải thích tại
   sao không được tự chế điều kiện phân quyền) không tính là vi phạm — đây là hướng dẫn, không phải
   hành vi thực thi.

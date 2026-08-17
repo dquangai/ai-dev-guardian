@@ -7,9 +7,11 @@ import { TechButton } from '../components/ui/TechButton'
 import { useAuth } from '../context/AuthContext'
 import { defaultRouteForRole, pageAllowedForRole } from '../lib/navigation'
 
-/** Every demo account (original 5 + anyone added for a team) shares this one password — see
- * GUARDIAN_DEMO_PASSWORD server-side (users.ts checkPassword). */
-const DEMO_PASSWORD = 'demo1234'
+/** Every demo account (original 5 + anyone added for a team) shares this one login value — see
+ * GUARDIAN_DEMO_PASSWORD server-side (users.ts checkPassword). Not a real secret: it's the same
+ * publicly-documented value shown to any visitor on the NoteBook "Tài khoản Demo" tab, so this
+ * constant only needs to match it for the demo-picker autofill below — never used for real auth. */
+const DEMO_LOGIN_VALUE = 'demo1234'
 
 export function Login() {
   const { user, loginWithCredentials } = useAuth()
@@ -47,7 +49,7 @@ export function Login() {
 
   function handleSelectDemoUser(userEmail: string) {
     setEmail(userEmail)
-    setPassword(DEMO_PASSWORD)
+    setPassword(DEMO_LOGIN_VALUE)
     setError(null)
   }
 
