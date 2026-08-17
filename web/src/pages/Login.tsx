@@ -6,7 +6,10 @@ import { LoginHero } from '../components/auth/LoginHero'
 import { TechButton } from '../components/ui/TechButton'
 import { useAuth } from '../context/AuthContext'
 import { defaultRouteForRole, pageAllowedForRole } from '../lib/navigation'
-import type { Role } from '../lib/rbac'
+
+/** Every demo account (original 5 + anyone added for a team) shares this one password — see
+ * GUARDIAN_DEMO_PASSWORD server-side (users.ts checkPassword). */
+const DEMO_PASSWORD = 'demo1234'
 
 export function Login() {
   const { user, loginWithCredentials } = useAuth()
@@ -42,21 +45,10 @@ export function Login() {
     }
   }
 
-  const DEMO_CREDENTIALS: Record<Role, { email: string; pass: string }> = {
-    'super-admin': { email: 'super.admin@guardian.dev', pass: 'demo1234' },
-    admin: { email: 'admin@guardian.dev', pass: 'demo1234' },
-    'senior-dev': { email: 'senior.dev@guardian.dev', pass: 'demo1234' },
-    developer: { email: 'dev@guardian.dev', pass: 'demo1234' },
-    auditor: { email: 'auditor@guardian.dev', pass: 'demo1234' },
-  }
-
-  function handleSelectDemoRole(role: Role) {
-    const creds = DEMO_CREDENTIALS[role]
-    if (creds) {
-      setEmail(creds.email)
-      setPassword(creds.pass)
-      setError(null)
-    }
+  function handleSelectDemoUser(userEmail: string) {
+    setEmail(userEmail)
+    setPassword(DEMO_PASSWORD)
+    setError(null)
   }
 
   return (
@@ -196,7 +188,7 @@ export function Login() {
 
         {/* Demo Mode Container */}
         <div className="w-full max-w-md">
-          <DemoModeSelector onSelectRole={handleSelectDemoRole} disabled={submitting} />
+          <DemoModeSelector onSelectUser={handleSelectDemoUser} disabled={submitting} />
         </div>
 
         <p className="text-center text-[10px] font-medium tracking-wide text-gray-400">

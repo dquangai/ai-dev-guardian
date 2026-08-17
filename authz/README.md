@@ -406,6 +406,48 @@ demo, và trước đó phải tự tay dựng Docker + cài `fga` CLI + tạo s
    dừng server hiện tại rồi khởi động lại — **phải khởi động lại**, vì flag chỉ có tác dụng lúc
    server start, không đổi được khi server đang chạy.
 
-**Lưu ý khi demo**: đừng restart server giữa chừng — mọi thao tác gán/xoá team qua UI trong lúc
-demo chỉ cập nhật `teamId` của demo user **trong bộ nhớ** (giống hành vi đã ghi nhận ở T-23/T-26),
-restart sẽ làm mất, phải gán lại từ đầu.
+**Lưu ý khi demo (đã hết hạn — xem mục dưới)**: trước đây mọi thao tác gán/xoá team qua UI chỉ cập
+nhật `teamId` **trong bộ nhớ**, restart server sẽ mất. Từ khi có `store/userStore.ts` (mục dưới),
+việc này đã persist thật vào `.guardian/users.json` — restart server không còn làm mất gán team
+nữa. Chỉ còn 1 điều vẫn đúng như cũ: đổi `GUARDIAN_AUTHZ_MODE`/`FGA_*` vẫn cần restart server (flag
+đọc 1 lần lúc router đăng ký).
+
+## Kịch bản demo: nhiều Team kỹ thuật + nhiều người thật (T-25 mở rộng)
+
+**Vấn đề trước đó**: `DEMO_USERS` là `Record<Role, DemoUser>` — đúng 1 người/role cho toàn hệ
+thống, 1 người chỉ thuộc 1 team tại 1 thời điểm. 2 team demo hiện có (`team-default`,
+`team-mentor-demo`) thực chất "chia nhau" cùng 4 người, không thể có 2 team cùng lúc có admin
+riêng — không đủ chuyên nghiệp cho demo V-ID (mô phỏng nhiều team kỹ thuật thật).
+
+**Đã làm**: thay `DEMO_USERS` bằng `src/server/store/userStore.ts` (JSON-backed, persist thật vào
+`.guardian/users.json`, seed-if-empty giữ nguyên 5 account gốc). Thêm `POST /api/teams/users`
+(super-admin only) để tạo người mới bất kỳ lúc nào — qua UI (`TeamManagement.tsx`, nút "+ Tạo Người
+Dùng Mới") hoặc script. Script `src/server/authz/seedDemoOrg.ts`
+(`npm run authz:seed-demo-org`, chạy sau `authz:migrate`/`authz:demo-up`) dựng sẵn 4 team kỹ thuật —
+**Backend, Mobile, Security, DevOps** — mỗi team đủ 4 vai trò (admin/senior-dev/developer/auditor),
+email dạng `<role>@<team>.guardian.dev`, mật khẩu demo dùng chung như mọi account khác. Idempotent —
+chạy lại không tạo trùng.
+
+Trang Login (`DemoModeSelector.tsx`) đổi từ 5 nút cố định sang danh sách động theo (Role @ Team) —
+fetch `GET /api/auth/demo-directory` (public, không cần token) để dựng picker, click 1 người tự
+điền đúng email + mật khẩu demo.
+
+**Đã verify sống thật** (không chỉ đọc code):
+- `test/seedDemoOrg.test.ts` — Docker OpenFGA thật riêng biệt (không đụng container demo của user),
+  chạy `seedDemoOrg()` thật 2 lần (xác nhận idempotent), `checkRelation()` thật xác nhận ranh giới
+  cross-team: admin Team Backend có quan hệ `admin` thật trên `team:team-backend` nhưng KHÔNG có
+  trên `team:team-mobile`. 5/5 test pass.
+- Server thật (`npm run server:dev`, port riêng tránh đụng session dev đang chạy) + curl thật toàn
+  bộ luồng: `GET /demo-directory` đúng 5 người gốc → login thật → super-admin tạo user mới qua
+  `POST /api/teams/users` gán `team-mentor-demo` → `GET /api/teams` phản ánh đúng → login thành
+  công bằng chính user vừa tạo, đúng role/quyền/teamId. Case fail cũng verify thật: non-super-admin
+  tạo user → 403, email trùng → 409, role `super-admin` → 400, sai mật khẩu → 401.
+- `npx tsc --noEmit` (backend) + `npm --prefix web run build` (`tsc -b && vite build`, frontend) đều
+  sạch. `npx vitest run`: **42 file / 395 test pass** (thêm `userStore.test.ts`, `seedDemoOrg.test.ts`,
+  test `POST /api/teams/users` trong `teamsRouter.test.ts`). `npm audit`: không thêm dependency mới,
+  6 CVE hiện có (chuỗi `esbuild`/`vite`/`vitest`/`nanoid`) không đổi, không liên quan thay đổi này.
+- Dọn dẹp sau verify sống: xoá user test (`ui-smoke-test@mentor-demo.guardian.dev`) khỏi
+  `.guardian/users.json` thật của repo, dừng server test, container Docker riêng cho test đã tự dọn
+  qua `afterAll`. **Chưa chạy `authz:seed-demo-org` vĩnh viễn vào state thật của repo** — 4 team + 16
+  người demo chỉ tồn tại khi cần, chạy `npm run authz:seed-demo-org` (sau khi đã có OpenFGA qua
+  `authz:demo-up`) ngay trước buổi demo thật.

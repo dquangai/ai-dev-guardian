@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/server/app";
 import { signToken } from "../src/server/token";
-import { DEMO_USERS } from "../src/server/users";
+import { findUserById, SEED_USER_IDS } from "../src/server/users";
 import { ROLES, hasPermission, type Permission, type Role } from "../src/server/rbac";
 
 /** T-11: route-level RBAC integration tests — hit the *real* Express app (real requireAuth +
@@ -36,7 +36,7 @@ afterAll(() => {
 const app = createApp();
 
 function authHeader(role: Role): string {
-  const user = DEMO_USERS[role];
+  const user = findUserById(SEED_USER_IDS[role])!;
   return `Bearer ${signToken({ sub: user.id, role: user.role, name: user.name, email: user.email }, false)}`;
 }
 

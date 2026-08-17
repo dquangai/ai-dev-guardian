@@ -25,6 +25,7 @@
     "eval:matrix": "tsx eval/runBenchmark.ts",
     "cli": "tsx src/cli.ts",
     "authz:migrate": "tsx src/server/authz/migrateTeamDefault.ts",
+    "authz:seed-demo-org": "tsx src/server/authz/seedDemoOrg.ts",
     "authz:demo-up": "tsx authz/demo-up.ts",
     "server:dev": "tsx src/server/index.ts",
     "server:start": "node dist/server/index.js",

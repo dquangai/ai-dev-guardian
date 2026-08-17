@@ -1,7 +1,7 @@
 # 📊 BÁO CÁO NGHIỆM THU ĐỢT 2 — HỆ THỐNG AI DEV GUARDIAN
 **Chủ đề:** Năng lực AI Agent (Evaluation Suite), Chuẩn hóa Policy Doanh nghiệp, Quản trị đa Team & Tự động hóa Level 5
 **Dự án áp dụng:** Hệ thống V-ID & Enterprise Microservices
-**Ngày lập báo cáo:** 13/08/2026
+**Ngày lập báo cáo:** 13/08/2026 — cập nhật 17/08/2026 (định vị Tiered Governance + nhiều Team kỹ thuật thật)
 **Đơn vị thực hiện:** Đội ngũ Phát triển & An toàn Thông tin
 
 ---
@@ -10,13 +10,14 @@
 
 **AI Dev Guardian** là CLI kèm git pre-push hook và web dashboard, gác code trước khi push/merge dựa trên **Project Policy của chính team** — không phải linter cố định, không phải một lớp vỏ mỏng gọi LLM. Mọi check chạy đúng phạm vi diff đang thay đổi, mọi kết luận của LLM đều bị đối chiếu lại với diff thật trước khi được tin, và công cụ không bao giờ tự sửa code — chỉ đề xuất 1 prompt sẵn sàng dán cho AI assistant của chính developer. 3 mục tiêu cốt lõi: (1) gác cổng theo policy riêng của V-ID thay vì rule chung chung, (2) **đo được năng lực thật bằng số liệu, không cảm tính** (trọng tâm Phần II), (3) vận hành được ở quy mô nhiều team.
 
-Đợt 2 xoay quanh 5 mảng việc chính, theo đúng thứ tự được xây dựng:
+Đợt 2 xoay quanh 6 mảng việc chính, theo đúng thứ tự được xây dựng:
 
 1. **Nền tảng quản trị** — Dashboard (React/Vite/Tailwind) + API (Express), RBAC 4 vai trò, xác thực JWT thật, luồng duyệt Policy Change Request/Bypass Request.
 2. **Phân quyền đa Team** — Multi-Team Authorization bằng OpenFGA/ReBAC, chạy song song RBAC cũ, đã demo trực tiếp cho Mentor.
 3. **Chuẩn hóa Policy Doanh nghiệp** — 11 policy đang áp dụng, đồng loạt theo cấu trúc 5 phần Enterprise Standard (Phần III).
 4. **Evaluation Suite** — bộ đo lường độc lập chứng minh AI Agent phát hiện đúng vi phạm bằng số liệu thật, không phải mô tả cảm tính (Phần II, trọng tâm báo cáo).
 5. **Tự động hóa Level 5 & giao diện quản trị** — CI/CD Quality Gate, Historical Analytics, Multi-Model Benchmark, và tái thiết kế giao diện Dashboard (Phần V).
+6. **Định vị Tiered Governance + nhiều Team kỹ thuật thật** — chốt kiến trúc 3 tầng (Core/Enterprise Standard/Executive & Compliance Mode) trong tài liệu chung, thay `DEMO_USERS` cứng bằng `userStore` persist + script dựng 4 team demo thật (Phần IV, mục 5–6).
 
 ---
 
@@ -171,6 +172,43 @@ flowchart LR
     Policies -. "gitSyncHint: nhắc commit/push thủ công" .-> Admin
     FGA[("OpenFGA tuples<br/>policy#team@team:X")] -. "chỉ cho Team X xem/duyệt policy Team X<br/>Super Admin xem mọi Team" .-> Admin
 ```
+
+### 5. Định vị trong Mô hình Quản trị theo Tầng (Tiered Governance)
+
+3 lớp ở trên (mục 1–3) chính là 3 **Tier** trong kiến trúc Tiered Governance mà Guardian đang định
+vị trong báo cáo/tài liệu chung của dự án:
+
+| Tier | Tương ứng | Đối tượng |
+|---|---|---|
+| **Tier 1 — Core** (miễn phí, mặc định) | Lớp Phân phối qua Git (mục 1) | Mọi Dev, không cần server |
+| **Tier 2 — Enterprise Standard** | Central Policy Package `@vinsmartfuture/guardian-policies` (kế hoạch, chưa triển khai trong Đợt 2) | Chuẩn hoá policy xuyên nhiều repo/team |
+| **Tier 3 — Executive & Compliance Mode** | Lớp Quản trị thay đổi + Ranh giới theo Team (mục 2–3) | CISO/Auditor, quản trị tập trung |
+
+Nguồn lực đội hiện ưu tiên **Tier 1 & Tier 2** (độ chính xác Agent, tốc độ, trải nghiệm CLI); **Tier
+3** (Dashboard/OpenFGA, đã chạy thật như mô tả ở mục 2–3) được giữ làm **bộ demo năng lực mở rộng**
+khi trình bày với Mentor/khách hàng doanh nghiệp, không phải trọng tâm phát triển tiếp theo.
+
+### 6. Nhiều Team kỹ thuật + Người dùng thật (T-25 mở rộng)
+
+Giới hạn trước đó: `DEMO_USERS` là `Record<Role, DemoUser>` — đúng 1 người/role cho toàn hệ thống,
+nên 2 team demo cũ thực chất "chia nhau" chung 4 tài khoản, không đủ thực tế để demo nhiều team kỹ
+thuật riêng biệt cho V-ID.
+
+**Đã làm:**
+- Thay bằng `src/server/store/userStore.ts` — persist thật vào `.guardian/users.json`, tự seed 5
+  account gốc khi store rỗng, số người/team không còn giới hạn 1-1.
+- Thêm `POST /api/teams/users` (super-admin only) + nút **"+ Tạo Người Dùng Mới"** trên
+  `TeamManagement.tsx` — tạo tài khoản mới bất kỳ lúc nào qua UI, không cần sửa code.
+- Script `src/server/authz/seedDemoOrg.ts` (`npm run authz:seed-demo-org`) dựng sẵn 4 team kỹ thuật
+  **Backend / Mobile / Security / DevOps**, mỗi team đủ 4 vai trò — idempotent, chạy lại không tạo
+  trùng. Trang Login (`DemoModeSelector.tsx`) đổi sang danh sách động fetch từ
+  `GET /api/auth/demo-directory`, không còn 5 nút cố định.
+
+**Đã verify sống thật:** `tsc --noEmit` sạch, `npx vitest run` **395/395 test / 42 file pass**
+(gồm `seedDemoOrg.test.ts`, `userStore.test.ts` chạy trên Docker OpenFGA thật — xác nhận ranh giới
+cross-team và tính idempotent), case fail đủ (403 non-super-admin, 409 email trùng, 400 role/input
+sai, 404 team không tồn tại). Không thêm dependency mới → không cần `npm audit`. Chi tiết đầy đủ ở
+`authz/README.md` (mục "Kịch bản demo: nhiều Team kỹ thuật + nhiều người thật").
 
 ---
 

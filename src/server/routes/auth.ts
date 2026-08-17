@@ -1,10 +1,17 @@
 import { Router, type Response } from "express";
 import { requireAuth } from "../authMiddleware";
-import { ROLE_LABELS, permissionsForRole } from "../rbac";
+import { isValidRole, ROLE_LABELS, permissionsForRole } from "../rbac";
 import { signToken } from "../token";
-import { getTeam } from "../store/teamStore";
-import { checkPassword, findUserByEmail, findUserByRole, type DemoUser } from "../users";
+import { getTeam, listTeams } from "../store/teamStore";
+import { checkPassword, findUserByEmail, findUserById, listAllUsers, SEED_USER_IDS, type DemoUser } from "../users";
 import { isSafeId } from "../validation";
+
+/** demo-login/act-as-team resolve "the" account for a role to the original seed account (not just
+ * any account with that role — there can be many now, see routes/teams.ts POST /users) since a
+ * bare role string is inherently ambiguous otherwise. */
+function findSeedUser(role: unknown): DemoUser | null {
+  return isValidRole(role) ? findUserById(SEED_USER_IDS[role]) : null;
+}
 
 export const authRouter = Router();
 
@@ -24,6 +31,27 @@ function respondWithToken(res: Response, user: DemoUser, rememberMe: boolean, te
   });
 }
 
+/** Public (no token — the Login page has none yet) directory of every demo account grouped by
+ * team, so the "pick a role to demo" picker can list real people instead of the old hard-coded
+ * 5-role map. No more sensitive than what already shipped in the frontend bundle before this
+ * change (the 5 demo emails were a literal object in Login.tsx) — never returns passwords, all
+ * demo accounts share one password from GUARDIAN_DEMO_PASSWORD regardless. */
+authRouter.get("/demo-directory", (_req, res) => {
+  const users = listAllUsers();
+  const superAdmin = users.find((u) => u.role === "super-admin") ?? null;
+  const teams = listTeams().map((team) => ({
+    id: team.id,
+    name: team.name,
+    members: users
+      .filter((u) => u.teamId === team.id)
+      .map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role })),
+  }));
+  res.json({
+    superAdmin: superAdmin ? { id: superAdmin.id, name: superAdmin.name, email: superAdmin.email } : null,
+    teams,
+  });
+});
+
 authRouter.post("/login", (req, res) => {
   const { email, password, rememberMe } = req.body ?? {};
   if (typeof email !== "string" || typeof password !== "string") {
@@ -41,7 +69,7 @@ authRouter.post("/login", (req, res) => {
 /** One-click demo login (the buttons on the Login page): still no password, but now the server
  * issues a real signed token for the chosen role instead of the client asserting it via header. */
 authRouter.post("/demo-login", (req, res) => {
-  const user = findUserByRole(req.body?.role);
+  const user = findSeedUser(req.body?.role);
   if (!user) {
     res.status(400).json({ error: "bad_request", message: "Unknown role." });
     return;
@@ -69,7 +97,7 @@ authRouter.post("/act-as-team", requireAuth, (req, res) => {
     res.status(404).json({ error: "not_found", message: `Team "${teamId}" not found.` });
     return;
   }
-  const superAdmin = findUserByRole("super-admin");
+  const superAdmin = findSeedUser("super-admin");
   if (!superAdmin) {
     res.status(500).json({ error: "internal_error", message: "Super Admin demo account missing." });
     return;

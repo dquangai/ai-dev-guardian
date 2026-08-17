@@ -10,6 +10,7 @@ import {
   FileText,
   GitPullRequest,
   Key,
+  ListChecks,
   Lock,
   Rocket,
   Shield,
@@ -21,7 +22,7 @@ import {
 import { QwoangIcon } from '../components/ui/QwoangLogo'
 import { TechGridCard } from '../components/ui/TechGridCard'
 
-type TabType = 'overview' | 'setup' | 'policy' | 'ci' | 'bypass' | 'rbac' | 'demo'
+type TabType = 'overview' | 'setup' | 'policy' | 'ci' | 'bypass' | 'rbac' | 'demo' | 'rollout'
 
 // Cho project RIÊNG của team (cài Guardian qua bản đã publish trên npm) — khác với
 // .github/workflows/guardian.yml của chính repo ai-dev-guardian (repo đó build từ
@@ -203,6 +204,7 @@ export function NoteBook() {
             { id: 'bypass', label: '5. Quy trình Bypass', icon: <ShieldCheck size={14} /> },
             { id: 'rbac', label: '6. Phân quyền RBAC', icon: <UserCheck size={14} /> },
             { id: 'demo', label: '7. Tài khoản Demo', icon: <Key size={14} /> },
+            { id: 'rollout', label: '8. Đưa vào Vận hành Team', icon: <ListChecks size={14} /> },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -621,6 +623,84 @@ tags: [enterprise-standard]             # tự do, chỉ để lọc/tìm kiếm
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 6: Rollout Checklist */}
+        {activeTab === 'rollout' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="tech-grid-card p-6 space-y-4">
+              <h3 className="text-base font-bold font-sans flex items-center gap-2">
+                <ListChecks size={16} className="text-[#C8102E]" />
+                Checklist đưa Guardian vào vận hành thật cho 1 Team/Dự án
+              </h3>
+              <p className="text-xs text-[#555555] dark:text-[#A1A1AA] leading-relaxed font-sans">
+                Dành cho Tech Lead/Admin lần đầu roll-out Guardian cho 1 team đang có sẵn codebase —
+                khác với các mục kỹ thuật ở trên (cài 1 máy, viết 1 policy, bật 1 workflow), đây là
+                thứ tự và những điều cần cân nhắc khi đưa cả team vào vận hành thật, không phải máy demo.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+                <div className="p-4 rounded bg-[#F4F5F7] dark:bg-[#09090B] border border-[#D6D6D6] dark:border-[#27272A] space-y-2">
+                  <span className="text-[#C8102E] font-bold">BƯỚC 1 — Cài đặt hàng loạt</span>
+                  <div className="font-bold text-[#111111] dark:text-[#F4F4F5] font-sans">100% máy trong team cài hook trước khi bật gate bắt buộc</div>
+                  <div className="text-[11px] text-[#666666] dark:text-[#A1A1AA] font-sans">
+                    Mỗi dev tự cài theo mục "2. Cài đặt cho Developer" ở trên. Nếu chỉ 1–2 người cài,
+                    phần còn lại vẫn push được vi phạm mà không ai biết — gate CI (bước 3) không thay
+                    thế được, nó chỉ chặn ở PR, không chặn lúc <code>git push</code> lên nhánh cá nhân.
+                  </div>
+                </div>
+
+                <div className="p-4 rounded bg-[#F4F5F7] dark:bg-[#09090B] border border-[#D6D6D6] dark:border-[#27272A] space-y-2">
+                  <span className="text-[#C8102E] font-bold">BƯỚC 2 — Policy khớp thực tế</span>
+                  <div className="font-bold text-[#111111] dark:text-[#F4F4F5] font-sans">Viết từ lỗi thật đã từng gặp, không viết tưởng tượng</div>
+                  <div className="text-[11px] text-[#666666] dark:text-[#A1A1AA] font-sans">
+                    Copy 1 file mẫu (mục "3. Viết Policy riêng cho Team"), sửa theo đúng loại lỗi
+                    project đã từng dính, cho ít nhất 1 Senior Dev review trước khi merge. Policy quá
+                    chặt/sai ngữ cảnh sẽ làm cả team spam Bypass Request ngay tuần đầu.
+                  </div>
+                </div>
+
+                <div className="p-4 rounded bg-[#F4F5F7] dark:bg-[#09090B] border border-[#D6D6D6] dark:border-[#27272A] space-y-2">
+                  <span className="text-[#C8102E] font-bold">BƯỚC 3 — Gate cảnh báo trước, bắt buộc sau</span>
+                  <div className="font-bold text-[#111111] dark:text-[#F4F4F5] font-sans">Đừng bật Required status check ngay ngày 1</div>
+                  <div className="text-[11px] text-[#666666] dark:text-[#A1A1AA] font-sans">
+                    Thêm workflow (mục "4. Tích hợp CI/CD") nhưng để job chạy song song vài ngày trước
+                    — quan sát tỉ lệ false positive thật trên PR thật, chỉ thêm vào Required status
+                    checks (Settings → Branches) sau khi team đã quen và policy đã ổn định.
+                  </div>
+                </div>
+
+                <div className="p-4 rounded bg-[#F4F5F7] dark:bg-[#09090B] border border-[#D6D6D6] dark:border-[#27272A] space-y-2">
+                  <span className="text-[#C8102E] font-bold">BƯỚC 4 — Gán đúng vai trò, không phát hết admin</span>
+                  <div className="font-bold text-[#111111] dark:text-[#F4F4F5] font-sans">Chỉ 1–2 người thật có quyền duyệt</div>
+                  <div className="text-[11px] text-[#666666] dark:text-[#A1A1AA] font-sans">
+                    Theo ma trận ở mục "6. Phân quyền RBAC": chỉ Admin/Senior Dev thật mới duyệt Policy
+                    Change/Bypass Request, còn lại để <code>developer</code>. Nhiều team dùng chung 1
+                    Dashboard → cân nhắc bật OpenFGA multi-team (xem <code>authz/README.md</code>) để
+                    team này không thấy/sửa được policy của team khác.
+                  </div>
+                </div>
+
+                <div className="p-4 rounded bg-[#F4F5F7] dark:bg-[#09090B] border border-[#D6D6D6] dark:border-[#27272A] space-y-2 md:col-span-2">
+                  <span className="text-[#C8102E] font-bold">BƯỚC 5 — Review định kỳ, không "bật rồi bỏ quên"</span>
+                  <div className="font-bold text-[#111111] dark:text-[#F4F4F5] font-sans">Ít nhất theo tuần trong tháng đầu vận hành</div>
+                  <div className="text-[11px] text-[#666666] dark:text-[#A1A1AA] font-sans">
+                    Đọc lại Audit History và các Bypass Request đã duyệt — dấu hiệu policy đang quá lỏng
+                    (vi phạm thật lọt qua) hoặc quá chặt (bypass liên tục vì 1 lý do lặp lại) đều nằm ở
+                    đây. Cập nhật lại file <code>.guardian/policies/*.md</code> theo đúng luồng duyệt ở
+                    mục "3", không sửa tay ngoài Dashboard rồi quên đồng bộ Git cho cả team.
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded bg-[#FFF7ED] dark:bg-[#1C1410] border border-[#FDBA74] dark:border-[#7C4A1E] text-[11px] font-sans text-[#7C4A1E] dark:text-[#FDBA74] leading-relaxed">
+                <strong className="font-bold">Coi là "live" khi cả 5 bước trên đều xong</strong> — không
+                chỉ khi CI workflow chạy được lần đầu. Một team chỉ mới bật CI Gate nhưng chưa đồng bộ
+                cài đặt cho toàn bộ máy (bước 1) hoặc chưa gán đúng người duyệt (bước 4) vẫn còn lỗ hổng
+                để vi phạm lọt qua mà không ai nhận trách nhiệm xử lý.
               </div>
             </div>
           </div>

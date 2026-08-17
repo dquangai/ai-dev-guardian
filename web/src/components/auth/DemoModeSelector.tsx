@@ -1,89 +1,94 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Code, Crown, Globe2, Network, Shield, UserCheck, X } from 'lucide-react'
+import { api } from '../../lib/api'
 import type { Role } from '../../lib/rbac'
-
 import { TechButton } from '../ui/TechButton'
 
-interface DemoRoleNode {
+interface DirectoryMember {
+  id: string
+  name: string
+  email: string
   role: Role
-  level: string
-  label: string
-  titleVi: string
-  description: string
-  badgeColor: string
-  borderColor: string
 }
 
-const ORG_HIERARCHY: {
-  level0: DemoRoleNode
-  level1: DemoRoleNode
-  level2: DemoRoleNode
-  level3: DemoRoleNode[]
-} = {
-  // T-24: org-wide, sits above the single-org chart entirely — no team of its own until it picks
-  // one via the Team switcher in the Header (see TeamManagement.tsx / AuthContext.actAsTeam).
-  level0: {
-    role: 'super-admin',
+interface DirectoryTeam {
+  id: string
+  name: string
+  members: DirectoryMember[]
+}
+
+interface DemoDirectory {
+  superAdmin: { id: string; name: string; email: string } | null
+  teams: DirectoryTeam[]
+}
+
+const ROLE_ORDER: Role[] = ['admin', 'senior-dev', 'developer', 'auditor']
+
+const ROLE_META: Record<Role, { icon: typeof Code; level: string; titleVi: string; description: string }> = {
+  'super-admin': {
+    icon: Globe2,
     level: 'CẤP 0 — TOÀN QUYỀN TỔ CHỨC',
-    label: 'Super Admin',
     titleVi: 'Quản trị viên Tổ chức',
     description: 'Quản lý toàn bộ Team trong tổ chức, chuyển đổi ngữ cảnh làm việc theo từng Team qua Team switcher',
-    badgeColor: 'bg-[#111111] text-white border-[#111111]',
-    borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
   },
-  level1: {
-    role: 'admin',
+  admin: {
+    icon: Crown,
     level: 'CẤP 1 — QUẢN TRỊ CAO CẤP',
-    label: 'Administrator',
     titleVi: 'Quản trị viên Hệ thống',
-    description: 'Toàn quyền cấu hình AI Engine (kể cả quản lý Cache), chỉnh sửa & phê duyệt Chính sách trực tiếp, phê duyệt Yêu cầu Bypass',
-    badgeColor: 'bg-[#111111] text-white border-[#111111]',
-    borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
+    description: 'Toàn quyền cấu hình AI Engine, chỉnh sửa & phê duyệt Chính sách trực tiếp của Team này',
   },
-  level2: {
-    role: 'senior-dev',
+  'senior-dev': {
+    icon: UserCheck,
     level: 'CẤP 2 — QUẢN LÝ PHÊ DUYỆT',
-    label: 'Senior Dev Lead',
     titleVi: 'Trưởng nhóm Phát triển',
-    description: 'Đề xuất & phê duyệt Chính sách mới, phê duyệt Yêu cầu Bypass mã nguồn',
-    badgeColor: 'bg-white text-[#111111] border-[#D6D6D6]',
-    borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
+    description: 'Đề xuất & phê duyệt Chính sách mới, phê duyệt Yêu cầu Bypass mã nguồn của Team này',
   },
-  level3: [
-    {
-      role: 'developer',
-      level: 'CẤP 3 — THỰC THI CODE',
-      label: 'Developer',
-      titleVi: 'Lập trình viên',
-      description: 'Chạy kiểm định Pre-Push AI Guard, gửi Yêu cầu Bypass khi cần thiết',
-      badgeColor: 'bg-white text-[#111111] border-[#D6D6D6]',
-      borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
-    },
-    {
-      role: 'auditor',
-      level: 'CẤP 3 — KIỂM TOÁN AN NINH',
-      label: 'Auditor',
-      titleVi: 'Chuyên viên Kiểm toán',
-      description: 'Chế độ Chỉ đọc: Giám sát Chính sách, Nhật ký kiểm định & cấu hình AI Engine',
-      badgeColor: 'bg-white text-[#111111] border-[#D6D6D6]',
-      borderColor: 'border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA]',
-    },
-  ],
+  developer: {
+    icon: Code,
+    level: 'CẤP 3 — THỰC THI CODE',
+    titleVi: 'Lập trình viên',
+    description: 'Chạy kiểm định Pre-Push AI Guard, gửi Yêu cầu Bypass khi cần thiết',
+  },
+  auditor: {
+    icon: Shield,
+    level: 'CẤP 3 — KIỂM TOÁN AN NINH',
+    titleVi: 'Chuyên viên Kiểm toán',
+    description: 'Chế độ Chỉ đọc: Giám sát Chính sách, Nhật ký kiểm định & cấu hình AI Engine',
+  },
 }
 
 interface DemoModeSelectorProps {
-  onSelectRole: (role: Role) => void
+  onSelectUser: (email: string) => void
   disabled?: boolean
 }
 
-export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorProps) {
+export function DemoModeSelector({ onSelectUser, disabled }: DemoModeSelectorProps) {
   const [modalOpen, setModalOpen] = useState(false)
+  const [directory, setDirectory] = useState<DemoDirectory | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
 
-  function handleSelect(role: Role) {
+  useEffect(() => {
+    if (!modalOpen || directory) return
+    api
+      .get<DemoDirectory>('/auth/demo-directory')
+      .then((dir) => {
+        setDirectory(dir)
+        setActiveTeamId(dir.teams[0]?.id ?? null)
+      })
+      .catch(() => setLoadError('Không tải được danh sách tài khoản demo.'))
+  }, [modalOpen, directory])
+
+  function handleSelect(email: string) {
     if (disabled) return
     setModalOpen(false)
-    onSelectRole(role)
+    onSelectUser(email)
   }
+
+  const activeTeam = directory?.teams.find((t) => t.id === activeTeamId) ?? null
+  const sortedMembers = activeTeam
+    ? [...activeTeam.members].sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
+    : []
 
   return (
     <>
@@ -102,15 +107,15 @@ export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorPro
             <p className="text-xs font-extrabold uppercase tracking-wider text-[#111111] transition-colors">
               Explore Demo Mode
             </p>
-            <p className="text-xs text-[#666666] font-medium mt-0.5">Sơ đồ phân cấp vai trò từ cao đến thấp</p>
+            <p className="text-xs text-[#666666] font-medium mt-0.5">Chọn tài khoản demo theo Team & Vai trò</p>
           </div>
         </div>
         <TechButton size="sm">
-          Xem sơ đồ
+          Xem danh sách
         </TechButton>
       </button>
 
-      {/* Org Hierarchy Modal */}
+      {/* Team/Role Picker Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="relative w-full max-w-2xl rounded-[20px] border border-[#D6D6D6] bg-white p-6 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -121,8 +126,8 @@ export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorPro
                   <Network size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-[#111111] tracking-tight">Sơ Đồ Phân Cấp Vai Trò (Role Hierarchy)</h3>
-                  <p className="text-xs text-[#666666]">Bấm vào bất kỳ chức vụ nào để tự động điền Email công việc và Mật khẩu tương ứng</p>
+                  <h3 className="text-base font-extrabold text-[#111111] tracking-tight">Danh Sách Tài Khoản Demo</h3>
+                  <p className="text-xs text-[#666666]">Chọn Team rồi bấm vào 1 người để tự động điền Email & Mật khẩu</p>
                 </div>
               </div>
               <button
@@ -134,114 +139,84 @@ export function DemoModeSelector({ onSelectRole, disabled }: DemoModeSelectorPro
               </button>
             </div>
 
-            {/* Hierarchy Tree Container */}
-            <div className="mt-6 flex flex-col items-center gap-4">
-              {/* Level 0: Super Admin */}
-              <div className="w-full max-w-md">
-                <button
-                  type="button"
-                  onClick={() => handleSelect(ORG_HIERARCHY.level0.role)}
-                  className={`tech-hover-card group relative flex w-full flex-col gap-2 rounded-[14px] border ${ORG_HIERARCHY.level0.borderColor} bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold ${ORG_HIERARCHY.level0.badgeColor}`}>
-                      {ORG_HIERARCHY.level0.level}
-                    </span>
-                    <Globe2 size={18} className="text-[#111111]" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-extrabold text-[#111111] transition-colors">
-                      {ORG_HIERARCHY.level0.label} <span className="text-xs font-semibold text-[#666666]">({ORG_HIERARCHY.level0.titleVi})</span>
-                    </h4>
-                    <p className="mt-1 text-xs text-[#555555] leading-relaxed">{ORG_HIERARCHY.level0.description}</p>
-                  </div>
-                </button>
-              </div>
+            {loadError && <p className="mt-4 text-xs font-semibold text-red-600">{loadError}</p>}
+            {!directory && !loadError && <p className="mt-4 text-xs text-[#666666]">Đang tải...</p>}
 
-              {/* Animated Laser Flow Line 1 */}
-              <div className="h-6 w-0.5 tech-laser-line-v rounded-full" />
+            {directory && (
+              <div className="mt-5 space-y-5">
+                {/* Super Admin — org-wide, no team */}
+                {directory.superAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(directory.superAdmin!.email)}
+                    className="tech-hover-card group relative flex w-full flex-col gap-2 rounded-[14px] border border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA] bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold bg-[#111111] text-white border-[#111111]">
+                        {ROLE_META['super-admin'].level}
+                      </span>
+                      <Globe2 size={18} className="text-[#111111]" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-[#111111]">
+                        {directory.superAdmin.name} <span className="text-xs font-semibold text-[#666666]">({ROLE_META['super-admin'].titleVi})</span>
+                      </h4>
+                      <p className="mt-1 text-xs text-[#555555] leading-relaxed">{ROLE_META['super-admin'].description}</p>
+                    </div>
+                  </button>
+                )}
 
-              {/* Level 1: Admin */}
-              <div className="w-full max-w-md">
-                <button
-                  type="button"
-                  onClick={() => handleSelect(ORG_HIERARCHY.level1.role)}
-                  className={`tech-hover-card group relative flex w-full flex-col gap-2 rounded-[14px] border ${ORG_HIERARCHY.level1.borderColor} bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold ${ORG_HIERARCHY.level1.badgeColor}`}>
-                      {ORG_HIERARCHY.level1.level}
-                    </span>
-                    <Crown size={18} className="text-[#111111]" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-extrabold text-[#111111] transition-colors">
-                      {ORG_HIERARCHY.level1.label} <span className="text-xs font-semibold text-[#666666]">({ORG_HIERARCHY.level1.titleVi})</span>
-                    </h4>
-                    <p className="mt-1 text-xs text-[#555555] leading-relaxed">{ORG_HIERARCHY.level1.description}</p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Animated Laser Flow Line 2 */}
-              <div className="h-6 w-0.5 tech-laser-line-v rounded-full" />
-
-              {/* Level 2: Senior Dev Lead */}
-              <div className="w-full max-w-md">
-                <button
-                  type="button"
-                  onClick={() => handleSelect(ORG_HIERARCHY.level2.role)}
-                  className={`tech-hover-card group relative flex w-full flex-col gap-2 rounded-[14px] border ${ORG_HIERARCHY.level2.borderColor} bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold ${ORG_HIERARCHY.level2.badgeColor}`}>
-                      {ORG_HIERARCHY.level2.level}
-                    </span>
-                    <UserCheck size={18} className="text-[#111111]" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-extrabold text-[#111111] transition-colors">
-                      {ORG_HIERARCHY.level2.label} <span className="text-xs font-semibold text-[#666666]">({ORG_HIERARCHY.level2.titleVi})</span>
-                    </h4>
-                    <p className="mt-1 text-xs text-[#555555] leading-relaxed">{ORG_HIERARCHY.level2.description}</p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Animated Laser Flow Line 3 Split */}
-              <div className="relative flex w-full max-w-lg justify-center">
-                <div className="h-5 w-0.5 tech-laser-line-v rounded-full" />
-                <div className="absolute top-5 h-0.5 w-3/4 tech-laser-line-h rounded-full" />
-              </div>
-
-              {/* Level 3: Developer & Auditor */}
-              <div className="mt-2 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
-                {ORG_HIERARCHY.level3.map((node) => {
-                  const Icon = node.role === 'developer' ? Code : Shield
-                  return (
+                {/* Team tabs */}
+                <div className="flex flex-wrap gap-2 border-t border-[#E5E7EB] pt-4">
+                  {directory.teams.map((team) => (
                     <button
-                      key={node.role}
+                      key={team.id}
                       type="button"
-                      onClick={() => handleSelect(node.role)}
-                      className={`tech-hover-card group relative flex flex-col gap-2 rounded-[14px] border ${node.borderColor} bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer`}
+                      onClick={() => setActiveTeamId(team.id)}
+                      className={`rounded-full border px-3.5 py-1.5 text-xs font-bold cursor-pointer transition-colors ${
+                        team.id === activeTeamId
+                          ? 'border-[#111111] bg-[#111111] text-white'
+                          : 'border-[#D6D6D6] bg-white text-[#555555] hover:border-[#111111]'
+                      }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold ${node.badgeColor}`}>
-                          {node.level}
-                        </span>
-                        <Icon size={18} className="text-[#111111]" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-extrabold text-[#111111] transition-colors">
-                          {node.label} <span className="text-xs font-semibold text-[#666666]">({node.titleVi})</span>
-                        </h4>
-                        <p className="mt-1 text-xs text-[#555555] leading-relaxed">{node.description}</p>
-                      </div>
+                      {team.name}
                     </button>
-                  )
-                })}
+                  ))}
+                </div>
+
+                {/* Role cards for the selected team */}
+                <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+                  {sortedMembers.length === 0 && (
+                    <p className="col-span-2 text-xs text-[#666666]">Team này chưa có thành viên nào.</p>
+                  )}
+                  {sortedMembers.map((member) => {
+                    const meta = ROLE_META[member.role]
+                    const Icon = meta.icon
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        onClick={() => handleSelect(member.email)}
+                        className="tech-hover-card group relative flex flex-col gap-2 rounded-[14px] border border-[#D6D6D6] hover:border-[#111111] hover:bg-[#F8F9FA] bg-white p-4 text-left shadow-xs transition-all duration-150 hover:shadow-md cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-mono font-bold bg-white text-[#111111] border-[#D6D6D6]">
+                            {meta.level}
+                          </span>
+                          <Icon size={18} className="text-[#111111]" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-[#111111]">
+                            {member.name} <span className="text-xs font-semibold text-[#666666]">({meta.titleVi})</span>
+                          </h4>
+                          <p className="mt-1 text-xs font-mono text-[#777777]">{member.email}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}

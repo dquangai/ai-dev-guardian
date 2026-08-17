@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildMigrationTuples, ORG_ID, DEFAULT_TEAM_ID } from "../src/server/authz/migrateTeamDefault";
-import { DEMO_USERS } from "../src/server/users";
+import { SEED_USER_IDS } from "../src/server/users";
 
 describe("buildMigrationTuples", () => {
   const tuples = buildMigrationTuples();
@@ -15,7 +15,7 @@ describe("buildMigrationTuples", () => {
 
   it("gán super-admin demo user vào relation super_admin của organization", () => {
     expect(tuples).toContainEqual({
-      user: `user:${DEMO_USERS["super-admin"].id}`,
+      user: `user:${SEED_USER_IDS["super-admin"]}`,
       relation: "super_admin",
       object: `organization:${ORG_ID}`,
     });

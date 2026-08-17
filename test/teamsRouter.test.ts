@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/server/app";
 import { signToken } from "../src/server/token";
-import { DEMO_USERS } from "../src/server/users";
+import { findUserById, SEED_USER_IDS } from "../src/server/users";
 import type { Role } from "../src/server/rbac";
 
 /** T-23: route-level integration tests for team management — hits the real Express app with real
@@ -32,7 +32,7 @@ afterAll(() => {
 const app = createApp();
 
 function authHeader(role: Role): string {
-  const user = DEMO_USERS[role];
+  const user = findUserById(SEED_USER_IDS[role])!;
   return `Bearer ${signToken(
     { sub: user.id, role: user.role, name: user.name, email: user.email, teamId: user.teamId },
     false
@@ -107,16 +107,16 @@ describe("Teams router (T-23) — gán/xoá thành viên", () => {
     const res = await request(app)
       .post("/api/teams/team-eng/members")
       .set("Authorization", authHeader("super-admin"))
-      .send({ userId: DEMO_USERS.developer.id });
+      .send({ userId: SEED_USER_IDS.developer });
     expect(res.status).toBe(200);
-    expect(res.body.members.map((m: { id: string }) => m.id)).toContain(DEMO_USERS.developer.id);
+    expect(res.body.members.map((m: { id: string }) => m.id)).toContain(SEED_USER_IDS.developer);
   });
 
   it("GET /api/teams phản ánh đúng: developer-1 rời team-default, thuộc team-eng", async () => {
     const res = await request(app).get("/api/teams").set("Authorization", authHeader("super-admin"));
     const engTeam = res.body.teams.find((t: { id: string }) => t.id === "team-eng");
-    expect(engTeam.members.map((m: { id: string }) => m.id)).toContain(DEMO_USERS.developer.id);
-    const developerEntry = res.body.users.find((u: { id: string }) => u.id === DEMO_USERS.developer.id);
+    expect(engTeam.members.map((m: { id: string }) => m.id)).toContain(SEED_USER_IDS.developer);
+    const developerEntry = res.body.users.find((u: { id: string }) => u.id === SEED_USER_IDS.developer);
     expect(developerEntry.teamId).toBe("team-eng");
   });
 
@@ -132,7 +132,7 @@ describe("Teams router (T-23) — gán/xoá thành viên", () => {
     const res = await request(app)
       .post("/api/teams/no-such-team/members")
       .set("Authorization", authHeader("super-admin"))
-      .send({ userId: DEMO_USERS.developer.id });
+      .send({ userId: SEED_USER_IDS.developer });
     expect(res.status).toBe(404);
   });
 
@@ -140,7 +140,7 @@ describe("Teams router (T-23) — gán/xoá thành viên", () => {
     const res = await request(app)
       .post("/api/teams/team-eng/members")
       .set("Authorization", authHeader("super-admin"))
-      .send({ userId: DEMO_USERS["super-admin"].id });
+      .send({ userId: SEED_USER_IDS["super-admin"] });
     expect(res.status).toBe(400);
   });
 
@@ -148,29 +148,92 @@ describe("Teams router (T-23) — gán/xoá thành viên", () => {
     const res = await request(app)
       .post("/api/teams/team-eng/members")
       .set("Authorization", authHeader("developer"))
-      .send({ userId: DEMO_USERS.developer.id });
+      .send({ userId: SEED_USER_IDS.developer });
     expect(res.status).toBe(403);
   });
 
   it("xoá developer-1 khỏi team-eng -> không còn trong members", async () => {
     const res = await request(app)
-      .delete(`/api/teams/team-eng/members/${DEMO_USERS.developer.id}`)
+      .delete(`/api/teams/team-eng/members/${SEED_USER_IDS.developer}`)
       .set("Authorization", authHeader("super-admin"));
     expect(res.status).toBe(200);
-    expect(res.body.members.map((m: { id: string }) => m.id)).not.toContain(DEMO_USERS.developer.id);
+    expect(res.body.members.map((m: { id: string }) => m.id)).not.toContain(SEED_USER_IDS.developer);
   });
 
   it("xoá thành viên đã không còn thuộc team -> 404 (không xoá 2 lần)", async () => {
     const res = await request(app)
-      .delete(`/api/teams/team-eng/members/${DEMO_USERS.developer.id}`)
+      .delete(`/api/teams/team-eng/members/${SEED_USER_IDS.developer}`)
       .set("Authorization", authHeader("super-admin"));
     expect(res.status).toBe(404);
   });
 
   it("non-super-admin không xoá được thành viên -> 403", async () => {
     const res = await request(app)
-      .delete(`/api/teams/team-eng/members/${DEMO_USERS.auditor.id}`)
+      .delete(`/api/teams/team-eng/members/${SEED_USER_IDS.auditor}`)
       .set("Authorization", authHeader("auditor"));
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("Teams router (T-25) — POST /api/teams/users, tạo người dùng mới", () => {
+  it("super-admin tạo user mới hợp lệ, có gán team -> 201", async () => {
+    const res = await request(app)
+      .post("/api/teams/users")
+      .set("Authorization", authHeader("super-admin"))
+      .send({ name: "Nguyễn Test", email: "test@eng.guardian.dev", role: "developer", teamId: "team-eng" });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ name: "Nguyễn Test", email: "test@eng.guardian.dev", role: "developer" });
+
+    const list = await request(app).get("/api/teams").set("Authorization", authHeader("super-admin"));
+    const entry = list.body.users.find((u: { email: string }) => u.email === "test@eng.guardian.dev");
+    expect(entry.teamId).toBe("team-eng");
+  });
+
+  it("tạo user không gán team -> 201, teamId undefined", async () => {
+    const res = await request(app)
+      .post("/api/teams/users")
+      .set("Authorization", authHeader("super-admin"))
+      .send({ name: "Chưa Gán Team", email: "unassigned@eng.guardian.dev", role: "auditor" });
+    expect(res.status).toBe(201);
+  });
+
+  it("email trùng -> 409", async () => {
+    const res = await request(app)
+      .post("/api/teams/users")
+      .set("Authorization", authHeader("super-admin"))
+      .send({ name: "Dup", email: "test@eng.guardian.dev", role: "developer" });
+    expect(res.status).toBe(409);
+  });
+
+  it("role = super-admin -> 400 (org-wide, không tạo thêm được)", async () => {
+    const res = await request(app)
+      .post("/api/teams/users")
+      .set("Authorization", authHeader("super-admin"))
+      .send({ name: "Fake Super Admin", email: "fake-sa@eng.guardian.dev", role: "super-admin" });
+    expect(res.status).toBe(400);
+  });
+
+  it("thiếu name/email không hợp lệ -> 400", async () => {
+    const res = await request(app)
+      .post("/api/teams/users")
+      .set("Authorization", authHeader("super-admin"))
+      .send({ name: "", email: "not-an-email", role: "developer" });
+    expect(res.status).toBe(400);
+  });
+
+  it("gán teamId không tồn tại -> 404", async () => {
+    const res = await request(app)
+      .post("/api/teams/users")
+      .set("Authorization", authHeader("super-admin"))
+      .send({ name: "X", email: "x@eng.guardian.dev", role: "developer", teamId: "no-such-team" });
+    expect(res.status).toBe(404);
+  });
+
+  it("non-super-admin không tạo được user -> 403", async () => {
+    const res = await request(app)
+      .post("/api/teams/users")
+      .set("Authorization", authHeader("admin"))
+      .send({ name: "Blocked", email: "blocked@eng.guardian.dev", role: "developer" });
     expect(res.status).toBe(403);
   });
 });

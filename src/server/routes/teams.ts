@@ -1,8 +1,9 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { ORG_ID, TEAM_SCOPED_ROLES } from "../authz/migrateTeamDefault";
 import { tryDeleteTuples, tryWriteTuples } from "../authz/fgaClient";
+import { isValidRole } from "../rbac";
 import { createTeam, getTeam, listTeams, type Team } from "../store/teamStore";
-import { DEMO_USERS, findUserById, setUserTeam, type DemoUser } from "../users";
+import { createUser, findUserByEmail, findUserById, listAllUsers, setUserTeam, type DemoUser } from "../users";
 import { isSafeId } from "../validation";
 
 export const teamsRouter = Router();
@@ -30,22 +31,34 @@ function toMember(user: DemoUser) {
 }
 
 function toTeamView(team: Team) {
-  const members = Object.values(DEMO_USERS).filter((u) => u.teamId === team.id).map(toMember);
+  const members = listAllUsers().filter((u) => u.teamId === team.id).map(toMember);
   return { ...team, members };
+}
+
+/** Shared by POST /:id/members and POST /users — writes the matching OpenFGA tuple (best-effort,
+ * fail-open, see fgaClient.ts) alongside the persisted teamId change, deleting the old tuple first
+ * if the user was already on another team. */
+async function assignUserToTeam(user: DemoUser, teamId: string): Promise<void> {
+  const relation = relationForRole(user.role);
+  if (!relation) return;
+  if (user.teamId && user.teamId !== teamId) {
+    await tryDeleteTuples([{ user: `user:${user.id}`, relation, object: `team:${user.teamId}` }]);
+  }
+  await tryWriteTuples([{ user: `user:${user.id}`, relation, object: `team:${teamId}` }]);
+  setUserTeam(user.id, teamId);
 }
 
 teamsRouter.use(requireSuperAdmin);
 
-/** Also returns every team-scoped demo user (with their current teamId) so the "add member" UI can
- * build its picker without a separate /api/users endpoint — there's no real user directory (see
- * users.ts), just these 4 fixed accounts. */
+/** Also returns every team-scoped user (with their current teamId) so the "add member" UI can
+ * build its picker without a separate request — see store/userStore.ts for the persisted directory
+ * this now reads from (previously just 4 fixed accounts). */
 teamsRouter.get("/", (_req, res) => {
   res.json({
     teams: listTeams().map(toTeamView),
-    users: TEAM_SCOPED_ROLES.map(({ role }) => {
-      const user = DEMO_USERS[role];
-      return { ...toMember(user), teamId: user.teamId };
-    }),
+    users: listAllUsers()
+      .filter((u) => relationForRole(u.role) !== undefined)
+      .map((u) => ({ ...toMember(u), teamId: u.teamId })),
   });
 });
 
@@ -65,6 +78,42 @@ teamsRouter.post("/", async (req, res) => {
   } catch (error) {
     res.status(409).json({ error: "conflict", message: (error as Error).message });
   }
+});
+
+/** New person for the org directory (T-25 multi-team demo roster) — only team-scoped roles, since
+ * super-admin is org-wide-by-design and there is exactly one (see users.ts's SEED_USER_IDS). */
+teamsRouter.post("/users", async (req, res) => {
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const email = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+  const role = req.body?.role;
+  const teamId = req.body?.teamId;
+
+  if (!name || !email || !email.includes("@")) {
+    res.status(400).json({ error: "bad_request", message: "name and a valid email are required." });
+    return;
+  }
+  if (!isValidRole(role) || role === "super-admin") {
+    res.status(400).json({ error: "bad_request", message: "role must be one of admin/senior-dev/developer/auditor." });
+    return;
+  }
+  if (teamId !== undefined && !isSafeId(teamId)) {
+    res.status(400).json({ error: "bad_request", message: "Invalid teamId." });
+    return;
+  }
+  if (findUserByEmail(email)) {
+    res.status(409).json({ error: "conflict", message: `User with email "${email}" already exists.` });
+    return;
+  }
+  if (teamId && !getTeam(teamId)) {
+    res.status(404).json({ error: "not_found", message: `Team "${teamId}" not found.` });
+    return;
+  }
+
+  const user = createUser({ name, email, role, createdBy: req.userId });
+  if (teamId) {
+    await assignUserToTeam(user, teamId);
+  }
+  res.status(201).json(toMember(findUserById(user.id) ?? user));
 });
 
 teamsRouter.post("/:id/members", async (req, res) => {
@@ -96,12 +145,7 @@ teamsRouter.post("/:id/members", async (req, res) => {
     res.json(toTeamView(team));
     return;
   }
-  const previousTeamId = user.teamId;
-  if (previousTeamId) {
-    await tryDeleteTuples([{ user: `user:${user.id}`, relation, object: `team:${previousTeamId}` }]);
-  }
-  await tryWriteTuples([{ user: `user:${user.id}`, relation, object: `team:${teamId}` }]);
-  setUserTeam(user.role, teamId);
+  await assignUserToTeam(user, teamId);
   res.json(toTeamView(team));
 });
 
@@ -122,6 +166,6 @@ teamsRouter.delete("/:id/members/:userId", async (req, res) => {
   if (relation) {
     await tryDeleteTuples([{ user: `user:${user.id}`, relation, object: `team:${teamId}` }]);
   }
-  setUserTeam(user.role, undefined);
+  setUserTeam(user.id, undefined);
   res.json(toTeamView(team));
 });

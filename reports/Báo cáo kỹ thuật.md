@@ -267,6 +267,23 @@ Theo đúng thứ tự trong sơ đồ:
 Phần trên (Mục 1–7) mô tả engine kiểm tra diff — phần chạy trên máy từng dev. Từ đó, dự án được mở
 rộng thêm 1 lớp quản trị để vận hành được ở quy mô nhiều nhóm dev như V-ID, không chỉ 1 repo đơn lẻ.
 
+### 8.0. Mô hình Quản trị theo Tầng (Tiered Governance Model)
+
+AI Dev Guardian được định vị là một kiến trúc **Tiered Governance** 3 tầng, không phải 1 khối
+monolith — mỗi tầng phục vụ 1 mức độ vận hành khác nhau, và có thể áp dụng độc lập:
+
+| Tầng | Vai trò | Hạ tầng | Cơ chế vận hành |
+|---|---|---|---|
+| **Tier 1 — Core** | Miễn phí & mặc định cho mọi Dev | Không cần server (CLI + Git Pre-push Hook + CI Gate) | Đổi policy qua Pull Request thường, dùng `CODEOWNERS` trên `.guardian/policies/**` |
+| **Tier 2 — Enterprise Standard** | Chuẩn hoá policy xuyên nhiều repo | Central Policy Package (`@vinsmartfuture/guardian-policies`) | Policy trung tâm publish dạng NPM package có version, từng service `npm install` rồi mở rộng thêm rule riêng |
+| **Tier 3 — Executive & Compliance Mode** | Quản trị tập trung cho CISO & Kiểm toán | Dashboard + ReBAC Engine + Audit Logs (Mục 8.1–8.3) | Dashboard tập trung, duyệt thay đổi policy trong app, cách ly đa Team bằng OpenFGA/ReBAC, audit trail phục vụ compliance |
+
+**Ưu tiên nguồn lực:** phần lớn effort kỹ thuật hiện dồn vào **Tier 1 & Tier 2** — độ chính xác của
+AI Agent, tốc độ diff-cache, trải nghiệm CLI — vì đây là thứ mọi dev chạm vào hàng ngày. **Tier 3**
+(Dashboard/ReBAC, đã triển khai đầy đủ ở Mục 8.1–8.3) được giữ ở trạng thái vận hành tốt nhưng đóng
+vai trò chính là **bộ Demo/Pitching Suite** để trình diễn năng lực mở rộng (scalability &
+multi-tenancy) khi báo cáo Lãnh đạo/khách hàng doanh nghiệp, không phải lộ trình rollout mặc định.
+
 ### 8.1. Web Dashboard & RBAC
 
 Dashboard (React/Vite/Tailwind) + API (Express) chạy chung 1 lệnh `guardian dashboard`, dành cho

@@ -6,7 +6,7 @@
  */
 import { createTeam, getTeam } from "../store/teamStore";
 import { listPolicies } from "../store/policyStore";
-import { DEMO_USERS } from "../users";
+import { SEED_USER_IDS } from "../users";
 import type { Role } from "../rbac";
 import { writeTuples, type Tuple } from "./fgaClient";
 
@@ -31,7 +31,7 @@ export function buildMigrationTuples(policyIds: string[] = []): Tuple[] {
     // inheritance (`admin: [user] or super_admin from org` in model.fga) silently never fires.
     { user: `organization:${ORG_ID}`, relation: "org", object: `team:${DEFAULT_TEAM_ID}` },
     {
-      user: `user:${DEMO_USERS["super-admin"].id}`,
+      user: `user:${SEED_USER_IDS["super-admin"]}`,
       relation: "super_admin",
       object: `organization:${ORG_ID}`,
     },
@@ -39,7 +39,7 @@ export function buildMigrationTuples(policyIds: string[] = []): Tuple[] {
 
   for (const { role, relation } of TEAM_SCOPED_ROLES) {
     tuples.push({
-      user: `user:${DEMO_USERS[role].id}`,
+      user: `user:${SEED_USER_IDS[role]}`,
       relation,
       object: `team:${DEFAULT_TEAM_ID}`,
     });
@@ -50,9 +50,9 @@ export function buildMigrationTuples(policyIds: string[] = []): Tuple[] {
   // captures cleanly), so these are direct grants rather than inherited via team membership.
   tuples.push(
     { user: `organization:${ORG_ID}`, relation: "org", object: `engine_config:${ENGINE_CONFIG_ID}` },
-    { user: `user:${DEMO_USERS.admin.id}`, relation: "can_view", object: `engine_config:${ENGINE_CONFIG_ID}` },
-    { user: `user:${DEMO_USERS.admin.id}`, relation: "can_edit", object: `engine_config:${ENGINE_CONFIG_ID}` },
-    { user: `user:${DEMO_USERS.auditor.id}`, relation: "can_view", object: `engine_config:${ENGINE_CONFIG_ID}` }
+    { user: `user:${SEED_USER_IDS.admin}`, relation: "can_view", object: `engine_config:${ENGINE_CONFIG_ID}` },
+    { user: `user:${SEED_USER_IDS.admin}`, relation: "can_edit", object: `engine_config:${ENGINE_CONFIG_ID}` },
+    { user: `user:${SEED_USER_IDS.auditor}`, relation: "can_view", object: `engine_config:${ENGINE_CONFIG_ID}` }
   );
 
   // Found during T-21 live verification: without this, can_view/can_edit_direct/can_approve on
@@ -73,7 +73,7 @@ export function buildMigrationTuples(policyIds: string[] = []): Tuple[] {
 export async function migrateTeamDefault(): Promise<{ team: ReturnType<typeof getTeam>; tupleCount: number }> {
   let team = getTeam(DEFAULT_TEAM_ID);
   if (!team) {
-    team = createTeam({ id: DEFAULT_TEAM_ID, name: "Default Team", createdBy: DEMO_USERS["super-admin"].id });
+    team = createTeam({ id: DEFAULT_TEAM_ID, name: "Default Team", createdBy: SEED_USER_IDS["super-admin"] });
   }
 
   const policyIds = listPolicies().map((p) => p.id);

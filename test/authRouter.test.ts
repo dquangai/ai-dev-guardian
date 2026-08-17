@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/server/app";
 import { signToken } from "../src/server/token";
-import { DEMO_USERS } from "../src/server/users";
+import { findUserById, SEED_USER_IDS } from "../src/server/users";
 import type { Role } from "../src/server/rbac";
 
 /** T-24: /api/auth/act-as-team — lets Super Admin reissue their own token with a chosen team
@@ -29,7 +29,7 @@ afterAll(() => {
 const app = createApp();
 
 function authHeader(role: Role): string {
-  const user = DEMO_USERS[role];
+  const user = findUserById(SEED_USER_IDS[role])!;
   return `Bearer ${signToken(
     { sub: user.id, role: user.role, name: user.name, email: user.email, teamId: user.teamId },
     false
@@ -40,7 +40,7 @@ describe("POST /api/auth/demo-login and /login (T-24 regression)", () => {
   it("demo-login trả về teamId đúng của role team-scoped", async () => {
     const res = await request(app).post("/api/auth/demo-login").send({ role: "developer" });
     expect(res.status).toBe(200);
-    expect(res.body.user.teamId).toBe(DEMO_USERS.developer.teamId);
+    expect(res.body.user.teamId).toBe(findUserById(SEED_USER_IDS.developer)?.teamId);
   });
 
   it("demo-login super-admin trả về teamId undefined (org-wide)", async () => {

@@ -465,7 +465,41 @@
       </div>
     </div>
 
-    <div class="board-title">SPRINT 2 TASK BOARD (HOÀN THÀNH)</div>
+    <div class="board-title">ĐỊNH HƯỚNG CHIẾN LƯỢC — TIERED GOVERNANCE MODEL</div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>Vai trò</th>
+            <th>Hạ tầng</th>
+            <th>Ưu tiên nguồn lực</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tier 1 — Core</td>
+            <td>Free &amp; Default cho mọi Dev</td>
+            <td>CLI + Pre-push Hook + CI Gate</td>
+            <td><strong style="color:#059669">Ưu tiên cao</strong> — độ chính xác AI Agent, tốc độ cache diff, trải nghiệm CLI</td>
+          </tr>
+          <tr>
+            <td>Tier 2 — Enterprise Standard</td>
+            <td>Chuẩn hoá policy xuyên nhiều repo</td>
+            <td>Central Policy Package (<code>@vinsmartfuture/guardian-policies</code>)</td>
+            <td><strong style="color:#059669">Ưu tiên cao</strong></td>
+          </tr>
+          <tr>
+            <td>Tier 3 — Executive &amp; Compliance Mode</td>
+            <td>Quản trị tập trung cho CISO &amp; Kiểm toán</td>
+            <td>Dashboard + ReBAC Engine + Audit Logs</td>
+            <td>Giữ vận hành tốt — dùng làm <strong>Demo/Pitching Suite</strong> (scalability &amp; multi-tenancy) khi báo cáo Lãnh đạo/khách hàng doanh nghiệp, không phải trọng tâm phát triển tiếp theo</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="board-title" style="margin-top: 1.5rem">SPRINT 2 TASK BOARD (HOÀN THÀNH)</div>
     <div class="table-scroll">
       <table>
         <thead>
@@ -1126,6 +1160,47 @@
                 trên; không tự ý patch trực tiếp vào <code>node_modules</code> của 1 dependency Beta chưa ổn định</li>
             </ul></td>
           </tr>
+          <tr>
+            <td>T-42</td>
+            <td>Kịch bản demo nhiều Team + nhiều người thật — 4 team kỹ thuật (Backend/Mobile/Security/DevOps),
+              <code>store/userStore.ts</code> thay <code>DEMO_USERS</code> cố định</td>
+            <td><span class="badge status-done">Done</span></td>
+            <td>5</td>
+            <td><span class="priority-medium">Medium</span></td>
+            <td>2026-08-17</td>
+            <td>2026-08-17</td>
+            <td><ul>
+              <li>BA/SA trước khi code: xác nhận giới hạn kiến trúc thật — <code>DEMO_USERS</code> là
+                <code>Record&lt;Role, DemoUser&gt;</code>, đúng 1 người/role toàn hệ thống, 1 team tại 1 thời
+                điểm, <code>teamId</code> chỉ đổi trong RAM (mất khi restart) — chốt hướng với user qua
+                AskUserQuestion: xây user store thật (không chỉ đổi tên 5 account có sẵn), 4 team theo chức
+                năng kỹ thuật, giữ nguyên <code>team-default</code>/<code>team-mentor-demo</code></li>
+              <li><code>src/server/store/userStore.ts</code> mới (JSON-backed, persist <code>.guardian/users.json</code>,
+                seed-if-empty giữ nguyên 5 account gốc) thay <code>DEMO_USERS</code> — sửa luôn được giới hạn cũ
+                "teamId mất khi restart server"</li>
+              <li><code>POST /api/teams/users</code> (super-admin only) tạo người mới bất kỳ lúc nào; UI mới
+                trong <code>TeamManagement.tsx</code> ("+ Tạo Người Dùng Mới")</li>
+              <li><code>src/server/authz/seedDemoOrg.ts</code> (<code>npm run authz:seed-demo-org</code>,
+                idempotent) dựng sẵn 4 team Backend/Mobile/Security/DevOps × 4 vai trò = 16 người, email
+                <code>&lt;role&gt;@&lt;team&gt;.guardian.dev</code></li>
+              <li>Trang Login (<code>DemoModeSelector.tsx</code>) đổi từ 5 nút cố định sang danh sách động theo
+                (Role @ Team), fetch <code>GET /api/auth/demo-directory</code> (public)</li>
+              <li>Verify sống thật: <code>test/seedDemoOrg.test.ts</code> — Docker OpenFGA thật riêng, chạy
+                <code>seedDemoOrg()</code> 2 lần xác nhận idempotent, <code>checkRelation()</code> thật xác nhận
+                ranh giới cross-team (admin Team Backend có quan hệ <code>admin</code> trên
+                <code>team:team-backend</code>, KHÔNG có trên <code>team:team-mobile</code>); server thật
+                (<code>npm run server:dev</code>) + curl toàn bộ luồng tạo user → gán team → login thành công,
+                cùng 4 case fail (403/409/400/401) đều đúng</li>
+              <li><code>npx tsc --noEmit</code> + <code>npm --prefix web run build</code> sạch; <code>npx vitest run</code>
+                42 file/<strong>395 test pass</strong>; <code>npm audit</code> không thêm dependency mới, 6 CVE
+                sẵn có (esbuild/vite/vitest/nanoid) không đổi</li>
+              <li>Dọn dẹp sau verify sống: xoá user test khỏi <code>.guardian/users.json</code> thật, dừng server
+                test, container Docker test tự dọn qua <code>afterAll</code>. Chưa chạy
+                <code>authz:seed-demo-org</code> vĩnh viễn vào state thật — chạy ngay trước buổi demo</li>
+              <li>Chi tiết kỹ thuật đầy đủ: <code>authz/README.md</code> mục "Kịch bản demo: nhiều Team kỹ thuật
+                + nhiều người thật"</li>
+            </ul></td>
+          </tr>
           <tr class="epic-row epic-gray">
             <td colspan="8">
               <div>EPIC 4: ENTERPRISE POLICY LIFECYCLE STUDIO &amp; RBAC PIPELINE (BACKLOG)</div>
@@ -1178,7 +1253,8 @@
 
     <footer>
       <ul>
-        <li>Cập nhật lần cuối: 2026-08-14 — T-41 Blocked/Reverted (DeepEval TS SDK Beta: 2 bug lõi thật, xem chi tiết trong bảng)</li>
+        <li>Cập nhật lần cuối: 2026-08-17 — T-42 Done (kịch bản demo nhiều Team + nhiều người thật, 42 file/395 test pass, xem chi tiết trong bảng)</li>
+        <li>2026-08-14 — T-41 Blocked/Reverted (DeepEval TS SDK Beta: 2 bug lõi thật, xem chi tiết trong bảng)</li>
         <li>Sprint 2 ĐẠT sớm hơn lịch 10 ngày (T-01→T-18 Done)</li>
         <li>Sprint 3 ĐẠT sớm hơn lịch 2 ngày (T-19→T-27 Done) — <code>CLAUDE.md</code> Corporate Execution Rules áp dụng từ T-21</li>
         <li>Sprint 4: T-28/T-29 Done — Evaluation Suite 100 case + chuẩn hoá 9 policy theo Enterprise Standard</li>

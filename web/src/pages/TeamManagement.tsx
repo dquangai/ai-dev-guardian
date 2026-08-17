@@ -5,6 +5,8 @@ import type { TeamsResponse, SystemDiagnostics } from '../lib/types'
 import { ROLE_LABELS, type Role } from '../lib/rbac'
 import { engineLabel } from '../lib/engineLabel'
 
+const TEAM_SCOPED_ROLE_OPTIONS: Role[] = ['admin', 'senior-dev', 'developer', 'auditor']
+
 type PickerUser = TeamsResponse['users'][number]
 
 const ROLE_TUPLE_RELATION: Record<Role, string> = {
@@ -162,7 +164,15 @@ export function TeamManagement() {
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-  
+
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false)
+  const [newUserName, setNewUserName] = useState('')
+  const [newUserEmail, setNewUserEmail] = useState('')
+  const [newUserRole, setNewUserRole] = useState<Role>('developer')
+  const [newUserTeamId, setNewUserTeamId] = useState('')
+  const [creatingUser, setCreatingUser] = useState(false)
+  const [createUserError, setCreateUserError] = useState<string | null>(null)
+
   const [selectedUserIdsByTeam, setSelectedUserIdsByTeam] = useState<Record<string, string[]>>({})
   const [actionError, setActionError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -187,6 +197,30 @@ export function TeamManagement() {
       setCreateError(err instanceof ApiError ? err.message : 'Tạo Team thất bại.')
     } finally {
       setCreating(false)
+    }
+  }
+
+  async function createUserAccount() {
+    if (!newUserName.trim() || !newUserEmail.trim()) return
+    setCreatingUser(true)
+    setCreateUserError(null)
+    try {
+      await api.post('/teams/users', {
+        name: newUserName.trim(),
+        email: newUserEmail.trim(),
+        role: newUserRole,
+        teamId: newUserTeamId || undefined,
+      })
+      setNewUserName('')
+      setNewUserEmail('')
+      setNewUserRole('developer')
+      setNewUserTeamId('')
+      setShowCreateUserModal(false)
+      refetch()
+    } catch (err) {
+      setCreateUserError(err instanceof ApiError ? err.message : 'Tạo người dùng thất bại.')
+    } finally {
+      setCreatingUser(false)
     }
   }
 
@@ -251,6 +285,12 @@ export function TeamManagement() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCreateUserModal(true)}
+              className="rounded-xl bg-white border border-slate-200 hover:border-[#9E0B10] hover:text-[#9E0B10] px-5 py-2.5 text-sm font-semibold text-slate-700 cursor-pointer shadow-xs"
+            >
+              + Tạo Người Dùng Mới
+            </button>
             <button
               onClick={() => setShowCreateModal(true)}
               className="rounded-xl bg-[#9E0B10] hover:bg-[#80070B] px-5 py-2.5 text-sm font-semibold text-white cursor-pointer border-0 shadow-xs"
@@ -549,6 +589,91 @@ export function TeamManagement() {
                     {history?.length ? Math.round(((history.length - blockAuditCount) / history.length) * 100) : 100}%
                   </span>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CREATE USER MODAL */}
+        {showCreateUserModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-xs p-4">
+            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 space-y-5 shadow-2xl shadow-slate-900/10">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-base font-bold text-slate-900">Tạo Người Dùng Mới</h3>
+                <button onClick={() => setShowCreateUserModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-base cursor-pointer border-0">
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4 text-sm">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Họ Tên</label>
+                  <input
+                    type="text"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    placeholder="Nguyễn Văn A"
+                    className="mt-1.5 w-full rounded-xl bg-slate-50/50 border border-slate-200 focus:border-[#9E0B10] focus:ring-2 focus:ring-red-100 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</label>
+                  <input
+                    type="email"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    placeholder="dev@backend.guardian.dev"
+                    className="mt-1.5 w-full rounded-xl bg-slate-50/50 border border-slate-200 focus:border-[#9E0B10] focus:ring-2 focus:ring-red-100 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Vai Trò</label>
+                  <select
+                    value={newUserRole}
+                    onChange={(e) => setNewUserRole(e.target.value as Role)}
+                    className="mt-1.5 w-full rounded-xl bg-slate-50/50 border border-slate-200 focus:border-[#9E0B10] focus:ring-2 focus:ring-red-100 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none"
+                  >
+                    {TEAM_SCOPED_ROLE_OPTIONS.map((role) => (
+                      <option key={role} value={role}>{ROLE_LABELS[role]}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Team (tuỳ chọn)</label>
+                  <select
+                    value={newUserTeamId}
+                    onChange={(e) => setNewUserTeamId(e.target.value)}
+                    className="mt-1.5 w-full rounded-xl bg-slate-50/50 border border-slate-200 focus:border-[#9E0B10] focus:ring-2 focus:ring-red-100 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none"
+                  >
+                    <option value="">— Chưa gán team —</option>
+                    {(data?.teams ?? []).map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {createUserError && <p className="text-xs font-bold text-red-600">{createUserError}</p>}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateUserModal(false)}
+                  className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 cursor-pointer border-0"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={createUserAccount}
+                  disabled={creatingUser || !newUserName.trim() || !newUserEmail.trim()}
+                  className="rounded-xl bg-[#9E0B10] hover:bg-[#80070B] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50 cursor-pointer border-0 shadow-xs"
+                >
+                  {creatingUser ? 'Đang tạo...' : 'Tạo Người Dùng'}
+                </button>
               </div>
             </div>
           </div>

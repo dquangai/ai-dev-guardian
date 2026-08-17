@@ -14,6 +14,7 @@ web/dist/
 .guardian/engine-config.json
 .guardian/policy-reads.json
 .guardian/teams.json
+.guardian/users.json
 
 # Guardian eval run output (local artifact, not source)
 eval/results/

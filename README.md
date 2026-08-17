@@ -42,6 +42,7 @@ copy-paste-ready fix prompt.
 - [Circular dependency detection](#circular-dependency-detection)
 - [Optional Semgrep integration](#optional-semgrep-integration)
 - [Policy as Code](#policy-as-code)
+- [Tiered Governance Architecture](#tiered-governance-architecture)
 - [Web Dashboard](#web-dashboard)
   - [RBAC](#rbac)
   - [Multi-team authorization (OpenFGA)](#multi-team-authorization-openfga)
@@ -400,6 +401,23 @@ filters to only the policies relevant to the current diff — via `micromatch.is
 policy's `scope` globs (a `scope: []` policy applies globally) — so the full policy library is
 never stuffed into a single LLM call, and each file's prompt only carries the rules that could
 possibly apply to it.
+
+## Tiered Governance Architecture
+
+AI Dev Guardian adopts a **3-Tier Operational Governance Model** designed to balance Developer Experience (DX) with Enterprise Compliance:
+
+| Tier | Focus | Infrastructure | Operational Mechanism |
+|---|---|---|---|
+| **Tier 1 — Core (Free & Default for all Devs)** | Lightweight, zero-overhead developer workflow | Zero server required (CLI + Git Pre-push Hook + CI Gate) | Policy changes reviewed via standard Git Pull Requests using `CODEOWNERS` on `.guardian/policies/**`. PR status badges mirror standard CI checks (CodeQL/Snyk). |
+| **Tier 2 — Enterprise Standard** | Multi-repo standardization across teams | Central Policy Package (`@vinsmartfuture/guardian-policies`) | Centralized policies published as a versioned NPM package; services `npm install` and extend with local rules. |
+| **Tier 3 — Executive & Compliance Mode** | Executive oversight & CISO Compliance | Dashboard + ReBAC Engine + Audit Logs (Web Dashboard + Express API + OpenFGA, Docker) | Centralized dashboard for CISOs/Auditors, in-app Policy Change Approval, ReBAC multi-team isolation, and Audit Trail compliance. |
+
+Engineering effort is weighted toward **Tier 1 and Tier 2** — CLI/CI accuracy, diff-cache speed, and
+day-to-day developer experience are what most teams touch daily. **Tier 3** (Dashboard + ReBAC) is
+kept fully functional but treated primarily as the **scalability & multi-tenancy demo suite** for
+CISO/enterprise-customer pitches, not the default rollout path.
+
+---
 
 ## Web Dashboard
 
