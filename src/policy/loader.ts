@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
-import type { ArchitectureRule, GitWorkflowRule, Policy, Severity } from "./types";
+import type { ArchitectureRule, GitWorkflowRule, Policy, Severity, TestingStandardsRule } from "./types";
 
 const VALID_SEVERITIES: Severity[] = ["low", "medium", "high", "critical"];
 
@@ -42,6 +42,20 @@ function parseGitWorkflowRules(value: unknown): GitWorkflowRule[] {
     .filter((rule) => rule.branchPattern !== undefined || rule.commitPattern !== undefined);
 }
 
+/** Parses frontmatter `testingStandards:` into TestingStandardsRule[], dropping entries missing `sourcePattern`/`testPattern`. */
+function parseTestingStandardsRules(value: unknown): TestingStandardsRule[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
+    .map((entry) => ({
+      sourcePattern: toStringArray(entry.sourcePattern),
+      testPattern: toStringArray(entry.testPattern),
+      description: typeof entry.description === "string" ? entry.description : undefined,
+    }))
+    .filter((rule) => rule.sourcePattern.length > 0 && rule.testPattern.length > 0);
+}
+
 function parsePolicyFile(filePath: string, id: string): Policy {
   const raw = fs.readFileSync(filePath, "utf-8");
   const { data, content } = matter(raw);
@@ -59,6 +73,7 @@ function parsePolicyFile(filePath: string, id: string): Policy {
     rules: parseRules(data.rules),
     dependencyAllowlist: toStringArray(data.dependencyAllowlist),
     gitWorkflow: parseGitWorkflowRules(data.gitWorkflow),
+    testingStandards: parseTestingStandardsRules(data.testingStandards),
     allowCommentEvidence: data.allowCommentEvidence === true,
   };
 }

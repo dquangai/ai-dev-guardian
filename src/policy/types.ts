@@ -35,6 +35,26 @@ export interface GitWorkflowRule {
   description?: string;
 }
 
+/**
+ * One testing-standards rule: a brand-new file matching `sourcePattern` requires the same diff to
+ * also touch at least one file matching `testPattern` — checked deterministically (file paths
+ * only, not content) — see checks/testingStandardsCheck.ts.
+ *
+ * Deliberately NOT a strict 1:1 name-matched pair (e.g. "auth.ts" -> "auth.test.ts"): this repo's
+ * own convention alone breaks that assumption (`src/server/routes/auth.ts` is tested by
+ * `test/authRouter.test.ts`, `policies.ts` by `test/policyRouter.test.ts` — no shared basename).
+ * Satisfaction is diff-wide: if the diff touches ANY file matching `testPattern`, every new file
+ * matching `sourcePattern` in that same diff is considered covered.
+ */
+export interface TestingStandardsRule {
+  /** Glob(s) — a brand-new file (not just modified) matching any of these requires a test change. */
+  sourcePattern: string[];
+  /** Glob(s) — the diff must touch at least one file matching any of these to satisfy the rule. */
+  testPattern: string[];
+  /** Optional human-readable reason, used as the violation's "why" instead of the generic default. */
+  description?: string;
+}
+
 export interface Policy {
   /** Filename relative to .guardian/policies, used as a stable reference in reports. */
   id: string;
@@ -54,6 +74,8 @@ export interface Policy {
   dependencyAllowlist: string[];
   /** Git-workflow rules this policy defines; [] if it defines none. See checks/gitWorkflowCheck.ts. */
   gitWorkflow: GitWorkflowRule[];
+  /** Testing-standards rules this policy defines; [] if it defines none. See checks/testingStandardsCheck.ts. */
+  testingStandards: TestingStandardsRule[];
   /**
    * When true, comment-only diff lines are kept as valid evidence for
    * violations of THIS policy (see isEvidenceGrounded in llmPolicyCheck.ts,

@@ -22,6 +22,7 @@ function architecturePolicy(overrides: Partial<Policy> = {}): Policy {
     rules: [{ from: ["**"], forbid: ["nothing/**"] }],
     dependencyAllowlist: [],
     gitWorkflow: [],
+    testingStandards: [],
     ...overrides,
   };
 }

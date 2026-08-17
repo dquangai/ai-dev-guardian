@@ -107,4 +107,29 @@ describe("loadPolicies", () => {
     const a = policies.find((p) => p.id === "sample-a.policy.md");
     expect(a?.gitWorkflow).toEqual([]);
   });
+
+  it("parse `testingStandards` thành TestingStandardsRule[], giữ nguyên sourcePattern/testPattern/description", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const e = policies.find((p) => p.id === "sample-e.policy.md");
+    expect(e?.testingStandards).toEqual([
+      {
+        sourcePattern: ["src/checks/**/*.ts"],
+        testPattern: ["test/**/*.test.ts"],
+        description: "Sample testing-standards rule for loader tests.",
+      },
+    ]);
+  });
+
+  it("loại bỏ testingStandards entry thiếu `sourcePattern` hoặc `testPattern`", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const e = policies.find((p) => p.id === "sample-e.policy.md");
+    expect(e?.testingStandards).toHaveLength(1);
+    expect(e?.testingStandards.some((r) => r.testPattern.length === 0)).toBe(false);
+  });
+
+  it("policy không có `testingStandards` trong frontmatter có testingStandards = []", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const a = policies.find((p) => p.id === "sample-a.policy.md");
+    expect(a?.testingStandards).toEqual([]);
+  });
 });

@@ -12,6 +12,7 @@ import { checkArchitectureRules } from "./checks/architectureRulesCheck";
 import { checkDependencyRules } from "./checks/dependencyRulesCheck";
 import { checkWithSemgrep } from "./checks/semgrepCheck";
 import { checkGitWorkflowRules } from "./checks/gitWorkflowCheck";
+import { checkTestingStandards } from "./checks/testingStandardsCheck";
 import { hashDiffText, readCache, writeCache } from "./cache";
 import type { CheckReport, Violation } from "./report/types";
 
@@ -27,6 +28,7 @@ export interface OrchestratorDeps {
   checkDependencyRules: typeof checkDependencyRules;
   checkWithSemgrep: typeof checkWithSemgrep;
   checkGitWorkflowRules: typeof checkGitWorkflowRules;
+  checkTestingStandards: typeof checkTestingStandards;
   readCache: typeof readCache;
   writeCache: typeof writeCache;
   resolveLLMClient: typeof resolveLLMClient;
@@ -106,6 +108,7 @@ export async function runGuardianCheck(
   const _checkDependencyRules = deps.checkDependencyRules ?? checkDependencyRules;
   const _checkWithSemgrep = deps.checkWithSemgrep ?? checkWithSemgrep;
   const _checkGitWorkflowRules = deps.checkGitWorkflowRules ?? checkGitWorkflowRules;
+  const _checkTestingStandards = deps.checkTestingStandards ?? checkTestingStandards;
   const _readCache = deps.readCache ?? readCache;
   const _writeCache = deps.writeCache ?? writeCache;
   const _resolveLLMClient = deps.resolveLLMClient ?? resolveLLMClient;
@@ -144,6 +147,7 @@ export async function runGuardianCheck(
     dependencyRuleViolations,
     semgrepViolations,
     gitWorkflowViolations,
+    testingStandardsViolations,
   ] = await Promise.all([
     Promise.resolve(_scanForSecrets(filteredDiff)),
     runLLMCheck(),
@@ -152,6 +156,13 @@ export async function runGuardianCheck(
     Promise.resolve(_checkDependencyRules(filteredDiff, matchedPolicies)),
     _checkWithSemgrep(filteredDiff),
     _checkGitWorkflowRules(filteredDiff, matchedPolicies),
+    // Unlike every other check here, this one needs the ORIGINAL diff, not filteredDiff — its
+    // testPattern is meant to match test/**/*.test.ts, but excludeIgnoredFiles() strips exactly
+    // that glob out before any check sees filteredDiff (it exists to protect secretScan/the LLM
+    // check from fixture false-positives, an unrelated concern this check doesn't share: it never
+    // reads file content, only path existence). Passing filteredDiff here would make testPattern
+    // structurally unmatchable — always flagging even a diff that genuinely added a test.
+    Promise.resolve(_checkTestingStandards(diff, matchedPolicies)),
   ]);
 
   const violations: Violation[] = [
@@ -162,6 +173,7 @@ export async function runGuardianCheck(
     ...dependencyRuleViolations,
     ...semgrepViolations,
     ...gitWorkflowViolations,
+    ...testingStandardsViolations,
   ];
   const verdict = violations.some((v) => BLOCKING_SEVERITIES.has(v.riskLevel)) ? "BLOCK" : "PASS";
 

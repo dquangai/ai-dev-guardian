@@ -22,6 +22,7 @@ function policyWithRule(rule: GitWorkflowRule, overrides: Partial<Policy> = {}):
     rules: [],
     dependencyAllowlist: [],
     gitWorkflow: [rule],
+    testingStandards: [],
     ...overrides,
   };
 }
@@ -52,6 +53,7 @@ describe("checkGitWorkflowRules", () => {
         rules: [],
         dependencyAllowlist: [],
         gitWorkflow: [],
+        testingStandards: [],
       };
       expect(await checkGitWorkflowRules(diffFor(["x.ts"]), [noRulePolicy], dir)).toEqual([]);
     } finally {

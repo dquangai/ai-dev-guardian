@@ -264,8 +264,13 @@ Hệ thống **AI Dev Guardian** ở Đợt 2 đã đạt **100% các tiêu chu�
 3. ✅ ~~Smoke-test trực quan cho giao diện QWOANG Enterprise UI~~ — **Done 17/08/2026**, phát hiện + sửa 1 bug hydration thật, xem Phần V mục 2.
 4. **Triển khai Policy Studio & Pipeline Wizard** — Upload file PDF/Docx ➔ Auto-Convert ➔ Health Audit (0-100đ) ➔ Conflict Check ➔ Synthetic TestGen ➔ Deploy — **hold cùng mục 2**, thuần Tier 3.
 5. **Multi-Tenant RBAC mở rộng 5 vai trò** — Security Admin (CISO), Tech Lead, Senior Dev, Dev, Auditor, kế thừa nền OpenFGA đã có — **hold cùng mục 2**.
-6. **Component ownership qua git blame** — **Done 17/08/2026**, xem `reports/Báo cáo kỹ thuật.md` §9.
-7. Backlog còn lại (Reusable GitHub Action + shared diff-hash baseline, Git Workflow policy category, Testing Standards policy category) — xem chi tiết đầy đủ ở `reports/Báo cáo kỹ thuật.md` §9, không lặp lại ở đây.
+6. ✅ ~~Component ownership qua git blame~~ — **Done 17/08/2026**, xem `reports/Báo cáo kỹ thuật.md` §9.
+7. ✅ ~~Git Workflow policy category~~ — **Done 17/08/2026**, xem `reports/Báo cáo kỹ thuật.md` §9.
+8. ✅ ~~Reusable GitHub Action + shared diff-hash baseline~~ — **Done code 17/08/2026** (chưa verify bằng 1 lần chạy GitHub Actions thật — publish tag `v1` là bước thủ công còn lại), xem `reports/Báo cáo kỹ thuật.md` §9.
+9. ✅ ~~Testing Standards policy category~~ — **Done 17/08/2026**, xem `reports/Báo cáo kỹ thuật.md` §9.
+
+Toàn bộ nhóm "Làm tiếp" (Tier 1 & 2) trong backlog đã xong — chỉ còn mục 2/4/5 (Tier 3, hold chờ
+Mentor trả lời) là chưa làm.
 
 ---
 *Báo cáo tổng hợp từ `eval/results/history/`, `README.md`, `reports/Báo cáo kỹ thuật.md`, `git log`/`git show --stat`, và verify sống trực tiếp (`tsc --noEmit`, `vitest run`, `web build`) tại thời điểm lập báo cáo — không suy diễn thêm.*

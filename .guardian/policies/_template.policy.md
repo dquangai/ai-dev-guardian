@@ -17,6 +17,11 @@
 #           { branchPattern?, exemptBranches?, commitPattern?, description? }, được
 #           gitWorkflowCheck.ts kiểm tra tự động (deterministic, dựa trên git metadata
 #           chứ không phải nội dung file — nên hầu như luôn dùng scope: []).
+# testingStandards: CHỈ dùng cho policy yêu cầu file test đi kèm — mảng
+#           { sourcePattern, testPattern, description? }. File MỚI khớp sourcePattern
+#           trong diff cần diff đó đụng ít nhất 1 file khớp testPattern (không bắt buộc
+#           khớp tên 1-1, xem ghi chú trong policy/types.ts vì sao). Được
+#           testingStandardsCheck.ts kiểm tra tự động (deterministic).
 #
 # Lưu ý: file bắt đầu bằng "_" (như file này) bị loadPolicies() bỏ qua có chủ đích
 # (src/policy/loader.ts) — đây là TEMPLATE để copy, không phải policy đang áp dụng.

@@ -13,6 +13,7 @@ function makePolicy(overrides: Partial<Policy>): Policy {
     rules: [],
     dependencyAllowlist: [],
     gitWorkflow: [],
+    testingStandards: [],
     ...overrides,
   };
 }

@@ -605,15 +605,14 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | CI/CD PR gate | `guardian check --ci` + a copy-pasteable `guardian.yml` workflow — diffs the PR, posts/updates a comment, exit code 1 on `BLOCK` — see [CI/CD Integration](#cicd-integration) |
 | Component ownership via git blame | Every violation tied to one added line (secret-scan, LLM policy check) is attributed to its last author via `git blame` — best-effort, never blocks the check if it can't resolve one |
 | Git Workflow policy category | Deterministic branch-naming + commit-message-format rules via `gitWorkflow: [{ branchPattern, exemptBranches, commitPattern }]` in policy frontmatter — checked against git metadata (`git rev-parse`, `git log -1`), not file content, no LLM call |
+| Reusable GitHub Action | `action.yml` at the repo root — `uses: dquangai/ai-dev-guardian@v1` instead of copy-pasting the full YAML, plus the [shared diff-hash baseline](#caching) via `actions/cache` — see [CI/CD Integration](#cicd-integration) |
+| Testing Standards policy category | `testingStandards: [{ sourcePattern, testPattern }]` in policy frontmatter — a brand-new file matching `sourcePattern` requires the same diff to touch at least one file matching `testPattern` (diff-wide, not a strict 1:1 name match — see `policy/types.ts`), checked deterministically, no LLM call |
 
 ### Planned
 
-| Feature | What it would look like |
-|---|---|
-| **Reusable GitHub Action** | Publish the [CI/CD Integration](#cicd-integration) workflow as `uses: dquangai/guardian-action@v1` so a team adds one line instead of copy-pasting the full YAML, plus a git-versioned baseline artifact (mirroring the diff-hash cache but shared across a team instead of local `.git/`) so PRs don't re-pay for a diff a teammate already got `PASS`'d elsewhere |
-| **Testing Standards policy category** | Coverage-delta and test-file-presence rules (e.g. "a new `src/**/*.ts` file must have a matching `test/**/*.test.ts`") |
-
-Two other ideas were on this list before ("Business Requirements policy category" and "Jira integration") and got dropped rather than left to linger — see `reports/Báo cáo kỹ thuật.md` §9 for why.
+This list is currently empty — every item that was here got shipped or explicitly dropped. Two
+ideas were dropped rather than left to linger ("Business Requirements policy category" and "Jira
+integration") — see `reports/Báo cáo kỹ thuật.md` §9 for why.
 
 ## Contributing
 
