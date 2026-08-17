@@ -544,6 +544,9 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | SHA-256 diff-hash caching | LRU of last 20 `PASS` hashes in `.git/guardian_cache.json`, survives branch switching |
 | Inter-file RAG-lite context | TypeScript/JavaScript (ast-grep, regex fallback), Python, C/C++, Go — up to 3 satellite files, 10KB each |
 | Circular dependency detection | madge-backed, TS/JS only, scoped to cycles the current diff's `changedFiles` actually touch |
+| Architecture Rules policy category | Policy-driven dependency-direction rules (`from`/`forbid` in policy frontmatter) beyond circular-dependency detection — deterministic, reuses the same local-import extraction RAG-lite already does, no LLM call |
+| Dependency Rules policy category | `dependencyAllowlist` in policy frontmatter — blocks a new `package.json` dependency not on the approved list, checked deterministically against the diff hunk |
+| Policy-driven severity for circular dependency | Severity/scope for the circular-dependency check now comes from `.guardian/policies/architecture.md` like every other policy-backed check, instead of a hardcoded `medium` |
 | Optional Semgrep integration | `p/security-audit` ruleset by default (`GUARDIAN_SEMGREP_CONFIG` overridable), findings filtered to added diff lines |
 | Interactive pre-push git hook | `Y/n` in a real TTY, fail-open (always runs) in CI/non-interactive scripts |
 | Web dashboard | React/Vite/Tailwind UI + Express API (`web/`, `src/server/`) for managing policies and reviewing audit history without the terminal |
@@ -560,14 +563,11 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | Feature | What it would look like |
 |---|---|
 | **Reusable GitHub Action** | Publish the [CI/CD Integration](#cicd-integration) workflow as `uses: dquangai/guardian-action@v1` so a team adds one line instead of copy-pasting the full YAML, plus a git-versioned baseline artifact (mirroring the diff-hash cache but shared across a team instead of local `.git/`) so PRs don't re-pay for a diff a teammate already got `PASS`'d elsewhere |
-| **Architecture Rules policy category** | Policy-driven dependency-direction rules beyond circular-dependency detection — e.g. `forbid: ["src/core/** -> src/cli/**"]` in policy frontmatter, checked deterministically by reusing the same local-import extraction RAG-lite already does, no LLM call needed |
 | **Git Workflow policy category** | Branch naming, commit message format, merge-strategy rules — deterministic, checked against `diff`/git metadata rather than file content |
 | **Testing Standards policy category** | Coverage-delta and test-file-presence rules (e.g. "a new `src/**/*.ts` file must have a matching `test/**/*.test.ts`") |
-| **Dependency Rules policy category** | Allowed/forbidden package policies — checked against `package.json` diff hunks, e.g. blocking a new dependency not on an approved list |
-| **Business Requirements policy category** | Domain-specific rules tying code changes to product requirements (exact mechanism TBD — likely requires linking to an external requirements/issue source) |
-| **Jira integration** | Link reported violations to a tracked issue automatically, rather than only printing a fix prompt |
 | **Component ownership via git blame** | Attach the last author of a violated line to the violation report, so `promptToFix` can be routed to the right person, not just printed generically |
-| **Policy-driven severity for circular dependency check** | Currently hardcoded `medium` in `architectureCheck.ts` — move to a `.guardian/policies/architecture.md` file so severity/scope become project-configurable like every other policy-backed check |
+
+Two other ideas were on this list before ("Business Requirements policy category" and "Jira integration") and got dropped rather than left to linger — see `reports/Báo cáo kỹ thuật.md` §9 for why.
 
 ## Contributing
 

@@ -370,17 +370,34 @@ Enterprise Standard, tham chiếu OWASP Top 10 / ISO 27001: Compliance Metadata 
 
 ### Đang chờ / Kế hoạch
 
-| Tính năng | Mô tả |
-|---|---|
-| Bật cờ `--ci` làm gate cứng trong `eval.yml` | Hiện workflow chỉ chạy chế độ thông tin (luôn `exit 0`) — xem Mục 4.4 |
-| OpenFGA production & Dashboard tập trung | Đưa `GUARDIAN_AUTHZ_MODE=fga` sang môi trường thật; quyết định deploy 1 Dashboard dùng chung cho cả team hay mỗi dev tự chạy instance riêng |
-| Policy Studio & Pipeline Wizard | Upload PDF/Docx → auto-convert → Health Audit (0–100đ) → Conflict Check → Synthetic TestGen → Deploy |
-| Multi-Tenant RBAC mở rộng 5 vai trò | Security Admin (CISO), Tech Lead, Senior Dev, Dev, Auditor — kế thừa nền OpenFGA đã có |
-| Git Workflow policy category | Luật đặt tên branch, format commit message |
-| Testing Standards policy category | Luật yêu cầu file test tương ứng khi thêm code mới |
-| Business Requirements policy category | Gắn thay đổi code với yêu cầu sản phẩm (cơ chế cụ thể còn TBD) |
-| Jira integration | Tự động gắn violation vào ticket theo dõi |
-| Component ownership qua git blame | Gắn `promptToFix` với đúng người đã viết dòng code vi phạm |
+Đánh giá lại 17/08/2026 theo đúng khung ưu tiên Tiered Governance (Mục 8.0): dồn lực Tier 1 & 2
+trước, Tier 3 (Dashboard/OpenFGA) chờ Mentor chốt hướng thay vì làm trước rồi có thể phải bỏ.
+
+**Ưu tiên làm tiếp — rẻ, thuộc Tier 1 & 2, không phụ thuộc quyết định nào đang treo:**
+
+| Tính năng | Mô tả | Vì sao ưu tiên |
+|---|---|---|
+| Bật cờ `--ci` làm gate cứng trong `eval.yml` | Hiện workflow chỉ chạy chế độ thông tin (luôn `exit 0`) — xem Mục 4.4 | Đã code xong, Recall/FPR hiện tại (96.1%/6.1%) còn dư rất xa ngưỡng chặn (85%/25%) — bật không rủi ro false-block |
+| Smoke-test QWOANG UI trên browser thật | Nợ verify còn sót từ Đợt 2 (Mục 8.2 cột UI, DoD chưa 100%) | Không phải feature mới, chỉ còn 1 bước verify |
+| Component ownership qua git blame | Gắn `promptToFix` với đúng người đã viết dòng code vi phạm | Cải thiện trực tiếp trải nghiệm CLI cốt lõi — đúng tinh thần Tier 1 |
+| Reusable GitHub Action + shared diff-hash baseline dùng chung team | Publish workflow thành 1 GitHub Action, PR không phải trả phí quét lại diff đồng đội đã `PASS` | Giảm ma sát cài CI Gate (đúng lời hứa Tier 1 "1 dòng thay vì copy YAML"), baseline dùng chung là bước đệm tự nhiên tới Tier 2 |
+| Git Workflow policy category | Luật đặt tên branch, format commit message | Tất định, tái dùng đúng pattern policy-as-code sẵn có, không cần LLM |
+| Testing Standards policy category | Luật yêu cầu file test tương ứng khi thêm code mới | Tất định, rẻ, củng cố đúng văn hoá "phải có test" của chính team |
+
+**Hold — chờ Mentor chốt hướng Dashboard trước khi làm (Mục 8.0, Tier 3):**
+
+| Tính năng | Mô tả | Vì sao hold |
+|---|---|---|
+| OpenFGA production & Dashboard tập trung | Đưa `GUARDIAN_AUTHZ_MODE=fga` sang môi trường thật; quyết định deploy 1 Dashboard dùng chung cho cả team hay mỗi dev tự chạy instance riêng | Đã là câu hỏi treo gửi Mentor — làm trước khi có quyết định là rủi ro làm xong rồi phải bỏ nếu Mentor chọn dừng đầu tư Dashboard |
+| Multi-Tenant RBAC mở rộng 5 vai trò | Security Admin (CISO), Tech Lead, Senior Dev, Dev, Auditor — kế thừa nền OpenFGA đã có | Phụ thuộc trực tiếp OpenFGA production ở trên, không tách rời được |
+| Policy Studio & Pipeline Wizard | Upload PDF/Docx → auto-convert → Health Audit (0–100đ) → Conflict Check → Synthetic TestGen → Deploy | Việc lớn nhất trong backlog, thuần Tier 3/Dashboard — nên chờ cùng quyết định Dashboard, không bắt đầu khi hướng còn chưa chốt |
+
+**Đề xuất bỏ khỏi roadmap — không để treo vô thời hạn như thể "đang chờ":**
+
+| Tính năng | Mô tả | Vì sao bỏ |
+|---|---|---|
+| Business Requirements policy category | Gắn thay đổi code với yêu cầu sản phẩm | Chính tài liệu này từng ghi "cơ chế cụ thể còn TBD" — chưa có thiết kế thật, đúng nguyên tắc No Guesswork nên gỡ khỏi roadmap tới khi có ý tưởng cụ thể |
+| Jira integration | Tự động gắn violation vào ticket theo dõi | Phụ thuộc 1 công cụ ngoài chưa chắc V-ID dùng, thêm bề mặt bảo trì (creds, webhook) cho ROI không rõ, trong khi Tier 1 & 2 vẫn còn việc rẻ hơn/giá trị cao hơn để làm trước — chỉ làm lại khi có khách hàng cụ thể yêu cầu |
 
 ## 10. Phân tích FinOps & Định vị thị trường
 
