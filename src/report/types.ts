@@ -33,7 +33,8 @@ export interface Violation {
     | "architecture-check"
     | "architecture-rules-check"
     | "dependency-rules-check"
-    | "semgrep-check";
+    | "semgrep-check"
+    | "git-workflow-check";
   /**
    * Verbatim code that matched this violation in the diff — set by secretScan (the raw regex
    * match) and llmPolicyCheck (its grounding-verified evidenceSnippet). Used only internally by

@@ -21,6 +21,7 @@ function architecturePolicy(overrides: Partial<Policy> = {}): Policy {
     body: "body",
     rules: [{ from: ["**"], forbid: ["nothing/**"] }],
     dependencyAllowlist: [],
+    gitWorkflow: [],
     ...overrides,
   };
 }

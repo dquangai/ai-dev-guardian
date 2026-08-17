@@ -11,6 +11,7 @@ import { checkCircularDependencies } from "./checks/architectureCheck";
 import { checkArchitectureRules } from "./checks/architectureRulesCheck";
 import { checkDependencyRules } from "./checks/dependencyRulesCheck";
 import { checkWithSemgrep } from "./checks/semgrepCheck";
+import { checkGitWorkflowRules } from "./checks/gitWorkflowCheck";
 import { hashDiffText, readCache, writeCache } from "./cache";
 import type { CheckReport, Violation } from "./report/types";
 
@@ -25,6 +26,7 @@ export interface OrchestratorDeps {
   checkArchitectureRules: typeof checkArchitectureRules;
   checkDependencyRules: typeof checkDependencyRules;
   checkWithSemgrep: typeof checkWithSemgrep;
+  checkGitWorkflowRules: typeof checkGitWorkflowRules;
   readCache: typeof readCache;
   writeCache: typeof writeCache;
   resolveLLMClient: typeof resolveLLMClient;
@@ -103,6 +105,7 @@ export async function runGuardianCheck(
   const _checkArchitectureRules = deps.checkArchitectureRules ?? checkArchitectureRules;
   const _checkDependencyRules = deps.checkDependencyRules ?? checkDependencyRules;
   const _checkWithSemgrep = deps.checkWithSemgrep ?? checkWithSemgrep;
+  const _checkGitWorkflowRules = deps.checkGitWorkflowRules ?? checkGitWorkflowRules;
   const _readCache = deps.readCache ?? readCache;
   const _writeCache = deps.writeCache ?? writeCache;
   const _resolveLLMClient = deps.resolveLLMClient ?? resolveLLMClient;
@@ -140,6 +143,7 @@ export async function runGuardianCheck(
     architectureRuleViolations,
     dependencyRuleViolations,
     semgrepViolations,
+    gitWorkflowViolations,
   ] = await Promise.all([
     Promise.resolve(_scanForSecrets(filteredDiff)),
     runLLMCheck(),
@@ -147,6 +151,7 @@ export async function runGuardianCheck(
     _checkArchitectureRules(filteredDiff, matchedPolicies),
     Promise.resolve(_checkDependencyRules(filteredDiff, matchedPolicies)),
     _checkWithSemgrep(filteredDiff),
+    _checkGitWorkflowRules(filteredDiff, matchedPolicies),
   ]);
 
   const violations: Violation[] = [
@@ -156,6 +161,7 @@ export async function runGuardianCheck(
     ...architectureRuleViolations,
     ...dependencyRuleViolations,
     ...semgrepViolations,
+    ...gitWorkflowViolations,
   ];
   const verdict = violations.some((v) => BLOCKING_SEVERITIES.has(v.riskLevel)) ? "BLOCK" : "PASS";
 

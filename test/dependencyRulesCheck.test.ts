@@ -30,6 +30,7 @@ function policyWithAllowlist(overrides: Partial<Policy> = {}): Policy {
     body: "body",
     rules: [],
     dependencyAllowlist: ["chalk", "commander"],
+    gitWorkflow: [],
     ...overrides,
   };
 }

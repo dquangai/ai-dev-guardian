@@ -78,4 +78,33 @@ describe("loadPolicies", () => {
     const b = policies.find((p) => p.id === "sample-b.policy.md");
     expect(b?.dependencyAllowlist).toEqual([]);
   });
+
+  it("parse `gitWorkflow` thành GitWorkflowRule[], giữ nguyên branchPattern/exemptBranches/commitPattern/description", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const d = policies.find((p) => p.id === "sample-d.policy.md");
+    expect(d?.gitWorkflow).toHaveLength(2);
+    expect(d?.gitWorkflow[0]).toEqual({
+      branchPattern: "^feature/.+$",
+      exemptBranches: ["master", "main"],
+      commitPattern: "^(feat|fix): .+$",
+      description: "Sample git-workflow rule for loader tests.",
+    });
+  });
+
+  it("gitWorkflow entry chỉ có commitPattern (không có branchPattern) vẫn giữ lại", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const d = policies.find((p) => p.id === "sample-d.policy.md");
+    expect(d?.gitWorkflow[1]).toEqual({
+      branchPattern: undefined,
+      exemptBranches: [],
+      commitPattern: "^chore: .+$",
+      description: undefined,
+    });
+  });
+
+  it("policy không có `gitWorkflow` trong frontmatter có gitWorkflow = []", () => {
+    const policies = loadPolicies(FIXTURES_DIR);
+    const a = policies.find((p) => p.id === "sample-a.policy.md");
+    expect(a?.gitWorkflow).toEqual([]);
+  });
 });

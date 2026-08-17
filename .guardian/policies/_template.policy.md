@@ -13,6 +13,10 @@
 #           architectureRulesCheck.ts kiểm tra tự động (deterministic, không qua LLM).
 # dependencyAllowlist: CHỈ dùng cho policy kiểm soát dependency (package.json) —
 #           được dependencyRulesCheck.ts kiểm tra tự động (deterministic).
+# gitWorkflow: CHỈ dùng cho policy branch-naming/commit-message — mảng
+#           { branchPattern?, exemptBranches?, commitPattern?, description? }, được
+#           gitWorkflowCheck.ts kiểm tra tự động (deterministic, dựa trên git metadata
+#           chứ không phải nội dung file — nên hầu như luôn dùng scope: []).
 #
 # Lưu ý: file bắt đầu bằng "_" (như file này) bị loadPolicies() bỏ qua có chủ đích
 # (src/policy/loader.ts) — đây là TEMPLATE để copy, không phải policy đang áp dụng.

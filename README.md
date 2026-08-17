@@ -558,13 +558,13 @@ npm test   # full unit test suite — no API calls, no semgrep/madge network acc
 | Evaluation Suite | 100-case golden dataset (`eval/`), real-API `npm run eval`, CI/CD quality gate (`--ci`), historical snapshots + Delta, `--split-policies` diagnostic — see [Evaluation](#evaluation-measuring-the-llm-check-against-a-golden-dataset) |
 | CI/CD PR gate | `guardian check --ci` + a copy-pasteable `guardian.yml` workflow — diffs the PR, posts/updates a comment, exit code 1 on `BLOCK` — see [CI/CD Integration](#cicd-integration) |
 | Component ownership via git blame | Every violation tied to one added line (secret-scan, LLM policy check) is attributed to its last author via `git blame` — best-effort, never blocks the check if it can't resolve one |
+| Git Workflow policy category | Deterministic branch-naming + commit-message-format rules via `gitWorkflow: [{ branchPattern, exemptBranches, commitPattern }]` in policy frontmatter — checked against git metadata (`git rev-parse`, `git log -1`), not file content, no LLM call |
 
 ### Planned
 
 | Feature | What it would look like |
 |---|---|
 | **Reusable GitHub Action** | Publish the [CI/CD Integration](#cicd-integration) workflow as `uses: dquangai/guardian-action@v1` so a team adds one line instead of copy-pasting the full YAML, plus a git-versioned baseline artifact (mirroring the diff-hash cache but shared across a team instead of local `.git/`) so PRs don't re-pay for a diff a teammate already got `PASS`'d elsewhere |
-| **Git Workflow policy category** | Branch naming, commit message format, merge-strategy rules — deterministic, checked against `diff`/git metadata rather than file content |
 | **Testing Standards policy category** | Coverage-delta and test-file-presence rules (e.g. "a new `src/**/*.ts` file must have a matching `test/**/*.test.ts`") |
 
 Two other ideas were on this list before ("Business Requirements policy category" and "Jira integration") and got dropped rather than left to linger — see `reports/Báo cáo kỹ thuật.md` §9 for why.

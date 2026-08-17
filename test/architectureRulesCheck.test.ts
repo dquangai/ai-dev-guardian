@@ -21,6 +21,7 @@ function policyWithRule(overrides: Partial<Policy> = {}): Policy {
     body: "body",
     rules: [{ from: ["from-layer/**"], forbid: ["forbidden-layer/**"] }],
     dependencyAllowlist: [],
+    gitWorkflow: [],
     ...overrides,
   };
 }
