@@ -1,6 +1,7 @@
 import type { DiffResult } from "./git/diff";
 import { splitDiffByFile } from "./git/diffSplitter";
 import { isIgnoredPath } from "./git/ignorePaths";
+import { blameLine, findEvidenceLine } from "./git/blame";
 import { loadPolicies } from "./policy/loader";
 import { routePolicies } from "./policy/router";
 import { scanForSecrets } from "./checks/secretScan";
@@ -45,6 +46,50 @@ function excludeIgnoredFiles(diff: DiffResult): DiffResult {
     .join("\n");
 
   return { diffText, changedFiles };
+}
+
+const FILE_LINE_LOCATION_PATTERN = /^(.+):(\d+)$/;
+
+/**
+ * Where to point `git blame` for this violation: either the line found by matching
+ * `evidenceSnippet` against the diff (secret-scan, llm-policy-check), or a `file:line` already
+ * baked into `location` by the check itself (semgrep-check). Violations whose location spans
+ * multiple files or targets `package.json` as a whole (architecture/dependency checks) resolve to
+ * null — component ownership only makes sense for a single violating line.
+ */
+function resolveBlameTarget(v: Violation, diffText: string): { file: string; line: number } | null {
+  if (v.evidenceSnippet) {
+    const line = findEvidenceLine(diffText, v.location, v.evidenceSnippet);
+    if (line !== null) return { file: v.location, line };
+  }
+  const match = FILE_LINE_LOCATION_PATTERN.exec(v.location);
+  return match ? { file: match[1], line: Number(match[2]) } : null;
+}
+
+/**
+ * Attaches `author` (last person to touch the violating line, via `git blame`) to every violation
+ * where a single line can be resolved — mutates in place so `promptToFix`, already built by each
+ * check, doesn't need to be rebuilt. Best-effort: a violation simply keeps `author` unset if
+ * nothing can be resolved or blame fails, same "never block the actual check" guarantee as the
+ * diff-hash cache.
+ *
+ * Always strips `evidenceSnippet` before returning, attribution succeeded or not — it's an
+ * internal-only lookup key (for secret-scan it's the RAW, unmasked matched secret) and must never
+ * reach `CheckReport` callers: the dashboard persists violations verbatim to
+ * `.guardian/audit-history.json` and serves them over the API (see server/store/auditStore.ts), so
+ * leaving it on would silently defeat secretScan's own masking in `errorWhat`.
+ */
+async function attributeAuthors(violations: Violation[], diffText: string): Promise<void> {
+  await Promise.all(
+    violations.map(async (v) => {
+      const target = resolveBlameTarget(v, diffText);
+      if (target) {
+        const author = await blameLine(target.file, target.line);
+        if (author) v.author = author;
+      }
+      delete v.evidenceSnippet;
+    })
+  );
 }
 
 export async function runGuardianCheck(
@@ -126,6 +171,8 @@ export async function runGuardianCheck(
   if (verdict === "PASS" && !llmCheckSkippedForMissingProvider && !llmCheckDegraded) {
     _writeCache(diffHash);
   }
+
+  await attributeAuthors(violations, filteredDiff.diffText);
 
   return { verdict, violations };
 }

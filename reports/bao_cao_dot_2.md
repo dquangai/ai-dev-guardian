@@ -259,11 +259,13 @@ Hệ thống **AI Dev Guardian** ở Đợt 2 đã đạt **100% các tiêu chu�
 * 🏛️ Đạt chứng nhận **Level 5 Enterprise Maturity (Production-Ready)**.
 
 ### 2. Kế hoạch Bước tiếp theo
-1. **Bật cờ `--ci` làm gate cứng thật** trong `eval.yml` — hiện workflow đã chạy tự động nhưng chỉ ở chế độ thông tin (Phần II mục 6).
-2. **Bật OpenFGA production & chốt hướng Dashboard trung tâm** — đưa `GUARDIAN_AUTHZ_MODE=fga` sang môi trường thật; quyết định cùng Mentor có deploy 1 Dashboard dùng chung cho cả team V-ID hay để mỗi dev tự chạy instance riêng (Phần IV mục 4).
-3. **Smoke-test trực quan cho giao diện QWOANG Enterprise UI** trên trình duyệt thật, hoàn tất bước cuối của Definition of Done cho phần UI Rebrand (Phần V mục 2).
-4. **Triển khai Policy Studio & Pipeline Wizard:** Tích hợp giao diện Web cho phép Upload file PDF/Docx ➔ Auto-Convert ➔ Health Audit (0-100đ) ➔ Conflict Check ➔ Synthetic TestGen ➔ Deploy.
-5. **Multi-Tenant RBAC mở rộng 5 vai trò:** Security Admin (CISO), Tech Lead, Senior Dev, Dev, Auditor — kế thừa nền OpenFGA đã có.
+1. ✅ ~~Bật cờ `--ci` làm gate cứng thật trong `eval.yml`~~ — **Done 17/08/2026**, scoped cho trigger `pull_request`.
+2. **Bật OpenFGA production & chốt hướng Dashboard trung tâm** — đưa `GUARDIAN_AUTHZ_MODE=fga` sang môi trường thật; quyết định cùng Mentor có deploy 1 Dashboard dùng chung cho cả team V-ID hay để mỗi dev tự chạy instance riêng (Phần IV mục 4) — **đang chờ Mentor trả lời**.
+3. ✅ ~~Smoke-test trực quan cho giao diện QWOANG Enterprise UI~~ — **Done 17/08/2026**, phát hiện + sửa 1 bug hydration thật, xem Phần V mục 2.
+4. **Triển khai Policy Studio & Pipeline Wizard** — Upload file PDF/Docx ➔ Auto-Convert ➔ Health Audit (0-100đ) ➔ Conflict Check ➔ Synthetic TestGen ➔ Deploy — **hold cùng mục 2**, thuần Tier 3.
+5. **Multi-Tenant RBAC mở rộng 5 vai trò** — Security Admin (CISO), Tech Lead, Senior Dev, Dev, Auditor, kế thừa nền OpenFGA đã có — **hold cùng mục 2**.
+6. **Component ownership qua git blame** — **Done 17/08/2026**, xem `reports/Báo cáo kỹ thuật.md` §9.
+7. Backlog còn lại (Reusable GitHub Action + shared diff-hash baseline, Git Workflow policy category, Testing Standards policy category) — xem chi tiết đầy đủ ở `reports/Báo cáo kỹ thuật.md` §9, không lặp lại ở đây.
 
 ---
 *Báo cáo tổng hợp từ `eval/results/history/`, `README.md`, `reports/Báo cáo kỹ thuật.md`, `git log`/`git show --stat`, và verify sống trực tiếp (`tsc --noEmit`, `vitest run`, `web build`) tại thời điểm lập báo cáo — không suy diễn thêm.*

@@ -113,6 +113,10 @@ function renderViolationBox(v: Violation, index: number, width: number): string 
   lines.push(...wrapText(`${icon} ${v.errorWhat}`, width - 2));
   lines.push(null);
   lines.push(...fieldLines("policy  ", v.policyViolated, width));
+  if (v.author) {
+    const authorText = v.author.email ? `${v.author.name} <${v.author.email}>` : v.author.name;
+    lines.push(...fieldLines("tác giả ", authorText, width));
+  }
   lines.push(...fieldLines("vì sao  ", v.why, width));
   lines.push(...fieldLines("cách sửa", v.howToFix, width));
   lines.push(null);

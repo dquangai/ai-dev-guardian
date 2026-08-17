@@ -82,6 +82,10 @@ export function scanForSecrets(diff: DiffResult): Violation[] {
           extraRequirement: "Remind me to rotate/revoke this secret.",
         }),
         source: "secret-scan",
+        // Raw (unmasked) match — used only to locate the violating line for git-blame author
+        // attribution (see git/blame.ts), never rendered; errorWhat above already carries the
+        // masked version shown to the user.
+        evidenceSnippet: match[0],
       });
     }
   }

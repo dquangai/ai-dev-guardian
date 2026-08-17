@@ -358,6 +358,9 @@ async function collectSurvivors(
           howToFix: v.howToFix,
         }),
         source: "llm-policy-check" as const,
+        // Already grounding-verified above (isEvidenceGrounded) to occur verbatim in the diff —
+        // used by the orchestrator to locate the violating line for git-blame author attribution.
+        evidenceSnippet: v.evidenceSnippet,
       },
     });
   }

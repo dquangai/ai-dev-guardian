@@ -34,6 +34,22 @@ export interface Violation {
     | "architecture-rules-check"
     | "dependency-rules-check"
     | "semgrep-check";
+  /**
+   * Verbatim code that matched this violation in the diff — set by secretScan (the raw regex
+   * match) and llmPolicyCheck (its grounding-verified evidenceSnippet). Used only internally by
+   * the orchestrator to look up the violating line for git-blame author attribution (see
+   * git/blame.ts) — never rendered directly. Absent for checks whose violation isn't tied to one
+   * specific added line (architecture/dependency checks span multiple files or target
+   * `package.json` as a whole).
+   */
+  evidenceSnippet?: string;
+  /**
+   * Last author of the violating line, from `git blame` — attached by the orchestrator after all
+   * checks run, so `promptToFix` can be routed to the right person instead of printed generically.
+   * Best-effort: absent if the line couldn't be resolved (evidence not grounded to one line, blame
+   * failed, not inside a git repo, ...) — never blocks the check.
+   */
+  author?: { name: string; email: string };
 }
 
 export interface CheckReport {

@@ -9,6 +9,9 @@ export interface Violation {
   location: string
   promptToFix: string
   source: 'secret-scan' | 'llm-policy-check' | 'architecture-check' | 'semgrep-check'
+  /** Last author of the violating line via `git blame`, when the server could resolve one — see
+   * src/report/types.ts on the API side. Absent for violations not tied to a single line. */
+  author?: { name: string; email: string }
 }
 
 export interface Policy {

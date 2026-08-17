@@ -368,6 +368,7 @@ Enterprise Standard, tham chiếu OWASP Top 10 / ISO 27001: Compliance Metadata 
 | Multi-Model Benchmark Matrix (`npm run eval:matrix`) | ✅ Done |
 | Publish công khai trên npm (`ai-dev-guardian@0.1.0`) | ✅ Done |
 | Smoke-test QWOANG UI trên browser thật | ✅ Done (17/08/2026) — phát hiện + sửa 1 bug hydration thật (`DemoModeSelector.tsx` lồng `<button>`), xem `bao_cao_dot_2.md` Phần V mục 2 |
+| Component ownership qua git blame | ✅ Done (17/08/2026) — `src/git/blame.ts` (`findEvidenceLine` + `blameLine`), gắn `author` vào violation cho secret-scan + LLM policy check (2 nguồn chiếm đa số vi phạm thật); `evidenceSnippet` dùng để tra dòng bị strip trước khi trả về, không lộ ra `audit-history.json`/API. Chưa làm cho architecture/dependency check (vi phạm không gắn với đúng 1 dòng, xem ghi chú trong code). |
 
 ### Đang chờ / Kế hoạch
 
@@ -376,12 +377,11 @@ trước, Tier 3 (Dashboard/OpenFGA) chờ Mentor chốt hướng thay vì làm 
 
 **Ưu tiên làm tiếp — rẻ, thuộc Tier 1 & 2, không phụ thuộc quyết định nào đang treo:**
 
-2 việc rẻ nhất trong nhóm này (bật `--ci` gate cứng, smoke-test QWOANG UI) đã xong 17/08/2026 —
-chuyển vào bảng "Đã hoàn thành" ở trên. Còn lại:
+3 việc rẻ nhất trong nhóm này (bật `--ci` gate cứng, smoke-test QWOANG UI, component ownership qua
+git blame) đã xong 17/08/2026 — chuyển vào bảng "Đã hoàn thành" ở trên. Còn lại 3 việc:
 
 | Tính năng | Mô tả | Vì sao ưu tiên |
 |---|---|---|
-| Component ownership qua git blame | Gắn `promptToFix` với đúng người đã viết dòng code vi phạm | Cải thiện trực tiếp trải nghiệm CLI cốt lõi — đúng tinh thần Tier 1 |
 | Reusable GitHub Action + shared diff-hash baseline dùng chung team | Publish workflow thành 1 GitHub Action, PR không phải trả phí quét lại diff đồng đội đã `PASS` | Giảm ma sát cài CI Gate (đúng lời hứa Tier 1 "1 dòng thay vì copy YAML"), baseline dùng chung là bước đệm tự nhiên tới Tier 2 |
 | Git Workflow policy category | Luật đặt tên branch, format commit message | Tất định, tái dùng đúng pattern policy-as-code sẵn có, không cần LLM |
 | Testing Standards policy category | Luật yêu cầu file test tương ứng khi thêm code mới | Tất định, rẻ, củng cố đúng văn hoá "phải có test" của chính team |
