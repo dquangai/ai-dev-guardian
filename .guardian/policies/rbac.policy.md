@@ -123,10 +123,18 @@ await api.post('/teams/users', { name, email, role: newUserRole, teamId: newUser
 ```
 
 ```ts
-// src/server/routes/teams.ts — người gọi API được xác thực qua middleware tập trung (không tin
-// role tự khai), giá trị role/teamId gửi lên bị validate lại trước khi ghi.
-teamsRouter.post("/users", requireAuth, requireSuperAdmin, (req, res) => {
-  const { role, teamId } = req.body ?? {};
+// src/server/routes/teams.ts — ĐÂY LÀ CODE THẬT ĐANG CHẠY, không phải ví dụ minh hoạ. Người gọi API
+// được xác thực qua middleware ÁP DỤNG CHO CẢ ROUTER (dòng `teamsRouter.use(requireSuperAdmin)` ở
+// đầu file — không phải tham số inline trên từng route), không tin role tự khai. req.body.role và
+// req.body.teamId của route POST /users CHỈ LÀ DỮ LIỆU cho user MỚI được tạo, bị validate lại
+// (isValidRole, loại trừ "super-admin", kiểm tra team tồn tại) trước khi ghi. KHÔNG được flag route
+// này chỉ vì nhìn thấy req.body.role/req.body.teamId trong hàm, phải tra middleware `.use()` phía
+// trên cùng file trước khi kết luận thiếu authorization.
+teamsRouter.use(requireSuperAdmin); // áp dụng cho MỌI route bên dưới, gồm cả /users
+
+teamsRouter.post("/users", async (req, res) => {
+  const role = req.body?.role;
+  const teamId = req.body?.teamId;
   if (!isValidRole(role) || role === "super-admin") return res.status(400).json({ error: "invalid_role" });
   if (teamId && !getTeam(teamId)) return res.status(404).json({ error: "team_not_found" });
   // ... tạo user mới với role/teamId đã validate
