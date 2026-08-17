@@ -236,7 +236,15 @@ Song song với Evaluation Suite, giao diện Dashboard đã được tái thi�
   * ✅ `npx tsc --noEmit` — biên dịch sạch 100%.
   * ✅ `npx vitest run` — **374/374 unit test PASS** trên 40 test file, không có test nào bị phá bởi thay đổi giao diện.
   * ✅ `npm --prefix web run build` — build production thành công (`vite build`, 1.829 module, không lỗi).
-  * ⏳ **Chưa có** smoke-test trực quan trên trình duyệt thật trong lần verify này — cần thực hiện trước khi coi là hoàn tất 100% theo Definition of Done.
+  * ✅ **Smoke-test trực quan trên trình duyệt thật (17/08/2026)** — dựng server thật, đăng nhập Super
+    Admin thật, click qua Overview/TeamManagement/Findings/Policies/EngineConfig/Diagnostics/NoteBook,
+    `console --errors` sạch. Phát hiện 1 bug thật lúc smoke-test: `DemoModeSelector.tsx` lồng
+    `<TechButton>` (tự render `<button>`) bên trong 1 `<button>` khác — HTML không hợp lệ, gây cảnh
+    báo hydration React thật. Đã sửa (đổi thành `<span>` thuần trang trí, không đụng `TechButton`
+    dùng chung — đã kiểm tra 10 chỗ dùng khác đều đúng, đây là chỗ duy nhất bị lồng), verify lại
+    `tsc --noEmit` sạch + `vitest run` 395/395 vẫn pass. Các 403 gặp khi test (Findings/Policies/
+    EngineConfig/Diagnostics) là RBAC hoạt động đúng thiết kế — Super Admin cố ý không có quyền vào
+    các trang vận hành theo Team, không phải lỗi.
 
 ---
 

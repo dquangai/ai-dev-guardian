@@ -363,10 +363,11 @@ Enterprise Standard, tham chiếu OWASP Top 10 / ISO 27001: Compliance Metadata 
 | Multi-Team Authorization bằng OpenFGA/ReBAC (song song RBAC cũ qua feature flag) | ✅ Done |
 | Chuẩn hoá Policy Doanh nghiệp — cấu trúc 5 phần, 9 policy, OWASP/ISO 27001 | ✅ Done |
 | Evaluation Suite — Golden Dataset 100 case, đo Recall/Precision/FPR bằng API thật | ✅ Done |
-| CI/CD Quality Gate cho Evaluation (`eval/checkThresholds.ts`, cờ `--ci`) | ✅ Done (code) — chưa bật gate cứng trong workflow, xem Mục 4.4 |
+| CI/CD Quality Gate cho Evaluation (`eval/checkThresholds.ts`, cờ `--ci`) | ✅ Done — đã bật gate cứng trong `.github/workflows/eval.yml` (17/08/2026), scoped cho trigger `pull_request`; `schedule`/`workflow_dispatch` vẫn informational |
 | Historical Analytics & Live Delta Engine cho Evaluation | ✅ Done |
 | Multi-Model Benchmark Matrix (`npm run eval:matrix`) | ✅ Done |
 | Publish công khai trên npm (`ai-dev-guardian@0.1.0`) | ✅ Done |
+| Smoke-test QWOANG UI trên browser thật | ✅ Done (17/08/2026) — phát hiện + sửa 1 bug hydration thật (`DemoModeSelector.tsx` lồng `<button>`), xem `bao_cao_dot_2.md` Phần V mục 2 |
 
 ### Đang chờ / Kế hoạch
 
@@ -375,10 +376,11 @@ trước, Tier 3 (Dashboard/OpenFGA) chờ Mentor chốt hướng thay vì làm 
 
 **Ưu tiên làm tiếp — rẻ, thuộc Tier 1 & 2, không phụ thuộc quyết định nào đang treo:**
 
+2 việc rẻ nhất trong nhóm này (bật `--ci` gate cứng, smoke-test QWOANG UI) đã xong 17/08/2026 —
+chuyển vào bảng "Đã hoàn thành" ở trên. Còn lại:
+
 | Tính năng | Mô tả | Vì sao ưu tiên |
 |---|---|---|
-| Bật cờ `--ci` làm gate cứng trong `eval.yml` | Hiện workflow chỉ chạy chế độ thông tin (luôn `exit 0`) — xem Mục 4.4 | Đã code xong, Recall/FPR hiện tại (96.1%/6.1%) còn dư rất xa ngưỡng chặn (85%/25%) — bật không rủi ro false-block |
-| Smoke-test QWOANG UI trên browser thật | Nợ verify còn sót từ Đợt 2 (Mục 8.2 cột UI, DoD chưa 100%) | Không phải feature mới, chỉ còn 1 bước verify |
 | Component ownership qua git blame | Gắn `promptToFix` với đúng người đã viết dòng code vi phạm | Cải thiện trực tiếp trải nghiệm CLI cốt lõi — đúng tinh thần Tier 1 |
 | Reusable GitHub Action + shared diff-hash baseline dùng chung team | Publish workflow thành 1 GitHub Action, PR không phải trả phí quét lại diff đồng đội đã `PASS` | Giảm ma sát cài CI Gate (đúng lời hứa Tier 1 "1 dòng thay vì copy YAML"), baseline dùng chung là bước đệm tự nhiên tới Tier 2 |
 | Git Workflow policy category | Luật đặt tên branch, format commit message | Tất định, tái dùng đúng pattern policy-as-code sẵn có, không cần LLM |

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Code, Crown, Globe2, Network, Shield, UserCheck, X } from 'lucide-react'
 import { api } from '../../lib/api'
 import type { Role } from '../../lib/rbac'
-import { TechButton } from '../ui/TechButton'
 
 interface DirectoryMember {
   id: string
@@ -110,9 +109,17 @@ export function DemoModeSelector({ onSelectUser, disabled }: DemoModeSelectorPro
             <p className="text-xs text-[#666666] font-medium mt-0.5">Chọn tài khoản demo theo Team & Vai trò</p>
           </div>
         </div>
-        <TechButton size="sm">
-          Xem danh sách
-        </TechButton>
+        {/* Purely decorative badge, not TechButton — TechButton renders its own <button>, and
+         * nesting it inside this trigger <button> is invalid HTML (React hydration warning) since
+         * this badge has no click behavior of its own; the outer button already handles the click. */}
+        <span className="tech-button group inline-flex items-center justify-between gap-4 px-3 py-1.5 text-[11px]">
+          <span className="inline-flex items-center gap-2 text-left truncate">
+            <span className="truncate">Xem danh sách</span>
+          </span>
+          <span className="shrink-0 font-mono text-sm leading-none transition-transform duration-200 ease-in-out group-hover:translate-x-[4px]">
+            →
+          </span>
+        </span>
       </button>
 
       {/* Team/Role Picker Modal */}

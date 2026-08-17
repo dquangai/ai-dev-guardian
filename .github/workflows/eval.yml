@@ -40,9 +40,22 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run Guardian eval
-        # Informational only (see eval/runEval.ts) — always exits 0, so this
-        # step never fails the job regardless of the Recall/FPR numbers.
+      - name: Run Guardian eval (PR — gates on DEFAULT_THRESHOLDS)
+        # --ci switches the exit code to fail the job when Recall/FPR regress past
+        # eval/checkThresholds.ts's DEFAULT_THRESHOLDS (see eval/runEval.ts). Scoped to
+        # pull_request only — a real regression on a PR that touches LLM-check code should
+        # block merge, but a nightly/manual run failing with nobody watching just adds noise.
+        if: github.event_name == 'pull_request'
+        run: npm run eval -- --ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Run Guardian eval (schedule/manual — informational only)
+        # No --ci: always exits 0 (see eval/runEval.ts) — nightly/workflow_dispatch runs still
+        # write history + post a PR comment when applicable, but never fail the job on their own.
+        if: github.event_name != 'pull_request'
         run: npm run eval
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
