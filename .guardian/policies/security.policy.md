@@ -308,6 +308,21 @@ await db.sessions.insert({ userId, refreshTokenHash: tokenHash });
     return { status: "succeeded", key: FAKE_STRIPE_TEST_KEY };
   }
   ```
+- Toàn bộ nội dung của đúng 2 file `src/server/routes/playgroundScenarios.ts` và
+  `web/src/lib/playgroundScenarios.ts` là DỮ LIỆU MẪU tĩnh cho tính năng Policy Playground — string
+  cố tình trông giống lỗ hổng thật (regex `.includes()` cho redirect, `ParseUnverified` cho JWT...)
+  nhưng KHÔNG BAO GIỜ được thực thi, chỉ dùng để tự dựng diff giả lập đưa lại vào chính check engine
+  (server) hoặc hiển thị trong code panel (web). Nhận diện qua ĐƯỜNG DẪN FILE chính xác — giống hệt
+  nguyên lý `test/fixtures/**` ở trên nhưng áp dụng cho đúng 2 path này (không nằm trong `test/`) —
+  không cần suy luận ngữ nghĩa "đây có phải data hay code thật" mỗi lần kiểm tra. Logic THẬT dùng
+  data này (`src/server/routes/playground.ts`) nằm ở file KHÁC, đã có `authzGate` riêng, không bị
+  carve-out này che. Ví dụ KHÔNG vi phạm:
+  ```ts
+  // File: src/server/routes/playgroundScenarios.ts — toàn bộ export ở file này là dữ liệu mẫu.
+  export const PLAYGROUND_SCENARIOS = {
+    jwt: { file: "sso/session.go", lines: ["token, _, err := parser.ParseUnverified(tokenString, &SessionClaims{})"] },
+  };
+  ```
 - Log thông báo lỗi hoặc kết quả kiểm tra không chứa credential thật — KHÔNG tính là vi phạm 2.2.
 - Quy tắc 2.3 chỉ áp dụng khi code thực sự nhận input từ nguồn không tin cậy (network request, form,
   file upload...) — không áp dụng cho hằng số nội bộ.

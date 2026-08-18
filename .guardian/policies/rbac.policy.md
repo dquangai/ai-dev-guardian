@@ -221,6 +221,12 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 ## 3. Approved Exceptions & Carve-outs
 
+- `src/server/app.ts` chỉ ĐĂNG KÝ router (`app.use("/api/x", xRouter)`), KHÔNG tự áp dụng phân quyền
+  tại chính dòng đó — mọi route thật (kể cả `playgroundRouter`, `auditRouter`, `teamsRouter`...) đều
+  tự gọi `authzGate()`/`requirePermission()` bên TRONG file router của chính nó (`src/server/routes/
+  *.ts`), không phải ở app.ts. KHÔNG được kết luận "thiếu auth" chỉ từ 1 dòng `app.use(...)` trong
+  app.ts mà chưa đối chiếu file router tương ứng — đây là kiến trúc chuẩn của mọi route hiện có
+  trong repo này, không phải ngoại lệ riêng cho 1 route nào.
 - Route xử lý dữ liệu công khai, không nhạy cảm (health-check, danh sách công khai) không bắt buộc
   qua lớp phân quyền. Ví dụ cụ thể: 1 route `GET` liệt kê danh mục tài khoản DEMO (tên/email/role,
   không phải user thật, không chứa password) để phục vụ màn hình đăng nhập demo hiển thị "chọn 1 tài

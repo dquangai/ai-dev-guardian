@@ -10,6 +10,7 @@ import { dashboardRouter } from "./routes/dashboard";
 import { engineConfigRouter } from "./routes/engineConfig";
 import { meRouter } from "./routes/me";
 import { notificationsRouter } from "./routes/notifications";
+import { playgroundRouter } from "./routes/playground";
 import { policiesRouter } from "./routes/policies";
 import { systemRouter } from "./routes/system";
 import { teamsRouter } from "./routes/teams";
@@ -36,6 +37,7 @@ export function createApp(): Express {
   app.use("/api/system", systemRouter);
   app.use("/api/engine-config", engineConfigRouter);
   app.use("/api/teams", teamsRouter);
+  app.use("/api/playground", playgroundRouter);
 
   // In dev, the frontend runs on its own Vite dev server (proxying /api here) and
   // web/dist doesn't exist. In a packaged/installed guardian, web/dist ships alongside

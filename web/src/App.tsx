@@ -15,6 +15,7 @@ import { BypassApprovals } from './pages/BypassApprovals'
 import { SystemDiagnostics } from './pages/SystemDiagnostics'
 import { EngineConfig } from './pages/EngineConfig'
 import { TeamManagement } from './pages/TeamManagement'
+import { PolicyPlayground } from './pages/PolicyPlayground'
 
 /** Catch-all target: send an authenticated user to their own landing page rather than a fixed
  * route, since "/" itself is Forbidden for a Dev — a plain <Navigate to="/"> would bounce them
@@ -71,6 +72,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['senior-dev']}>
                 <ProposePolicy />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="playground"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'senior-dev']}>
+                <PolicyPlayground />
               </ProtectedRoute>
             }
           />

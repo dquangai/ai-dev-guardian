@@ -15,6 +15,7 @@ export interface NavItem {
     | 'diagnostics'
     | 'engine-config'
     | 'teams'
+    | 'playground'
 }
 
 /**
@@ -43,6 +44,7 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { to: '/', label: 'Overview', icon: 'overview' },
     { to: '/findings', label: 'Findings', icon: 'findings' },
     { to: '/policies', label: 'Policies', icon: 'policies' },
+    { to: '/playground', label: 'Policy Playground', icon: 'playground' },
     { to: '/policy-approvals', label: 'Policy Approvals Hub', icon: 'policy-approvals' },
     { to: '/bypass-approvals', label: 'Bypass Approvals Hub', icon: 'bypass-approvals' },
     { to: '/diagnostics', label: 'System Diagnostics', icon: 'diagnostics' },
@@ -53,6 +55,7 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { to: '/findings', label: 'Findings', icon: 'findings' },
     { to: '/policies', label: 'Active Policies', icon: 'policies' },
     { to: '/policies/propose', label: 'Propose New Policy', icon: 'propose-policy' },
+    { to: '/playground', label: 'Policy Playground', icon: 'playground' },
     { to: '/policy-approvals', label: 'Policy Approvals Hub', icon: 'policy-approvals' },
     { to: '/bypass-approvals', label: 'Bypass Approvals Hub', icon: 'bypass-approvals' },
     { to: '/diagnostics', label: 'System Diagnostics', icon: 'diagnostics' },

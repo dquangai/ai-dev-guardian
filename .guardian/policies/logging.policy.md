@@ -156,6 +156,15 @@ export function loginHandler(req: Request, res: Response, authService: AuthServi
   ```
 - Nếu code log một hành vi đáng ngờ RỒI CHẶN LẠI ngay sau đó (return lỗi/throw, không tiếp tục thực
   thi hành động), đây là compliant — 2.3 chỉ vi phạm khi log xong vẫn tiếp tục thực thi bình thường.
+- Toàn bộ nội dung của đúng 2 file `src/server/routes/playgroundScenarios.ts` và
+  `web/src/lib/playgroundScenarios.ts` là DỮ LIỆU MẪU tĩnh cho tính năng Policy Playground — một
+  trong các kịch bản mẫu cố tình chứa đúng đoạn code KHÔNG audit log khi thu hồi token (giống ví dụ
+  ❌ Non-Compliant ở mục 2.1) để demo cho người dùng, nhưng KHÔNG BAO GIỜ được thực thi, chỉ dùng để
+  tự dựng diff giả lập đưa lại vào chính check engine (server) hoặc hiển thị trong code panel (web).
+  Nhận diện qua ĐƯỜNG DẪN FILE chính xác — giống hệt nguyên lý `test/fixtures/**` ở trên nhưng áp
+  dụng cho đúng 2 path này (không nằm trong `test/`) — không cần suy luận ngữ nghĩa "đây có phải
+  data hay code thật" mỗi lần kiểm tra. Logic THẬT dùng data này
+  (`src/server/routes/playground.ts`) nằm ở file KHÁC, không liên quan tới quy tắc này.
 
 ## 4. Automated Enforcement
 

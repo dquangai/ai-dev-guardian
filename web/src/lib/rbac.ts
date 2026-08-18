@@ -20,6 +20,7 @@ export type Permission =
   | 'bypass:approve'
   | 'engine-config:view'
   | 'engine-config:edit'
+  | 'playground:run'
 
 const ADMIN_PERMISSIONS: Permission[] = [
   'policy:view',
@@ -30,6 +31,7 @@ const ADMIN_PERMISSIONS: Permission[] = [
   'bypass:approve',
   'engine-config:view',
   'engine-config:edit',
+  'playground:run',
 ]
 
 const PERMISSIONS: Record<Role, Permission[]> = {
@@ -43,6 +45,7 @@ const PERMISSIONS: Record<Role, Permission[]> = {
     'policy:approve',
     'audit:view',
     'bypass:approve',
+    'playground:run',
   ],
   developer: ['policy:view', 'audit:run', 'audit:view', 'bypass:request'],
   auditor: ['policy:view', 'audit:view', 'engine-config:view'],

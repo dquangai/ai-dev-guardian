@@ -76,6 +76,15 @@ function ViolationRow({ violation }: { violation: Violation }) {
             <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">How to fix</div>
             <p className="mt-1 text-emerald-700 font-bold">{violation.howToFix}</p>
           </div>
+          {violation.author && (
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Component ownership (git blame)</div>
+              <p className="mt-1 text-slate-700 font-medium">
+                {violation.author.name}
+                {violation.author.email && <span className="font-mono text-slate-500"> &lt;{violation.author.email}&gt;</span>}
+              </p>
+            </div>
+          )}
           <div>
             <div className="flex items-center justify-between">
               <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Full prompt to fix</div>

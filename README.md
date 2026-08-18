@@ -45,6 +45,7 @@ copy-paste-ready fix prompt.
 - [Tiered Governance Architecture](#tiered-governance-architecture)
 - [Web Dashboard](#web-dashboard)
   - [RBAC](#rbac)
+  - [Policy Playground](#policy-playground)
   - [Multi-team authorization (OpenFGA)](#multi-team-authorization-openfga)
   - [Policy approval workflow](#policy-approval-workflow)
   - [Bypass requests](#bypass-requests)
@@ -491,6 +492,21 @@ server-side in `authMiddleware.ts`'s `requirePermission()`, never only hidden in
 | **Senior Dev-Lead** | Propose policy changes, approve policy change requests and bypass requests |
 | **Developer** | Run audits, request bypasses, read-only on policies |
 | **Auditor** | Read-only everywhere — no approve, no edit, no run |
+
+### Policy Playground
+
+`/playground` (Admin/Senior-Dev only — new `playground:run` permission) runs 2 fixed, hand-picked
+scenarios (a Go JWT `ParseUnverified` decode-as-verify bug, a React open-redirect via
+`.includes()`) through the real `runGuardianCheck()` engine and shows the real verdict — for
+testing a policy change against a known case before rolling it out, and for walking a new dev
+through what Guardian actually catches. Deliberately **not** a free-text paste box: the client only
+ever sends a `scenario` id (`"jwt" | "redirect"`), never code, so the route can't be used to run
+the LLM against arbitrary input (`src/server/routes/playground.ts`). A run is sandboxed — unlike
+Code Audit's `/audit/run`, it never calls `recordAudit()`, so it never touches real Audit History
+or OpenFGA tuples. The 2 scenarios' content lives in its own file on both sides
+(`src/server/routes/playgroundScenarios.ts`, `web/src/lib/playgroundScenarios.ts`) specifically so
+Guardian's own security policy can carve them out by exact file path — they're intentionally
+vulnerable-looking sample data, not real risk in the files that hold them.
 
 ### Multi-team authorization (OpenFGA)
 

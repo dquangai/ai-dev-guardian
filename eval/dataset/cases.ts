@@ -1,22 +1,8 @@
 import type { EvalCase } from "../types";
+import { newFileDiff } from "../../src/git/syntheticDiff";
 
-/**
- * Every case is a brand-new file (`--- /dev/null`) so no real on-disk fixture is needed —
- * `readFileContextSafe` just returns null for a path that doesn't exist, which is a normal,
- * fail-open path the real checker already handles (see src/checks/llm/fileContext.ts). File paths
- * live under "eval-samples/" specifically so they never collide with a real path in this repo.
- */
-function newFileDiff(file: string, contentLines: string[]): string {
-  return [
-    `diff --git a/${file} b/${file}`,
-    `new file mode 100644`,
-    `index 0000000..1111111`,
-    `--- /dev/null`,
-    `+++ b/${file}`,
-    `@@ -0,0 +1,${contentLines.length} @@`,
-    ...contentLines.map((line) => `+${line}`),
-  ].join("\n");
-}
+// File paths live under "eval-samples/" specifically so they never collide with a real path in
+// this repo (see newFileDiff's own doc comment for why a non-existent path is safe as input).
 
 function makeCase(
   id: string,
