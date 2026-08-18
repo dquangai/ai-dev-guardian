@@ -412,3 +412,56 @@ html.dark .glass-input {
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--text-secondary);
 }
+
+/* NAVY BLUE + CRIMSON RED + WHITE BACKGROUND PALETTE */
+.arcade-grid-bg {
+  background-color: #FFFFFF;
+  background-image: 
+    linear-gradient(to right, rgba(0, 32, 96, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 32, 96, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+html.dark .arcade-grid-bg {
+  background-color: #0A0F1D;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.arcade-command-box {
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 12px rgba(0, 32, 96, 0.04);
+}
+
+html.dark .arcade-command-box {
+  background-color: #111827;
+  border: 1px solid #1F2937;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* NOTEBOOK BOOK PAGE STYLES */
+.notebook-paper-sheet {
+  background-color: #FFFFFF;
+  background-image: 
+    linear-gradient(to right, rgba(0, 32, 96, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 32, 96, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  box-shadow: 0 10px 30px -5px rgba(0, 32, 96, 0.06), 0 4px 10px -2px rgba(0, 32, 96, 0.03);
+}
+
+html.dark .notebook-paper-sheet {
+  background-color: #111827;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+}
+
+
+
+
+

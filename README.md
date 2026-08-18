@@ -9,6 +9,8 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 [![GitHub stars](https://img.shields.io/github/stars/dquangai/ai-dev-guardian?style=social)](https://github.com/dquangai/ai-dev-guardian/stargazers)
 
+**[📖 Read the User Guide](https://dquangai.github.io/ai-dev-guardian/)**
+
 </div>
 
 ---

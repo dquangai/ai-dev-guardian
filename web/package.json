@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:notebook": "tsc -b && vite build --config vite.notebook.config.ts && mv dist-notebook/notebook.html dist-notebook/index.html",
+    "deploy:notebook": "npm run build:notebook && gh-pages -d dist-notebook -b gh-pages -r https://github.com/dquangai/ai-dev-guardian.git --nojekyll"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -22,6 +24,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "gh-pages": "^6.3.0",
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
