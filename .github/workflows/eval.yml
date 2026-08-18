@@ -1,0 +1,63 @@
+name: Guardian Eval
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Nightly — catches drift in the LLM's real detection quality even on days
+    # nobody touches a prompt/policy file (model updates, provider-side changes).
+    - cron: "0 2 * * *"
+  pull_request:
+    # Only PRs that can actually change detection quality — not every PR, to
+    # keep this off the noisy/cost path for unrelated changes.
+    paths:
+      - "src/checks/llm/**"
+      - "src/checks/llmPolicyCheck.ts"
+      - ".guardian/policies/**"
+      - "eval/**"
+
+# pull-requests: write lets the eval step post/update its report comment on the
+# PR (only taken when GITHUB_REF is actually a pull_request ref — see eval/report.ts).
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  guardian-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Guardian eval (PR — gates on DEFAULT_THRESHOLDS)
+        # --ci switches the exit code to fail the job when Recall/FPR regress past
+        # eval/checkThresholds.ts's DEFAULT_THRESHOLDS (see eval/runEval.ts). Scoped to
+        # pull_request only — a real regression on a PR that touches LLM-check code should
+        # block merge, but a nightly/manual run failing with nobody watching just adds noise.
+        if: github.event_name == 'pull_request'
+        run: npm run eval -- --ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Run Guardian eval (schedule/manual — informational only)
+        # No --ci: always exits 0 (see eval/runEval.ts) — nightly/workflow_dispatch runs still
+        # write history + post a PR comment when applicable, but never fail the job on their own.
+        if: github.event_name != 'pull_request'
+        run: npm run eval
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
