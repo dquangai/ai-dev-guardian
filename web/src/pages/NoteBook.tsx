@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowRight,
@@ -149,34 +149,87 @@ function LiveStepLine({ step }: { step: LiveStep }) {
   )
 }
 
-/** Reveals one VID_LIVE_STEPS entry per Enter/click — a presenter controls the pace live
- * instead of watching a fixed-speed autoplay loop, e.g. while narrating a screen recording. */
+/** Automatic terminal execution simulation — types commands character-by-character
+ * and streams outputs/violations with natural execution pauses and auto-looping. */
 function GuardianLiveDemo({ isVi }: { isVi: boolean }) {
-  const [stepIdx, setStepIdx] = useState(0)
+  const [completedSteps, setCompletedSteps] = useState<LiveStep[]>([])
+  const [activeStepIdx, setActiveStepIdx] = useState(0)
+  const [typedText, setTypedText] = useState('')
   const bodyRef = useRef<HTMLDivElement>(null)
-  const done = stepIdx >= VID_LIVE_STEPS.length
+
+  // Auto-scroll terminal body as content arrives
+  useEffect(() => {
+    if (bodyRef.current) {
+      bodyRef.current.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' })
+    }
+  }, [completedSteps, typedText])
 
   useEffect(() => {
-    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' })
-  }, [stepIdx])
-
-  const advance = () => setStepIdx((i) => Math.min(i + 1, VID_LIVE_STEPS.length))
-  const restart = () => setStepIdx(0)
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      advance()
+    // End of simulation — wait 5 seconds and restart cleanly
+    if (activeStepIdx >= VID_LIVE_STEPS.length) {
+      const loopTimer = setTimeout(() => {
+        setCompletedSteps([])
+        setActiveStepIdx(0)
+        setTypedText('')
+      }, 5000)
+      return () => clearTimeout(loopTimer)
     }
+
+    const currentStep = VID_LIVE_STEPS[activeStepIdx]
+
+    if (currentStep.type === 'cmd') {
+      // Type command character by character with realistic speed variation
+      if (typedText.length < currentStep.text.length) {
+        const charTimer = setTimeout(() => {
+          setTypedText(currentStep.text.slice(0, typedText.length + 1))
+        }, 22 + Math.floor(Math.random() * 18))
+        return () => clearTimeout(charTimer)
+      } else {
+        // Command text complete -> pause before executing/showing output
+        const cmdPauseTimer = setTimeout(() => {
+          setCompletedSteps((prev) => [...prev, currentStep])
+          setTypedText('')
+          setActiveStepIdx((idx) => idx + 1)
+        }, 450)
+        return () => clearTimeout(cmdPauseTimer)
+      }
+    } else if (currentStep.type === 'out') {
+      // Output log streaming pause
+      const outTimer = setTimeout(() => {
+        setCompletedSteps((prev) => [...prev, currentStep])
+        setActiveStepIdx((idx) => idx + 1)
+      }, 300)
+      return () => clearTimeout(outTimer)
+    } else if (currentStep.type === 'block-banner' || currentStep.type === 'pass-banner') {
+      // Security scan verdict pause
+      const bannerTimer = setTimeout(() => {
+        setCompletedSteps((prev) => [...prev, currentStep])
+        setActiveStepIdx((idx) => idx + 1)
+      }, 750)
+      return () => clearTimeout(bannerTimer)
+    } else if (currentStep.type === 'violation') {
+      // Policy violation detail card pause
+      const violationTimer = setTimeout(() => {
+        setCompletedSteps((prev) => [...prev, currentStep])
+        setActiveStepIdx((idx) => idx + 1)
+      }, 850)
+      return () => clearTimeout(violationTimer)
+    }
+  }, [activeStepIdx, typedText])
+
+  const restart = () => {
+    setCompletedSteps([])
+    setActiveStepIdx(0)
+    setTypedText('')
   }
 
+  const isDone = activeStepIdx >= VID_LIVE_STEPS.length
+  const currentStep = !isDone ? VID_LIVE_STEPS[activeStepIdx] : null
+
   return (
-    <div
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-      className="rounded-2xl bg-[#0A0F1D] border border-[#1F2937] overflow-hidden shadow-2xl text-left outline-none focus:ring-2 focus:ring-[#3B82F6]/50"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-[#1F2937] bg-[#0F172A]">
+    <div className="rounded-2xl bg-[#0A0F1D] border border-[#1F2937] overflow-hidden shadow-2xl text-left outline-none">
+      {/* Terminal Header Bar */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#1F2937] bg-[#0F172A]">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#FF5F56] inline-block" />
           <span className="w-3 h-3 rounded-full bg-[#FFBD2E] inline-block" />
@@ -186,49 +239,68 @@ function GuardianLiveDemo({ isVi }: { isVi: boolean }) {
             dev@v-id — guardian check — zsh
           </span>
         </div>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1E293B] text-[#60A5FA] border border-[#3B82F6]/30 font-bold">
-          {isVi ? 'BẤM ENTER ĐỂ TIẾP TỤC' : 'PRESS ENTER TO CONTINUE'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-[10px] font-mono text-[#3FB950] bg-[#3FB950]/10 px-2 py-0.5 rounded border border-[#3FB950]/20 font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#3FB950] animate-pulse" />
+            AUTO RUN
+          </span>
+        </div>
       </div>
 
-      <div ref={bodyRef} className="p-6 font-mono text-xs sm:text-sm space-y-1.5 h-[420px] overflow-y-auto">
-        {VID_LIVE_STEPS.slice(0, stepIdx).map((step, i) => (
+      {/* Terminal Body */}
+      <div ref={bodyRef} className="p-6 font-mono text-xs sm:text-sm space-y-1.5 h-[440px] overflow-y-auto">
+        {completedSteps.map((step, i) => (
           <LiveStepLine key={i} step={step} />
         ))}
-        {!done && (
+
+        {/* Active typing command line */}
+        {currentStep && currentStep.type === 'cmd' && (
+          <div className={`flex items-start gap-2.5 ${currentStep.gapBefore ? 'mt-3' : ''}`}>
+            <span className="text-[#3FB950] font-bold select-none">$</span>
+            <span className="text-[#F0F6FC] font-medium">
+              {typedText}
+              <span className="inline-block w-[8px] h-[16px] -mb-[3px] ml-0.5 bg-[#60A5FA] animate-pulse" />
+            </span>
+          </div>
+        )}
+
+        {/* Cursor indicator when executing output or scanning */}
+        {currentStep && currentStep.type !== 'cmd' && (
           <div className="flex items-center gap-2.5 pt-1">
+            <span className="inline-block w-[8px] h-[16px] -mb-[3px] bg-[#60A5FA] animate-pulse" />
+          </div>
+        )}
+
+        {/* Terminal prompt when simulation completes before loop */}
+        {isDone && (
+          <div className="flex items-center gap-2.5 pt-2">
             <span className="text-[#3FB950] font-bold select-none">$</span>
             <span className="inline-block w-[8px] h-[16px] -mb-[3px] bg-[#60A5FA] animate-pulse" />
           </div>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between px-4 py-3 bg-[#0F172A] border-t border-[#1F2937] font-mono text-xs gap-3">
-        <span className="text-[#94A3B8] text-[11px]">
-          {done
-            ? isVi
-              ? 'Hết mô phỏng'
-              : 'End of walkthrough'
-            : isVi
-              ? `Bước ${stepIdx + 1} / ${VID_LIVE_STEPS.length}`
-              : `Step ${stepIdx + 1} of ${VID_LIVE_STEPS.length}`}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={restart}
-            className="px-2.5 py-1 rounded text-xs font-mono border border-[#334155] bg-[#1E293B] text-[#94A3B8] hover:text-[#F0F6FC] transition-colors cursor-pointer"
-          >
-            {isVi ? '↻ Xem lại' : '↻ Restart'}
-          </button>
-          {!done && (
-            <button
-              onClick={advance}
-              className="px-3 py-1 rounded text-xs font-mono border border-[#C8102E] bg-[#C8102E] text-white font-bold hover:bg-[#A00C24] transition-colors cursor-pointer flex items-center gap-1"
-            >
-              {isVi ? 'Dòng tiếp' : 'Next'} <ArrowRight size={12} />
-            </button>
-          )}
+      {/* Terminal Bottom Status Bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-[#0F172A] border-t border-[#1F2937] font-mono text-xs text-[#64748B]">
+        <div className="flex items-center gap-3 text-[11px]">
+          <span className="text-[#3FB950] font-semibold">● zsh</span>
+          <span className="hidden sm:inline text-[#8B949E]">
+            {isDone
+              ? isVi
+                ? 'Mô phỏng hoàn tất (Tự động lặp lại)'
+                : 'Walkthrough finished (Auto looping)'
+              : isVi
+                ? 'Đang tự động chạy lệnh...'
+                : 'Auto executing commands...'}
+          </span>
         </div>
+        <button
+          onClick={restart}
+          className="text-[11px] font-mono text-[#94A3B8] hover:text-[#F0F6FC] transition-colors cursor-pointer bg-transparent border-0 flex items-center gap-1"
+          title={isVi ? 'Chạy lại từ đầu' : 'Restart simulation'}
+        >
+          ↻ {isVi ? 'Chạy lại' : 'Replay'}
+        </button>
       </div>
     </div>
   )
@@ -520,23 +592,7 @@ export function NoteBook() {
         </section>
 
         {/* 3. SELF-ANALYSIS DEMO */}
-        <section id="self-analysis-demo" className="space-y-6 scroll-mt-24">
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-[#C8102E] uppercase bg-[#C8102E]/10 px-3 py-1 rounded-md border border-[#C8102E]/20">
-              <Terminal size={14} className="text-[#C8102E]" /> {isVi ? 'DEMO VAI TRÒ DEV' : 'DEV-SEAT DEMO'}
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#002060] dark:text-[#F8FAFC]">
-              {isVi
-                ? 'Guardian bắt sống 2 lỗi bảo mật thật trong luồng SSO của V-ID'
-                : 'Guardian catching two real security bugs in a V-ID SSO flow'}
-            </h2>
-            <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8]">
-              {isVi
-                ? 'Không phải autoplay — bấm Enter hoặc "Dòng tiếp" để tự tay chạy từng bước như trên terminal thật, đúng tốc độ khi thuyết trình.'
-                : "Not autoplay — press Enter or \"Next\" to drive each step yourself, at your own presenting pace."}
-            </p>
-          </div>
-
+        <section id="self-analysis-demo" className="scroll-mt-24">
           <GuardianLiveDemo isVi={isVi} />
         </section>
 
