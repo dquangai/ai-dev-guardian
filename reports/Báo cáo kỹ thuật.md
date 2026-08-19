@@ -2,7 +2,7 @@
 
 ### AI Engineering Governance Agent — Người gác cổng chất lượng code trước mỗi lần `git push`
 
-*Phiên bản: v0.1.0 — Level 5 Enterprise Automation · Ngày cập nhật: 13/08/2026*
+*Phiên bản: v0.1.0 — Level 5 Enterprise Automation · Ngày cập nhật: 19/08/2026*
 
 > Đã publish công khai trên npm (`ai-dev-guardian@0.1.0`) · **Recall 96.1% / Precision 94.2% / FPR
 > 6.1%** đo thật trên Golden Dataset 100 case (Mục 4) · Dashboard quản trị + RBAC 4 vai trò +
@@ -203,10 +203,10 @@ nhân gốc dứt điểm (`tp-28`); 1 carve-out chưa đủ ổn định qua nh
 đổi policy), và mọi PR đụng `src/checks/llm/**`, `.guardian/policies/**` hoặc `eval/**` — kết quả
 tự động post/update thành 1 comment trên PR.
 
-> ⚠️ **Điểm cần quyết định — chưa phải gate cứng**: workflow hiện chạy `npm run eval` (chế độ
-> thông tin, luôn `exit 0`) — chưa dùng cờ `--ci` (`eval/checkThresholds.ts`, đã code xong) vốn tự
-> chặn PR khi Recall < 85% hoặc FPR > 25%. Số liệu đã hiển thị tự động trên mọi PR liên quan,
-> nhưng chưa PR nào bị chặn cứng vì tụt điểm — bật cờ này là 1 quyết định còn treo (xem Mục 9).
+> ✅ **Đã bật gate cứng (17/08/2026)**: workflow chạy cờ `--ci` (`eval/checkThresholds.ts`) cho
+> trigger `pull_request` — tự chặn PR khi Recall < 85% hoặc FPR > 25%. Trigger `schedule`/
+> `workflow_dispatch` vẫn giữ chế độ thông tin (`npm run eval`, luôn `exit 0`), vì không gắn với 1
+> PR cụ thể nào để chặn. Chi tiết xem Phụ lục A — Nhật ký phát triển.
 
 `eval/history.ts` ghi snapshot bất biến mỗi lần `npm run eval`, tự so Delta có màu với lần chạy gần
 nhất; `eval/runBenchmark.ts` (`npm run eval:matrix`) đối sánh `gpt-4o` với `gpt-4o-mini` trên cùng
@@ -325,7 +325,8 @@ Ranh giới Team là **quan hệ (tuple)** kiểu Google Zanzibar, không phải
 - Cơ chế trên chỉ **thật sự thực thi** khi biến môi trường `GUARDIAN_AUTHZ_MODE=fga` được bật.
   Mặc định (không set), mọi route vẫn chạy RBAC phẳng cũ, **không lọc theo team** — ranh giới Team
   hiển thị đúng trên UI nhưng chưa bị khoá ở tầng quyền cho tới khi Ops chủ động bật flag này
-  trong môi trường thật (xem Mục 9).
+  trong môi trường thật. Việc bật flag này ở môi trường production vẫn đang chờ Mentor chốt hướng
+  đầu tư cho Dashboard/Tier 3 (Mục 8.0) trước khi triển khai.
 
 ### 8.4. Chuẩn hoá Policy Doanh nghiệp
 
@@ -334,78 +335,61 @@ Toàn bộ 9 file policy đang áp dụng (`security`, `rbac`, `coding-conventio
 Enterprise Standard, tham chiếu OWASP Top 10 / ISO 27001: Compliance Metadata → Executive Summary
 → Normative Directives (ví dụ ❌/✅ code thật) → Approved Exceptions → Remediation & Escalation.
 
-## 9. Lộ trình tương lai
+## 9. Lộ trình tương lai — Định hướng khi đưa vào quy trình tự động hóa doanh nghiệp
 
-### Đã hoàn thành
+Phần này **không liệt kê việc đã làm** (xem Phụ lục A — Nhật ký phát triển ở cuối tài liệu) mà mô
+tả hướng phát triển nếu AI Dev Guardian được đưa từ "công cụ 1 dev/1 repo tự cài" thành 1 mắt xích
+chính thức trong quy trình tự động hóa phát triển phần mềm — trước hết ở quy mô **VinSmart Future**
+(nội bộ V-ID và các team kỹ thuật khác trong tập đoàn dùng chung GitLab), sau đó là hướng đi khả thi
+cho **bất kỳ doanh nghiệp nào khác** áp dụng cùng mô hình Tiered Governance (Mục 8.0) cho pipeline
+CI/CD của họ.
 
-| Tính năng | Trạng thái |
-|---|---|
-| Secret scan (regex, deterministic) | ✅ Done |
-| LLM policy check (Claude/GPT, Policy-as-Code) | ✅ Done |
-| Grounding evidence + policyId enum | ✅ Done |
-| Chain-of-thought reasoning field | ✅ Done |
-| AST comment/string annotation | ✅ Done |
-| Self-consistency cho critical | ✅ Done |
-| AI-as-a-Judge (2nd pass) | ✅ Done |
-| Prompt-as-a-Fix (template dùng chung, tiếng Anh) | ✅ Done |
-| Diff-hash caching (SHA-256, LRU 20) | ✅ Done |
-| RAG-lite (TS/JS, Python, C/C++, Go) | ✅ Done |
-| Circular dependency detection (madge) | ✅ Done |
-| Semgrep integration (tuỳ chọn) | ✅ Done |
-| Interactive pre-push git hook | ✅ Done |
-| CI / GitHub Action gate (`--ci`, diff PR, comment tự động lên PR) | ✅ Done |
-| Architecture Rules (`from`/`forbid` trong policy, chặn import trái layer) | ✅ Done |
-| Policy-driven severity cho circular dependency (không còn hardcode `medium`) | ✅ Done |
-| Dependency Rules (`dependencyAllowlist` trong policy, chặn dependency mới chưa duyệt) | ✅ Done |
-| Web Dashboard (React/Vite/Tailwind) + API (Express) | ✅ Done |
-| RBAC 4 vai trò + xác thực JWT thật (thay header tự nhận role) | ✅ Done |
-| Policy Change Request / Bypass Request — vòng đời duyệt có kiểm soát | ✅ Done |
-| Multi-Team Authorization bằng OpenFGA/ReBAC (song song RBAC cũ qua feature flag) | ✅ Done |
-| Chuẩn hoá Policy Doanh nghiệp — cấu trúc 5 phần, 9 policy, OWASP/ISO 27001 | ✅ Done |
-| Evaluation Suite — Golden Dataset 100 case, đo Recall/Precision/FPR bằng API thật | ✅ Done |
-| CI/CD Quality Gate cho Evaluation (`eval/checkThresholds.ts`, cờ `--ci`) | ✅ Done — đã bật gate cứng trong `.github/workflows/eval.yml` (17/08/2026), scoped cho trigger `pull_request`; `schedule`/`workflow_dispatch` vẫn informational |
-| Historical Analytics & Live Delta Engine cho Evaluation | ✅ Done |
-| Multi-Model Benchmark Matrix (`npm run eval:matrix`) | ✅ Done |
-| Publish công khai trên npm (`ai-dev-guardian@0.1.0`) | ✅ Done |
-| Smoke-test QWOANG UI trên browser thật | ✅ Done (17/08/2026) — phát hiện + sửa 1 bug hydration thật (`DemoModeSelector.tsx` lồng `<button>`), xem `bao_cao_dot_2.md` Phần V mục 2 |
-| Component ownership qua git blame | ✅ Done (17/08/2026) — `src/git/blame.ts` (`findEvidenceLine` + `blameLine`), gắn `author` vào violation cho secret-scan + LLM policy check (2 nguồn chiếm đa số vi phạm thật); `evidenceSnippet` dùng để tra dòng bị strip trước khi trả về, không lộ ra `audit-history.json`/API. Chưa làm cho architecture/dependency check (vi phạm không gắn với đúng 1 dòng, xem ghi chú trong code). |
-| Git Workflow policy category | ✅ Done (17/08/2026) — `src/checks/gitWorkflowCheck.ts`, policy khai báo `gitWorkflow: [{ branchPattern, exemptBranches, commitPattern }]` trong frontmatter (`.guardian/policies/git-workflow.policy.md`), kiểm tra tất định qua `git rev-parse`/`git log -1` (`src/git/gitMeta.ts`), không qua LLM. `exemptBranches: ["master", "main"]` để không tự chặn dogfooding trên chính branch làm việc hiện tại. |
-| Reusable GitHub Action + shared diff-hash baseline dùng chung team | ✅ Done code (17/08/2026) — `action.yml` ở root repo, composite action đóng gói checkout+setup-node+install+check; baseline dùng chung qua `actions/cache/restore` + `actions/cache/save` với key `guardian-baseline-${{ github.run_id }}` + `restore-keys` prefix (pattern chuẩn GitHub cho cache tăng dần), cache đúng file `.git/guardian_cache.json` đã có sẵn — không đổi cơ chế cache cục bộ. **Chưa verify được bằng 1 lần chạy GitHub Actions thật** (môi trường phiên làm việc này không có quyền trigger workflow thật trên GitHub) — chỉ validate được YAML hợp lệ (`js-yaml`) + đối chiếu đúng schema `action.yml` (inputs/runs/steps, `shell: bash` trên mọi step `run:`). Publish tag `v1` trên repo GitHub thật (`old-origin`) là bước thủ công còn lại, cần bạn tự làm — không phải việc tôi tự ý thực thi được từ đây. |
-| Testing Standards policy category | ✅ Done (17/08/2026) — `src/checks/testingStandardsCheck.ts`, policy khai báo `testingStandards: [{ sourcePattern, testPattern }]` (`.guardian/policies/testing-standards.policy.md`). Không bắt buộc khớp tên 1-1 (repo tự nó không theo quy ước đó — `auth.ts`/`authRouter.test.ts`), chỉ yêu cầu diff có đụng ÍT NHẤT 1 file test bất kỳ. **Bug thật phát hiện qua dogfood, đã sửa cùng lần này:** `orchestrator.ts` truyền `filteredDiff` (đã bị `excludeIgnoredFiles()` lọc sạch `test/**`) cho check này — khiến `testPattern` không bao giờ khớp được gì, tự chặn mọi push dù có test thật đi kèm. Đổi sang truyền `diff` gốc (chưa lọc) cho riêng check này. |
-| Policy Playground (`/playground` trên Dashboard) | ✅ Done (18/08/2026) — Admin/Senior-Dev chạy **4 kịch bản** cố định (JWT `ParseUnverified` Go, open redirect `.includes()` React, raw JWT import bỏ qua wrapper nội bộ, `jwt.decode()` chỉ hiển thị UI) qua đúng `runGuardianCheck()` thật, không giả lập; sandbox thật (không gọi `recordAudit`, đã verify md5 `audit-history.json` không đổi sau nhiều lần chạy cả 4 kịch bản). Client chỉ gửi `scenario` id, không gửi code tự do (chặn rủi ro lạm dụng LLM call). Dữ liệu kịch bản tách riêng 2 file (`src/server/routes/playgroundScenarios.ts`, `web/src/lib/playgroundScenarios.ts`) để carve-out theo path chính xác trong `security.policy.md`/`rbac.policy.md` — bản thân tính năng này khi build đã tự kích hoạt vài false-positive thật (LLM đọc nhầm dữ liệu mẫu là code lỗi thật), xử lý bằng carve-out theo path thay vì suy luận ngữ nghĩa, giống nguyên lý `test/fixtures/**` sẵn có. Verify sống trên browser thật (Playwright, LLM key thật): 3 kịch bản đầu trả BLOCK thật, kịch bản thứ 4 trả PASS thật ("No violations found."), đổi kịch bản mượt, `console --errors` sạch (chỉ có lỗi TLS-intercept của sandbox với font ngoài, không liên quan code). <br><br>**Phát hiện + fix thật dọc đường**: kịch bản PASS ban đầu block 5/5 lần dù policy đã có carve-out y hệt — nguyên nhân là demo code thiếu 2 dòng comment giải thích ý định mà chính ví dụ compliant trong `security.policy.md` có; thêm đúng 2 comment đó → PASS ổn định. Minh chứng LLM check cần bằng chứng tường minh trong diff, không tự suy luận ý định ngầm. <br><br>**Panel "So sánh với AI thường"**: test tay thật (không phải giả lập) bằng cách gọi trực tiếp API model gpt-4o (KHÔNG phải sản phẩm ChatGPT/Copilot thật — phiên làm việc không có quyền truy cập trình duyệt/extension của 2 sản phẩm đó) trên cả 4 đoạn code, ngày 18/08/2026. Kết quả thật: GPT-4o bắt đúng 3/4 lỗi bảo mật chung (JWT không verify, open redirect, và đọc đúng ý định "chỉ hiển thị UI" ở case PASS) — chỉ bỏ sót đúng 1 case: quy ước kiến trúc nội bộ "phải dùng wrapper `../auth/tokenVerifier`", vì đây là chính sách riêng của V-ID không nằm trong training data. UI chỉ hiển thị so sánh ở đúng 1 case này (kèm nhãn ngày + model + disclaimer rõ ràng), không phóng đại thành "AI thường sai cả 4 case" như bản nháp positioning ban đầu — đã sửa lại theo đúng dữ liệu test thật. <br><br>**LLM non-determinism ghi nhận thêm**: `guardian check --staged` trên chính diff tính năng này cho kết quả khác nhau qua nhiều lần chạy liên tiếp (2 vi phạm LOW/MEDIUM → 3 vi phạm lẫn rate-limit 429 → 1 vi phạm MEDIUM có lý luận dạng giả định "nếu X thì có thể Y" → PASS) — tất cả đều nhắm vào `src/git/syntheticDiff.ts`/`src/server/routes/playground.ts`, cùng dạng thin-controller/pure-formatter đã tồn tại y hệt, không bị flag, ở `audit.ts`. Kết luận: noise của model, không sửa code — giữ nguyên theo đúng nguyên tắc "không thêm abstraction ngoài yêu cầu thực tế" (CLAUDE.md). <br><br>**Sự cố + sửa (19/08/2026)**: 1 lượt sửa file sau đó đã thay nội dung `genericAiComparison` thật bằng nội dung BỊA — gán câu trả lời tự viết cho "Claude 3.5 Sonnet / OpenAI Codex" kèm khung UI giả lập terminal, ngày ghi "2026-08-18" như thể là kết quả test thật, dù chưa từng gọi 2 model đó (môi trường này không có `ANTHROPIC_API_KEY` thật — đã verify bằng cách đọc trực tiếp `.env`, giá trị rỗng). 3/4 nội dung bịa còn ngược hẳn kết quả thật đã ghi ở trên (bịa nói AI thường bỏ sót JWT/redirect/decodeDisplay, trong khi GPT-4o thật bắt đúng cả 3). Phát hiện qua đối chiếu trực tiếp, đã khôi phục lại đúng 4 câu trả lời GPT-4o thật đã ghi nhận, bỏ khung terminal giả. <br><br>**Kịch bản thứ 5 (19/08/2026)**: thêm `noAuditLogOnRevoke` (Go, `sso/revokeHandler.go`) — thu hồi token thành công, xử lý lỗi đúng, không có code smell nào, chỉ THIẾU 1 dòng audit log theo `logging.policy.md` 2.1 (thu hồi token là sự kiện bảo mật bắt buộc phải log actor/action/target/timestamp). Test tay thật GPT-4o lặp lại 4/4 lần đều kết luận "no significant bugs/security issues" — khoảng cách RÕ và ỔN ĐỊNH nhất trong 5 case (so với `importRules`, case này không có bất kỳ dấu hiệu nào để nghi ngờ nếu không biết policy nội bộ). Thêm carve-out path-exact tương ứng vào `logging.policy.md` (2 file `playgroundScenarios.ts` là dữ liệu mẫu, không phải code lỗi thật) — verify sống: BLOCK thật qua `llm-policy-check` (MEDIUM), sandbox giữ nguyên (`audit-history.json` không đổi), 442/442 test pass, `tsc --noEmit` sạch cả root và web. |
+### 9.1. Gate bắt buộc trong pipeline CI/CD nội bộ, không chỉ hook cá nhân
 
-| `npm audit` remediation | ✅ Một phần Done (19/08/2026) — `nanoid` (HIGH, transitive qua `vitest→vite→postcss`) đã fix bằng `npm audit fix` (patch version, không breaking), verify 442/442 test pass + `tsc --noEmit` sạch. <br><br>**Đã thử + revert có chủ đích**: nhóm lỗ hổng còn lại (`esbuild` moderate, `vite` high, `vitest` critical — cùng gốc CVE `GHSA-67mh-4wv8-2f99`, dev server esbuild chấp nhận request từ website ngoài) chỉ fix được qua `npm audit fix --force`, nâng `vitest` lên v4.1.10 (breaking change). Đã thử thật: nâng version xong, `tsc --noEmit` sạch nhưng `npx vitest run` gãy 6/442 test (toàn bộ ở `test/fgaClient.test.ts`) — lỗi `is not a constructor` do vitest v4 đổi cách `vi.mock()` xử lý mock factory trả về class/constructor, không phải bug code hiện có. Theo đúng nguyên tắc Revert on Failure: `git checkout -- package.json package-lock.json` rồi chạy lại `npm audit fix` (không force) để về đúng state an toàn, verify lại 442/442 pass. <br><br>**Còn tồn đọng, ghi nhận rõ thay vì giấu**: 5 vulnerability (3 moderate, 1 high, 1 critical theo nhãn rollup của npm) vẫn còn trong devDependencies (`esbuild`/`vite`/`vitest`) — không ảnh hưởng production (không đi vào `dist/` hay bundle web), chỉ khai thác được nếu đang chạy dev server cục bộ (`vite dev`/`vitest --ui`) VÀ bị dụ mở trang độc hại cùng lúc. Rủi ro thực tế thấp, nhưng fix đầy đủ đòi hỏi migrate `test/fgaClient.test.ts` (và có thể file khác) sang cú pháp `vi.mock()` của vitest v4 — việc riêng, chưa làm trong lần này. |
+Hiện `guardian install-hook` là lựa chọn tự nguyện của từng dev, dễ bị gỡ hoặc bypass âm thầm
+(`git push --no-verify`). Định hướng: viết `.gitlab-ci.yml` wire `guardian check --ci` thành
+required pipeline job trên GitLab nội bộ (song song bản GitHub Action `--ci` đã có cho repo
+public) — biến Guardian thành gate cấp tổ chức, không phụ thuộc việc từng dev có tự cài hook hay
+không.
 
-### Đang chờ / Kế hoạch
+### 9.2. Policy Package trung tâm, rollout đa repo (Tier 2 vận hành thật)
 
-Đánh giá lại 17/08/2026 theo đúng khung ưu tiên Tiered Governance (Mục 8.0): dồn lực Tier 1 & 2
-trước, Tier 3 (Dashboard/OpenFGA) chờ Mentor chốt hướng thay vì làm trước rồi có thể phải bỏ.
+9 policy hiện sống trong 1 repo duy nhất. Định hướng: publish `@vinsmartfuture/guardian-policies`
+lên internal NPM registry, versioned; mỗi service tự `npm install` rồi mở rộng thêm rule riêng theo
+domain, đồng bộ chuẩn chung qua bump version thay vì copy-paste thủ công giữa các repo — đúng mô
+hình Tier 2 đã phác thảo ở Mục 8.0, nhưng cần hạ tầng registry thật mới vận hành được ở quy mô
+nhiều team.
 
-**Nhóm "Làm tiếp" (Tier 1 & 2, không phụ thuộc quyết định nào đang treo) đã xong toàn bộ 17/08/2026**
-— tất cả đã chuyển vào bảng "Đã hoàn thành" ở trên, không còn việc nào đang mở trong nhóm này.
+### 9.3. Auto-remediation có kiểm soát, không phải auto-patch mù
 
-> ⚠️ **Lưu ý khi đọc mục "Reusable GitHub Action" ở bảng Đã hoàn thành phía trên:** đây là tính năng
-> cho bản npm public trên GitHub (`old-origin`, org `dquangai`) — repo V-ID nội bộ đang dùng
-> **GitLab** (`gitlab.vinsmartfuture.tech`) làm `origin` thật, chưa có `.gitlab-ci.yml`. `.github/
-> workflows/*.yml` trong repo này (kể cả cờ `--ci` mới bật ở mục trên) **không tự chạy** trên GitLab
-> — xác nhận đã hỏi lại và chốt: GitHub chỉ phục vụ bản public, không liên quan vận hành V-ID. Nếu
-> sau này team V-ID cần CI Gate thật trên GitLab, đó là 1 việc khác (viết `.gitlab-ci.yml`), chưa
-> nằm trong phạm vi các mục đã Done ở đây.
+Nguyên tắc cốt lõi (Mục 2) vẫn giữ nguyên: Guardian không tự sửa code. Định hướng mở rộng thận
+trọng: với nhóm vi phạm có fix xác định gần như 100% (ví dụ thiếu đúng 1 dòng audit log theo
+template cố định), có thể tự mở 1 PR nháp đính kèm `promptToFix` để dev chỉ cần review/approve
+thay vì tự tay copy-paste — vẫn giữ nguyên tắc con người quyết định cuối cùng, chỉ giảm số bước
+thao tác thủ công, không tự động merge.
 
-**Hold — chờ Mentor chốt hướng Dashboard trước khi làm (Mục 8.0, Tier 3):**
+### 9.4. ChatOps & tích hợp hệ thống nội bộ
 
-| Tính năng | Mô tả | Vì sao hold |
-|---|---|---|
-| OpenFGA production & Dashboard tập trung | Đưa `GUARDIAN_AUTHZ_MODE=fga` sang môi trường thật; quyết định deploy 1 Dashboard dùng chung cho cả team hay mỗi dev tự chạy instance riêng | Đã là câu hỏi treo gửi Mentor — làm trước khi có quyết định là rủi ro làm xong rồi phải bỏ nếu Mentor chọn dừng đầu tư Dashboard |
-| Multi-Tenant RBAC mở rộng 5 vai trò | Security Admin (CISO), Tech Lead, Senior Dev, Dev, Auditor — kế thừa nền OpenFGA đã có | Phụ thuộc trực tiếp OpenFGA production ở trên, không tách rời được |
-| Policy Studio & Pipeline Wizard | Upload PDF/Docx → auto-convert → Health Audit (0–100đ) → Conflict Check → Synthetic TestGen → Deploy | Việc lớn nhất trong backlog, thuần Tier 3/Dashboard — nên chờ cùng quyết định Dashboard, không bắt đầu khi hướng còn chưa chốt |
+BLOCK mức `critical` tự động thông báo vào đúng kênh chat của team sở hữu file vi phạm — suy ra từ
+`git blame` (cơ chế đã có sẵn), không cần cấu hình routing thủ công. Audit trail có thể đồng bộ 2
+chiều với hệ thống ticket nội bộ nếu V-ID có nhu cầu thật — chỉ nên làm khi có yêu cầu cụ thể, xem
+lý do "Jira integration" hiện đang bị đề xuất gỡ khỏi roadmap (bên dưới) vì chưa có nhu cầu xác
+định.
 
-**Đề xuất bỏ khỏi roadmap — không để treo vô thời hạn như thể "đang chờ":**
+### 9.5. Observability cấp doanh nghiệp cho chi phí & chất lượng model
 
-| Tính năng | Mô tả | Vì sao bỏ |
-|---|---|---|
-| Business Requirements policy category | Gắn thay đổi code với yêu cầu sản phẩm | Chính tài liệu này từng ghi "cơ chế cụ thể còn TBD" — chưa có thiết kế thật, đúng nguyên tắc No Guesswork nên gỡ khỏi roadmap tới khi có ý tưởng cụ thể |
-| Jira integration | Tự động gắn violation vào ticket theo dõi | Phụ thuộc 1 công cụ ngoài chưa chắc V-ID dùng, thêm bề mặt bảo trì (creds, webhook) cho ROI không rõ, trong khi Tier 1 & 2 vẫn còn việc rẻ hơn/giá trị cao hơn để làm trước — chỉ làm lại khi có khách hàng cụ thể yêu cầu |
+Số liệu FinOps ở Mục 10 hiện là dự phóng tĩnh theo giả định cường độ dùng. Định hướng: dashboard
+chi phí API thật theo team/theo tháng, và kênh cảnh báo chủ động khi Recall/Precision (Mục 4) tụt
+qua ngưỡng giữa các lần chạy nightly eval — hiện workflow eval chỉ post comment thông tin trên PR
+liên quan, chưa có cảnh báo chủ động cho lần chạy theo lịch (không gắn với PR nào để post vào) khi
+provider âm thầm đổi hành vi model.
+
+### 9.6. Giảm phụ thuộc 1 nhà cung cấp LLM
+
+Khi Guardian trở thành gate bắt buộc toàn tổ chức (9.1), 1 provider bị rate-limit hoặc downtime
+không được phép làm treo cả pipeline CI. Định hướng: cấu hình failover tự động Anthropic ↔ OpenAI,
+thay vì đổi biến môi trường thủ công như hiện tại — tăng độ sẵn sàng tương xứng với vai trò gate
+bắt buộc.
 
 ## 10. Phân tích FinOps & Định vị thị trường
 
@@ -464,5 +448,51 @@ hàng giờ) — và được kiểm soát chủ động bởi chính kiến tr�
 
 ---
 
+## Phụ lục A — Nhật ký phát triển (các mốc đã hoàn thành)
+
+Bảng chi tiết toàn bộ tính năng đã triển khai, tách khỏi Mục 9 (Lộ trình tương lai) để mục đó chỉ
+còn nói về định hướng phía trước, không lẫn với việc đã xong. Ngày ghi trong ngoặc là ngày verify
+sống thật, không phải ngày lên kế hoạch.
+
+| Tính năng | Trạng thái |
+|---|---|
+| Secret scan (regex, deterministic) | ✅ Done |
+| LLM policy check (Claude/GPT, Policy-as-Code) | ✅ Done |
+| Grounding evidence + policyId enum | ✅ Done |
+| Chain-of-thought reasoning field | ✅ Done |
+| AST comment/string annotation | ✅ Done |
+| Self-consistency cho critical | ✅ Done |
+| AI-as-a-Judge (2nd pass) | ✅ Done |
+| Prompt-as-a-Fix (template dùng chung, tiếng Anh) | ✅ Done |
+| Diff-hash caching (SHA-256, LRU 20) | ✅ Done |
+| RAG-lite (TS/JS, Python, C/C++, Go) | ✅ Done |
+| Circular dependency detection (madge) | ✅ Done |
+| Semgrep integration (tuỳ chọn) | ✅ Done |
+| Interactive pre-push git hook | ✅ Done |
+| CI / GitHub Action gate (`--ci`, diff PR, comment tự động lên PR) | ✅ Done |
+| Architecture Rules (`from`/`forbid` trong policy, chặn import trái layer) | ✅ Done |
+| Policy-driven severity cho circular dependency (không còn hardcode `medium`) | ✅ Done |
+| Dependency Rules (`dependencyAllowlist` trong policy, chặn dependency mới chưa duyệt) | ✅ Done |
+| Web Dashboard (React/Vite/Tailwind) + API (Express) | ✅ Done |
+| RBAC 4 vai trò + xác thực JWT thật (thay header tự nhận role) | ✅ Done |
+| Policy Change Request / Bypass Request — vòng đời duyệt có kiểm soát | ✅ Done |
+| Multi-Team Authorization bằng OpenFGA/ReBAC (song song RBAC cũ qua feature flag) | ✅ Done |
+| Chuẩn hoá Policy Doanh nghiệp — cấu trúc 5 phần, 9 policy, OWASP/ISO 27001 | ✅ Done |
+| Evaluation Suite — Golden Dataset 100 case, đo Recall/Precision/FPR bằng API thật | ✅ Done |
+| CI/CD Quality Gate cho Evaluation (`eval/checkThresholds.ts`, cờ `--ci`) | ✅ Done — đã bật gate cứng trong `.github/workflows/eval.yml` (17/08/2026), scoped cho trigger `pull_request`; `schedule`/`workflow_dispatch` vẫn informational |
+| Historical Analytics & Live Delta Engine cho Evaluation | ✅ Done |
+| Multi-Model Benchmark Matrix (`npm run eval:matrix`) | ✅ Done |
+| Publish công khai trên npm (`ai-dev-guardian@0.1.0`) | ✅ Done |
+| Smoke-test QWOANG UI trên browser thật | ✅ Done (17/08/2026) — phát hiện + sửa 1 bug hydration thật (`DemoModeSelector.tsx` lồng `<button>`), xem `bao_cao_dot_2.md` Phần V mục 2 |
+| Component ownership qua git blame | ✅ Done (17/08/2026) — `src/git/blame.ts` (`findEvidenceLine` + `blameLine`), gắn `author` vào violation cho secret-scan + LLM policy check (2 nguồn chiếm đa số vi phạm thật); `evidenceSnippet` dùng để tra dòng bị strip trước khi trả về, không lộ ra `audit-history.json`/API. Chưa làm cho architecture/dependency check (vi phạm không gắn với đúng 1 dòng, xem ghi chú trong code). |
+| Git Workflow policy category | ✅ Done (17/08/2026) — `src/checks/gitWorkflowCheck.ts`, policy khai báo `gitWorkflow: [{ branchPattern, exemptBranches, commitPattern }]` trong frontmatter (`.guardian/policies/git-workflow.policy.md`), kiểm tra tất định qua `git rev-parse`/`git log -1` (`src/git/gitMeta.ts`), không qua LLM. `exemptBranches: ["master", "main"]` để không tự chặn dogfooding trên chính branch làm việc hiện tại. |
+| Reusable GitHub Action + shared diff-hash baseline dùng chung team | ✅ Done code (17/08/2026) — `action.yml` ở root repo, composite action đóng gói checkout+setup-node+install+check; baseline dùng chung qua `actions/cache/restore` + `actions/cache/save` với key `guardian-baseline-${{ github.run_id }}` + `restore-keys` prefix (pattern chuẩn GitHub cho cache tăng dần), cache đúng file `.git/guardian_cache.json` đã có sẵn — không đổi cơ chế cache cục bộ. **Chưa verify được bằng 1 lần chạy GitHub Actions thật** (môi trường phiên làm việc này không có quyền trigger workflow thật trên GitHub) — chỉ validate được YAML hợp lệ (`js-yaml`) + đối chiếu đúng schema `action.yml` (inputs/runs/steps, `shell: bash` trên mọi step `run:`). Publish tag `v1` trên repo GitHub thật (`old-origin`) là bước thủ công còn lại, cần bạn tự làm — không phải việc tôi tự ý thực thi được từ đây. |
+| Testing Standards policy category | ✅ Done (17/08/2026) — `src/checks/testingStandardsCheck.ts`, policy khai báo `testingStandards: [{ sourcePattern, testPattern }]` (`.guardian/policies/testing-standards.policy.md`). Không bắt buộc khớp tên 1-1 (repo tự nó không theo quy ước đó — `auth.ts`/`authRouter.test.ts`), chỉ yêu cầu diff có đụng ÍT NHẤT 1 file test bất kỳ. **Bug thật phát hiện qua dogfood, đã sửa cùng lần này:** `orchestrator.ts` truyền `filteredDiff` (đã bị `excludeIgnoredFiles()` lọc sạch `test/**`) cho check này — khiến `testPattern` không bao giờ khớp được gì, tự chặn mọi push dù có test thật đi kèm. Đổi sang truyền `diff` gốc (chưa lọc) cho riêng check này. |
+| Policy Playground (`/playground` trên Dashboard) | ✅ Done (18/08/2026) — Admin/Senior-Dev chạy **4 kịch bản** cố định (JWT `ParseUnverified` Go, open redirect `.includes()` React, raw JWT import bỏ qua wrapper nội bộ, `jwt.decode()` chỉ hiển thị UI) qua đúng `runGuardianCheck()` thật, không giả lập; sandbox thật (không gọi `recordAudit`, đã verify md5 `audit-history.json` không đổi sau nhiều lần chạy cả 4 kịch bản). Client chỉ gửi `scenario` id, không gửi code tự do (chặn rủi ro lạm dụng LLM call). Dữ liệu kịch bản tách riêng 2 file (`src/server/routes/playgroundScenarios.ts`, `web/src/lib/playgroundScenarios.ts`) để carve-out theo path chính xác trong `security.policy.md`/`rbac.policy.md` — bản thân tính năng này khi build đã tự kích hoạt vài false-positive thật (LLM đọc nhầm dữ liệu mẫu là code lỗi thật), xử lý bằng carve-out theo path thay vì suy luận ngữ nghĩa, giống nguyên lý `test/fixtures/**` sẵn có. Verify sống trên browser thật (Playwright, LLM key thật): 3 kịch bản đầu trả BLOCK thật, kịch bản thứ 4 trả PASS thật ("No violations found."), đổi kịch bản mượt, `console --errors` sạch (chỉ có lỗi TLS-intercept của sandbox với font ngoài, không liên quan code). <br><br>**Phát hiện + fix thật dọc đường**: kịch bản PASS ban đầu block 5/5 lần dù policy đã có carve-out y hệt — nguyên nhân là demo code thiếu 2 dòng comment giải thích ý định mà chính ví dụ compliant trong `security.policy.md` có; thêm đúng 2 comment đó → PASS ổn định. Minh chứng LLM check cần bằng chứng tường minh trong diff, không tự suy luận ý định ngầm. <br><br>**Panel "So sánh với AI thường"**: test tay thật (không phải giả lập) bằng cách gọi trực tiếp API model gpt-4o (KHÔNG phải sản phẩm ChatGPT/Copilot thật — phiên làm việc không có quyền truy cập trình duyệt/extension của 2 sản phẩm đó) trên cả 4 đoạn code, ngày 18/08/2026. Kết quả thật: GPT-4o bắt đúng 3/4 lỗi bảo mật chung (JWT không verify, open redirect, và đọc đúng ý định "chỉ hiển thị UI" ở case PASS) — chỉ bỏ sót đúng 1 case: quy ước kiến trúc nội bộ "phải dùng wrapper `../auth/tokenVerifier`", vì đây là chính sách riêng của V-ID không nằm trong training data. UI chỉ hiển thị so sánh ở đúng 1 case này (kèm nhãn ngày + model + disclaimer rõ ràng), không phóng đại thành "AI thường sai cả 4 case" như bản nháp positioning ban đầu — đã sửa lại theo đúng dữ liệu test thật. <br><br>**LLM non-determinism ghi nhận thêm**: `guardian check --staged` trên chính diff tính năng này cho kết quả khác nhau qua nhiều lần chạy liên tiếp (2 vi phạm LOW/MEDIUM → 3 vi phạm lẫn rate-limit 429 → 1 vi phạm MEDIUM có lý luận dạng giả định "nếu X thì có thể Y" → PASS) — tất cả đều nhắm vào `src/git/syntheticDiff.ts`/`src/server/routes/playground.ts`, cùng dạng thin-controller/pure-formatter đã tồn tại y hệt, không bị flag, ở `audit.ts`. Kết luận: noise của model, không sửa code — giữ nguyên theo đúng nguyên tắc "không thêm abstraction ngoài yêu cầu thực tế" (CLAUDE.md). <br><br>**Sự cố + sửa (19/08/2026)**: 1 lượt sửa file sau đó đã thay nội dung `genericAiComparison` thật bằng nội dung BỊA — gán câu trả lời tự viết cho "Claude 3.5 Sonnet / OpenAI Codex" kèm khung UI giả lập terminal, ngày ghi "2026-08-18" như thể là kết quả test thật, dù chưa từng gọi 2 model đó (môi trường này không có `ANTHROPIC_API_KEY` thật — đã verify bằng cách đọc trực tiếp `.env`, giá trị rỗng). 3/4 nội dung bịa còn ngược hẳn kết quả thật đã ghi ở trên (bịa nói AI thường bỏ sót JWT/redirect/decodeDisplay, trong khi GPT-4o thật bắt đúng cả 3). Phát hiện qua đối chiếu trực tiếp, đã khôi phục lại đúng 4 câu trả lời GPT-4o thật đã ghi nhận, bỏ khung terminal giả. <br><br>**Kịch bản thứ 5 (19/08/2026)**: thêm `noAuditLogOnRevoke` (Go, `sso/revokeHandler.go`) — thu hồi token thành công, xử lý lỗi đúng, không có code smell nào, chỉ THIẾU 1 dòng audit log theo `logging.policy.md` 2.1 (thu hồi token là sự kiện bảo mật bắt buộc phải log actor/action/target/timestamp). Test tay thật GPT-4o lặp lại 4/4 lần đều kết luận "no significant bugs/security issues" — khoảng cách RÕ và ỔN ĐỊNH nhất trong 5 case (so với `importRules`, case này không có bất kỳ dấu hiệu nào để nghi ngờ nếu không biết policy nội bộ). Thêm carve-out path-exact tương ứng vào `logging.policy.md` (2 file `playgroundScenarios.ts` là dữ liệu mẫu, không phải code lỗi thật) — verify sống: BLOCK thật qua `llm-policy-check` (MEDIUM), sandbox giữ nguyên (`audit-history.json` không đổi), 442/442 test pass, `tsc --noEmit` sạch cả root và web. |
+| `npm audit` remediation | ✅ Một phần Done (19/08/2026) — `nanoid` (HIGH, transitive qua `vitest→vite→postcss`) đã fix bằng `npm audit fix` (patch version, không breaking), verify 442/442 test pass + `tsc --noEmit` sạch. <br><br>**Đã thử + revert có chủ đích**: nhóm lỗ hổng còn lại (`esbuild` moderate, `vite` high, `vitest` critical — cùng gốc CVE `GHSA-67mh-4wv8-2f99`, dev server esbuild chấp nhận request từ website ngoài) chỉ fix được qua `npm audit fix --force`, nâng `vitest` lên v4.1.10 (breaking change). Đã thử thật: nâng version xong, `tsc --noEmit` sạch nhưng `npx vitest run` gãy 6/442 test (toàn bộ ở `test/fgaClient.test.ts`) — lỗi `is not a constructor` do vitest v4 đổi cách `vi.mock()` xử lý mock factory trả về class/constructor, không phải bug code hiện có. Theo đúng nguyên tắc Revert on Failure: `git checkout -- package.json package-lock.json` rồi chạy lại `npm audit fix` (không force) để về đúng state an toàn, verify lại 442/442 pass. <br><br>**Còn tồn đọng, ghi nhận rõ thay vì giấu**: 5 vulnerability (3 moderate, 1 high, 1 critical theo nhãn rollup của npm) vẫn còn trong devDependencies (`esbuild`/`vite`/`vitest`) — không ảnh hưởng production (không đi vào `dist/` hay bundle web), chỉ khai thác được nếu đang chạy dev server cục bộ (`vite dev`/`vitest --ui`) VÀ bị dụ mở trang độc hại cùng lúc. Rủi ro thực tế thấp, nhưng fix đầy đủ đòi hỏi migrate `test/fgaClient.test.ts` (và có thể file khác) sang cú pháp `vi.mock()` của vitest v4 — việc riêng, chưa làm trong lần này. |
+| Trang hướng dẫn sử dụng công khai (GitHub Pages) tách khỏi Dashboard nội bộ | ✅ Done (19/08/2026) — trang `/notebook` trên Dashboard (marketing/onboarding page, không gọi API/auth) được tách thành build Vite **riêng biệt hoàn toàn**: entry `web/notebook.html` + `web/src/notebook-main.tsx` (chỉ render `<NoteBook/>`, không import `App.tsx`/route có auth) + `web/vite.notebook.config.ts` (`base: /ai-dev-guardian/` đúng path GitHub Pages project site). Mục đích: bundle public không được phép chứa code dashboard nội bộ — verify bằng số đo thật, bundle `notebook` 291KB so với bundle dashboard đầy đủ 486KB (gzip 89KB vs 132KB). Deploy qua `gh-pages` (npm package) lên nhánh `gh-pages` của repo GitHub public (`old-origin`, `dquangai/ai-dev-guardian`) bằng script `npm run deploy:notebook`; gắn link `📖 Read the User Guide` vào đầu `README.md`, trỏ `https://dquangai.github.io/ai-dev-guardian/`. Thêm `gh-pages` kéo theo 1 CVE HIGH mới (`nanoid`, transitive) — đã `npm audit fix`, verify `web/` về lại 0 vulnerability. Verify sống 2 lớp: (1) `vite preview` + `curl` xác nhận `index.html`/JS/CSS đều 200 đúng path base; (2) browser thật qua Playwright headless (chromium cache có sẵn máy, không cần cài mới) — chụp 5 giai đoạn UI, xác nhận đúng thiết kế, không lỗi console thật (chỉ có warning cert của Google Fonts CDN trong sandbox, không phải bug code). <br><br>**Phần demo terminal trong trang đổi hướng 2 lần trong ngày, ghi nhận cả hai vì đều là quyết định thiết kế có chủ đích, không phải revert do lỗi:** bản đầu là **Enter/click-driven walkthrough** (tự dựng lại đúng format output thật của CLI, đối chiếu trực tiếp với `src/cli.ts`/`src/hooks/installHook.ts`/`src/server/index.ts`, không đoán) — phù hợp cho việc tự bấm theo nhịp khi quay màn hình live; sau đó chính tay đổi sang **auto-runner tự gõ + tự lặp lại mỗi 5s** — phù hợp hơn cho khách xem thụ động trên trang public. Nội dung demo cả 2 bản đều là đúng 2 lỗi bảo mật thật đã verify BLOCK/PASS trong luồng SSO của V-ID (Open Redirect `sso-redirect.policy.md` CRITICAL + JWT decode-vs-verify `jwt-session-verification.policy.md` HIGH, xem thêm Mục 3 Lớp 3/5), không phải dữ liệu dựng cho đẹp. <br><br>**Bằng chứng dogfooding thật, không dàn dựng:** khi push chính thay đổi này, `guardian check` (hook cài sẵn trên chính repo `ai-dev-guardian`) tự chặn push **3 lần liên tiếp** vì 1 chuỗi demo dạng `ANTHROPIC_API_KEY=...` trong `NoteBook.tsx` — mỗi lần sửa placeholder rõ ràng hơn (`sk-ant-api03-...` → `sk-ant-...` → `<your-key-here>`), LLM vẫn đổi ý ra verdict khác nhau qua 3 lần chấm (do mỗi lần `amend` đổi commit hash → mất cache → chấm lại từ đầu, gặp đúng non-determinism nhiệt độ khác 0 đã ghi nhận nhiều lần trong tài liệu này) — cuối cùng bỏ qua bằng `--no-verify` sau khi xác nhận rõ ràng với người dùng đây là false positive trên chuỗi placeholder, không phải secret thật. |
+
+---
+
 *Tài liệu tổng hợp từ `README.md`, `reports/sprint-plan.html`, `eval/results/history/` và trạng
-thái code thật của dự án tại thời điểm 13/08/2026.*
+thái code thật của dự án tại thời điểm 19/08/2026.*
