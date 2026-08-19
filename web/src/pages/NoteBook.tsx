@@ -408,8 +408,8 @@ export function NoteBook() {
               <div className="whitespace-nowrap">
                 <div className="flex items-center gap-1.5 font-mono text-sm font-bold tracking-tight text-[#002060] dark:text-[#F8FAFC]">
                   <span>qwoang</span>
-                  <span className="text-[#C8102E]">·guardian</span>
-                  <span className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#C8102E]/10 text-[#C8102E] border border-[#C8102E]/20 font-bold">
+                  <span className="text-[#C8102E] dark:text-[#FF6B6B]">·guardian</span>
+                  <span className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#C8102E]/10 text-[#C8102E] dark:text-[#FF6B6B] border border-[#C8102E]/20 font-bold">
                     v1.2.0
                   </span>
                 </div>
@@ -541,13 +541,13 @@ export function NoteBook() {
             {isVi ? (
               <>
                 Các AI coding agent không thiếu trí tuệ — chúng chỉ thiếu ngữ cảnh kiến trúc có ranh giới.{' '}
-                <strong className="text-[#C8102E] font-bold">ai-dev-guardian</strong> chính là bản đồ:
+                <strong className="text-[#C8102E] dark:text-[#FF6B6B] font-bold">ai-dev-guardian</strong> chính là bản đồ:
                 thành phần, phụ thuộc, secrets, quy tắc an ninh — trích xuất trực tiếp từ code, kiểm tra trước khi push, phục vụ qua CLI & Web Dashboard.
               </>
             ) : (
               <>
                 Coding agents don't lack intelligence — they lack bounded architectural context.{' '}
-                <strong className="text-[#C8102E] font-bold">ai-dev-guardian</strong> is the map:
+                <strong className="text-[#C8102E] dark:text-[#FF6B6B] font-bold">ai-dev-guardian</strong> is the map:
                 components, dependencies, secrets, security rules — recovered from your code, checked pre-push, served over CLI & Web Dashboard.
               </>
             )}
@@ -657,7 +657,7 @@ export function NoteBook() {
                     : 'Guardian never trusts LLM outputs blindly — every claim must survive strict evidence verification.'}
                 </p>
               </div>
-              <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-[#C8102E]/10 text-[#C8102E] font-bold border border-[#C8102E]/20">
+              <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-[#C8102E]/10 text-[#C8102E] dark:text-[#FF6B6B] font-bold border border-[#C8102E]/20">
                 {isVi ? 'ĐÃ KIỂM CHỨNG BỘ DATASET' : 'GOLDEN DATASET TESTED'}
               </span>
             </div>
@@ -668,7 +668,7 @@ export function NoteBook() {
                   key={layer.title}
                   className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0A0F1D] border border-[#E2E8F0] dark:border-[#1F2937] space-y-2"
                 >
-                  <div className="font-bold text-[#C8102E] text-xs font-sans">{layer.title}</div>
+                  <div className="font-bold text-[#C8102E] dark:text-[#FF6B6B] text-xs font-sans">{layer.title}</div>
                   <div className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-sans leading-snug">
                     {isVi ? layer.descVi : layer.descEn}
                   </div>
@@ -815,7 +815,7 @@ export function NoteBook() {
               </div>
 
               <div className="p-3 rounded-lg bg-[#FFF1F2] dark:bg-[#311218] border border-[#C8102E]/40 space-y-2">
-                <div className="flex items-center justify-between font-mono text-xs font-bold text-[#C8102E]">
+                <div className="flex items-center justify-between font-mono text-xs font-bold text-[#C8102E] dark:text-[#FF6B6B]">
                   <span>{isVi ? 'KẾT LUẬN: CHẶN' : 'VERDICT: BLOCK'}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#C8102E] text-white font-bold">
                     {isVi ? '1 NGHIÊM TRỌNG' : '1 CRITICAL'}
@@ -823,7 +823,7 @@ export function NoteBook() {
                 </div>
                 <div className="text-xs font-sans text-[#475569] dark:text-[#CBD5E1]">
                   {isVi ? 'Phát hiện AWS Secret Key bị hardcode tại' : 'Found AWS Secret Key hardcoded in'}{' '}
-                  <code className="font-mono text-xs font-bold text-[#C8102E]">src/config/aws.ts:14</code>
+                  <code className="font-mono text-xs font-bold text-[#C8102E] dark:text-[#FF6B6B]">src/config/aws.ts:14</code>
                 </div>
               </div>
 
@@ -860,7 +860,7 @@ export function NoteBook() {
           {/* 4 Key Benchmark Metric Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
             <div className="p-5 rounded-2xl border border-[#E2E8F0] dark:border-[#1F2937] bg-[#FFFFFF] dark:bg-[#111827] space-y-1 shadow-xs">
-              <div className="text-3xl sm:text-4xl font-extrabold text-[#C8102E] font-mono">96.1%</div>
+              <div className="text-3xl sm:text-4xl font-extrabold text-[#C8102E] dark:text-[#FF6B6B] font-mono">96.1%</div>
               <div className="text-xs font-bold text-[#002060] dark:text-[#F8FAFC]">
                 {isVi ? 'Độ phủ Recall' : 'Recall Accuracy'}
               </div>
@@ -909,7 +909,7 @@ export function NoteBook() {
                 </h3>
                 <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
                   {isVi ? 'Trích từ' : 'From'}{' '}
-                  <code className="font-mono text-[#C8102E] font-bold">eval/results/latest.md</code>{' '}
+                  <code className="font-mono text-[#C8102E] dark:text-[#FF6B6B] font-bold">eval/results/latest.md</code>{' '}
                   — {isVi ? 'tự động cập nhật mỗi bản phát hành.' : 'updated automatically on each engine release.'}
                 </p>
               </div>
@@ -932,14 +932,14 @@ export function NoteBook() {
                 <tbody className="divide-y divide-[#E2E8F0] dark:divide-[#1F2937] text-[#475569] dark:text-[#94A3B8]">
                   <tr className="hover:bg-[#F8FAFC] dark:hover:bg-[#0A0F1D]/50 transition-colors">
                     <td className="py-2 px-3 text-[#002060] dark:text-[#F8FAFC] font-bold">tp-01-aws-secret</td>
-                    <td className="py-2 px-3 text-[#C8102E] font-bold">true-positive</td>
+                    <td className="py-2 px-3 text-[#C8102E] dark:text-[#FF6B6B] font-bold">true-positive</td>
                     <td className="py-2 px-3">security.policy.md</td>
                     <td className="py-2 px-3 text-center text-[#3FB950] font-bold">✅ PASS</td>
                     <td className="py-2 px-3">{isVi ? 'Phát hiện 2 vi phạm' : '2 violations detected'}</td>
                   </tr>
                   <tr className="hover:bg-[#F8FAFC] dark:hover:bg-[#0A0F1D]/50 transition-colors">
                     <td className="py-2 px-3 text-[#002060] dark:text-[#F8FAFC] font-bold">tp-04-sql-injection</td>
-                    <td className="py-2 px-3 text-[#C8102E] font-bold">true-positive</td>
+                    <td className="py-2 px-3 text-[#C8102E] dark:text-[#FF6B6B] font-bold">true-positive</td>
                     <td className="py-2 px-3">security.policy.md</td>
                     <td className="py-2 px-3 text-center text-[#3FB950] font-bold">✅ PASS</td>
                     <td className="py-2 px-3">{isVi ? 'Phát hiện 1 vi phạm' : '1 violation detected'}</td>
@@ -953,7 +953,7 @@ export function NoteBook() {
                   </tr>
                   <tr className="hover:bg-[#F8FAFC] dark:hover:bg-[#0A0F1D]/50 transition-colors">
                     <td className="py-2 px-3 text-[#002060] dark:text-[#F8FAFC] font-bold">tp-13-header-based-admin-bypass</td>
-                    <td className="py-2 px-3 text-[#C8102E] font-bold">true-positive</td>
+                    <td className="py-2 px-3 text-[#C8102E] dark:text-[#FF6B6B] font-bold">true-positive</td>
                     <td className="py-2 px-3">rbac.policy.md</td>
                     <td className="py-2 px-3 text-center text-[#3FB950] font-bold">✅ PASS</td>
                     <td className="py-2 px-3">{isVi ? 'Phát hiện 1 vi phạm' : '1 violation detected'}</td>

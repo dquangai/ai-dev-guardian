@@ -30,16 +30,16 @@ export function TechGridCard({
   return (
     <div className={`tech-grid-card group relative p-5 flex flex-col justify-between select-none ${className}`}>
       {/* Technical Corner Brackets (Corner Marks) */}
-      <div className="absolute top-[7px] left-[7px] w-[9px] h-[9px] border-t border-l border-[#C8102E] pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute top-[7px] right-[7px] w-[9px] h-[9px] border-t border-r border-[#C8102E] pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute bottom-[7px] left-[7px] w-[9px] h-[9px] border-b border-l border-[#C8102E] pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute bottom-[7px] right-[7px] w-[9px] h-[9px] border-b border-r border-[#C8102E] pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute top-[7px] left-[7px] w-[9px] h-[9px] border-t border-l border-[#C8102E] dark:border-[#FF6B6B] pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute top-[7px] right-[7px] w-[9px] h-[9px] border-t border-r border-[#C8102E] dark:border-[#FF6B6B] pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute bottom-[7px] left-[7px] w-[9px] h-[9px] border-b border-l border-[#C8102E] dark:border-[#FF6B6B] pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute bottom-[7px] right-[7px] w-[9px] h-[9px] border-b border-r border-[#C8102E] dark:border-[#FF6B6B] pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" />
 
       {/* Card Header: Category + Icon & Optional Status Pill */}
       <div>
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-wider uppercase text-[#C8102E]">
-            {icon && <span className="text-[#C8102E] shrink-0 text-base">{icon}</span>}
+          <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-wider uppercase text-[#C8102E] dark:text-[#FF6B6B]">
+            {icon && <span className="text-[#C8102E] dark:text-[#FF6B6B] shrink-0 text-base">{icon}</span>}
             {category && <span>{category}</span>}
           </div>
           {statusPill && <div>{statusPill}</div>}
