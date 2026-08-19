@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowRight,
@@ -11,8 +11,6 @@ import {
   GitPullRequest,
   Layers,
   Moon,
-  Pause,
-  Play,
   Rocket,
   Shield,
   Sparkles,
@@ -26,44 +24,215 @@ import { QwoangIcon } from '../components/ui/QwoangLogo'
 import { TechGridCard } from '../components/ui/TechGridCard'
 import { useTheme } from '../context/ThemeContext'
 
-// Demo terminal steps matching README.md Quick Start
-const SETUP_DEMO_STEPS = [
+// Keypress-driven terminal walkthrough — the exact command/output format `guardian`
+// prints for real, ending in the open-redirect + JWT-verification bugs Guardian has
+// actually caught live in a V-ID SSO flow (see sso-redirect.policy.md /
+// jwt-session-verification.policy.md). Advances one step per Enter/click, not autoplay.
+type LiveStep =
+  | { type: 'cmd'; text: string; gapBefore?: boolean }
+  | { type: 'out'; text: string; tone?: 'dim' | 'ok' | 'err' }
+  | { type: 'block-banner' }
+  | { type: 'pass-banner' }
+  | {
+      type: 'violation'
+      index: number
+      level: string
+      what: string
+      policy: string
+      why: string
+      fix: string
+      fixPrompt: string
+    }
+
+const VID_LIVE_STEPS: LiveStep[] = [
+  { type: 'cmd', text: 'npm install -g ai-dev-guardian' },
+  { type: 'out', text: 'added 47 packages in 3s', tone: 'dim' },
+  { type: 'cmd', text: 'echo "ANTHROPIC_API_KEY=<your-key-here>" >> .env', gapBefore: true },
+  { type: 'cmd', text: 'guardian install-hook', gapBefore: true },
+  { type: 'out', text: '[guardian] Đã cài pre-push hook tại .git/hooks/pre-push', tone: 'ok' },
+  { type: 'cmd', text: 'git add src/routes/sso-callback.ts src/services/session.ts', gapBefore: true },
+  { type: 'cmd', text: 'git commit -m "feat(auth): finish SSO callback redirect + session verification"' },
+  { type: 'out', text: '[main 9f3a21c] feat(auth): finish SSO callback redirect + session verification', tone: 'dim' },
+  { type: 'out', text: ' 2 files changed, 11 insertions(+), 4 deletions(-)', tone: 'dim' },
+  { type: 'cmd', text: 'git push origin main', gapBefore: true },
+  { type: 'block-banner' },
   {
-    step: 1,
-    title: 'Install CLI Globally',
-    comment: '# 1. Install AI Dev Guardian CLI globally from npm',
-    cmd: 'npm install -g ai-dev-guardian',
-    detail: '✓ Installed ai-dev-guardian@1.2.0 · Node.js >=18 environment verified',
+    type: 'violation',
+    index: 1,
+    level: 'CRITICAL',
+    what: 'Redirect URL không được validate bằng URL parser chuẩn',
+    policy: 'sso-redirect.policy.md',
+    why: 'targetUrl.includes("v-id.vn") bypass được bằng hacker.com/?x=v-id.vn hoặc v-id.vn.hacker.com',
+    fix: 'Parse URL thật rồi so khớp chính xác hostname, không match chuỗi con',
+    fixPrompt:
+      'Thay if (targetUrl.includes("v-id.vn")) bằng new URL(targetUrl).hostname === "v-id.vn", bọc try/catch để URL không hợp lệ rơi về trang mặc định.',
   },
   {
-    step: 2,
-    title: 'Configure LLM Key',
-    comment: '# 2. Configure LLM key in .env (or OPENAI_API_KEY)',
-    cmd: 'echo "ANTHROPIC_API_KEY=<your-key-here>" >> .env',
-    detail: '✓ Appended key to .env · Verified file is gitignored',
+    type: 'violation',
+    index: 2,
+    level: 'HIGH',
+    what: 'Session token được decode nhưng không xác thực chữ ký',
+    policy: 'jwt-session-verification.policy.md',
+    why: 'jwt.decode(token) không verify chữ ký — ai cũng tạo được token giả rồi tự set đúng iss/exp để qua check thủ công phía sau',
+    fix: 'Dùng jwt.verify(token, publicKey, { algorithms: ["RS256"] }) thay vì decode(), không suy thuật toán từ header token',
+    fixPrompt:
+      'Thay authService.readSession dùng jwt.decode bằng jwt.verify với public key cố định + khai báo rõ algorithms; bỏ hoàn toàn nhánh decode-only.',
   },
-  {
-    step: 3,
-    title: 'Install Pre-push Hook',
-    comment: '# 3. Install git pre-push hook for automatic checks',
-    cmd: 'guardian install-hook',
-    detail: '✓ Pre-push hook written to .git/hooks/pre-push · Interactive TTY mode enabled',
-  },
-  {
-    step: 4,
-    title: 'Execute 4-Round Verification',
-    comment: '# 4. Check staged changes before committing',
-    cmd: 'guardian check --staged',
-    detail: '✓ Secrets: 0 leaked | AST: 0 smells | LLM Judge: PASS (0 violations)',
-  },
-  {
-    step: 5,
-    title: 'Launch Governance Dashboard',
-    comment: '# 5. Serve Web Dashboard and Express API on one port',
-    cmd: 'guardian dashboard',
-    detail: '✓ Governance UI serving at http://localhost:5173 · Express API active at :4000',
-  },
+  { type: 'out', text: "error: failed to push some refs to 'github.com:v-id/platform.git'", tone: 'err' },
+  { type: 'cmd', text: 'git commit -am "fix(auth): validate redirect hostname + verify JWT signature"', gapBefore: true },
+  { type: 'out', text: '[main a71cd44] fix(auth): validate redirect hostname + verify JWT signature', tone: 'dim' },
+  { type: 'out', text: ' 2 files changed, 8 insertions(+), 4 deletions(-)', tone: 'dim' },
+  { type: 'cmd', text: 'git push origin main' },
+  { type: 'pass-banner' },
+  { type: 'out', text: 'To github.com:v-id/platform.git', tone: 'dim' },
+  { type: 'out', text: '   9f3a21c..a71cd44  main -> main', tone: 'dim' },
+  { type: 'cmd', text: 'guardian dashboard', gapBefore: true },
+  { type: 'out', text: '[guardian-server] listening on http://localhost:4000', tone: 'ok' },
 ]
+
+function LiveStepLine({ step }: { step: LiveStep }) {
+  const gapClass = 'gapBefore' in step && step.gapBefore ? 'mt-3' : ''
+
+  if (step.type === 'cmd') {
+    return (
+      <div className={`flex items-start gap-2.5 ${gapClass}`}>
+        <span className="text-[#3FB950] font-bold select-none">$</span>
+        <span className="text-[#F0F6FC] font-medium">{step.text}</span>
+      </div>
+    )
+  }
+
+  if (step.type === 'out') {
+    const toneClass =
+      step.tone === 'ok' ? 'text-[#3FB950]' : step.tone === 'err' ? 'text-[#F85149]' : 'text-[#8B949E]'
+    return <div className={`pl-5 ${toneClass}`}>{step.text}</div>
+  }
+
+  if (step.type === 'block-banner' || step.type === 'pass-banner') {
+    const isPass = step.type === 'pass-banner'
+    return (
+      <div className={`my-2 rounded-lg border px-3 py-2 ${isPass ? 'border-[#3FB950]/50' : 'border-[#C8102E]/50'}`}>
+        <span
+          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mr-2 ${
+            isPass ? 'bg-[#3FB950] text-[#06210B]' : 'bg-[#C8102E] text-white'
+          }`}
+        >
+          {isPass ? 'PASS' : 'BLOCK'}
+        </span>
+        <span className="text-[#D6DCE5] text-xs">
+          {isPass ? 'Không phát hiện vi phạm policy nào.' : '2 vi phạm được phát hiện trước khi push.'}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="my-2 rounded-lg border border-[#C8102E]/40 bg-[#111827] px-3 py-2.5 space-y-1.5">
+      <div className="text-[10px] font-bold text-[#C8102E] font-mono">
+        {step.index} · {step.level}
+      </div>
+      <div className="text-[#D6DCE5] text-xs">⛔ {step.what}</div>
+      <div className="text-[11px] text-[#8B949E]">
+        <span className="text-[#64748B]">policy </span>
+        {step.policy}
+      </div>
+      <div className="text-[11px] text-[#8B949E]">
+        <span className="text-[#64748B]">vì sao </span>
+        {step.why}
+      </div>
+      <div className="text-[11px] text-[#8B949E]">
+        <span className="text-[#64748B]">cách sửa </span>
+        {step.fix}
+      </div>
+      <div className="mt-1.5 pl-2 border-l-2 border-[#3FB950]/60 text-[11px] text-[#3FB950]">💬 {step.fixPrompt}</div>
+    </div>
+  )
+}
+
+/** Reveals one VID_LIVE_STEPS entry per Enter/click — a presenter controls the pace live
+ * instead of watching a fixed-speed autoplay loop, e.g. while narrating a screen recording. */
+function GuardianLiveDemo({ isVi }: { isVi: boolean }) {
+  const [stepIdx, setStepIdx] = useState(0)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const done = stepIdx >= VID_LIVE_STEPS.length
+
+  useEffect(() => {
+    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' })
+  }, [stepIdx])
+
+  const advance = () => setStepIdx((i) => Math.min(i + 1, VID_LIVE_STEPS.length))
+  const restart = () => setStepIdx(0)
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      advance()
+    }
+  }
+
+  return (
+    <div
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      className="rounded-2xl bg-[#0A0F1D] border border-[#1F2937] overflow-hidden shadow-2xl text-left outline-none focus:ring-2 focus:ring-[#3B82F6]/50"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-[#1F2937] bg-[#0F172A]">
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-[#FF5F56] inline-block" />
+          <span className="w-3 h-3 rounded-full bg-[#FFBD2E] inline-block" />
+          <span className="w-3 h-3 rounded-full bg-[#27C93F] inline-block" />
+          <span className="ml-3 text-xs font-mono text-[#94A3B8] flex items-center gap-1.5">
+            <Terminal size={13} className="text-[#60A5FA]" />
+            dev@v-id — guardian check — zsh
+          </span>
+        </div>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1E293B] text-[#60A5FA] border border-[#3B82F6]/30 font-bold">
+          {isVi ? 'BẤM ENTER ĐỂ TIẾP TỤC' : 'PRESS ENTER TO CONTINUE'}
+        </span>
+      </div>
+
+      <div ref={bodyRef} className="p-6 font-mono text-xs sm:text-sm space-y-1.5 h-[420px] overflow-y-auto">
+        {VID_LIVE_STEPS.slice(0, stepIdx).map((step, i) => (
+          <LiveStepLine key={i} step={step} />
+        ))}
+        {!done && (
+          <div className="flex items-center gap-2.5 pt-1">
+            <span className="text-[#3FB950] font-bold select-none">$</span>
+            <span className="inline-block w-[8px] h-[16px] -mb-[3px] bg-[#60A5FA] animate-pulse" />
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between px-4 py-3 bg-[#0F172A] border-t border-[#1F2937] font-mono text-xs gap-3">
+        <span className="text-[#94A3B8] text-[11px]">
+          {done
+            ? isVi
+              ? 'Hết mô phỏng'
+              : 'End of walkthrough'
+            : isVi
+              ? `Bước ${stepIdx + 1} / ${VID_LIVE_STEPS.length}`
+              : `Step ${stepIdx + 1} of ${VID_LIVE_STEPS.length}`}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={restart}
+            className="px-2.5 py-1 rounded text-xs font-mono border border-[#334155] bg-[#1E293B] text-[#94A3B8] hover:text-[#F0F6FC] transition-colors cursor-pointer"
+          >
+            {isVi ? '↻ Xem lại' : '↻ Restart'}
+          </button>
+          {!done && (
+            <button
+              onClick={advance}
+              className="px-3 py-1 rounded text-xs font-mono border border-[#C8102E] bg-[#C8102E] text-white font-bold hover:bg-[#A00C24] transition-colors cursor-pointer flex items-center gap-1"
+            >
+              {isVi ? 'Dòng tiếp' : 'Next'} <ArrowRight size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const CI_WORKFLOW_YAML = `# .github/workflows/guardian.yml
 name: Guardian
@@ -129,38 +298,6 @@ export function NoteBook() {
 
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null)
   const [lang, setLang] = useState<'vi' | 'en'>('vi')
-
-  // Terminal simulator state
-  const [stepIndex, setStepIndex] = useState(0)
-  const [typedLength, setTypedLength] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(true)
-  const [showCursor, setShowCursor] = useState(true)
-
-  const currentStep = SETUP_DEMO_STEPS[stepIndex]
-
-  // Typing simulator effect
-  useEffect(() => {
-    if (!isPlaying) return
-
-    if (typedLength >= currentStep.cmd.length) {
-      const timer = setTimeout(() => {
-        setTypedLength(0)
-        setStepIndex((i) => (i + 1) % SETUP_DEMO_STEPS.length)
-      }, 1800)
-      return () => clearTimeout(timer)
-    }
-
-    const typeTimer = setTimeout(() => {
-      setTypedLength((n) => n + 1)
-    }, 28)
-    return () => clearTimeout(typeTimer)
-  }, [typedLength, currentStep.cmd.length, isPlaying])
-
-  // Cursor blink effect
-  useEffect(() => {
-    const blink = setInterval(() => setShowCursor((v) => !v), 500)
-    return () => clearInterval(blink)
-  }, [])
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text)
@@ -386,94 +523,21 @@ export function NoteBook() {
         <section id="self-analysis-demo" className="space-y-6 scroll-mt-24">
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-[#C8102E] uppercase bg-[#C8102E]/10 px-3 py-1 rounded-md border border-[#C8102E]/20">
-              <Terminal size={14} className="text-[#C8102E]" /> {isVi ? 'TRÌNH DIỄN TỰ PHÂN TÍCH' : 'SELF-ANALYSIS DEMO'}
+              <Terminal size={14} className="text-[#C8102E]" /> {isVi ? 'DEMO VAI TRÒ DEV' : 'DEV-SEAT DEMO'}
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-[#002060] dark:text-[#F8FAFC]">
               {isVi
-                ? 'Xem Guardian xác minh diff trước khi push theo thời gian thực'
-                : 'See Guardian verify your pre-push diff in real-time'}
+                ? 'Guardian bắt sống 2 lỗi bảo mật thật trong luồng SSO của V-ID'
+                : 'Guardian catching two real security bugs in a V-ID SSO flow'}
             </h2>
             <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8]">
               {isVi
-                ? 'Mô phỏng quy trình 5 bước bắt đầu nhanh trực tiếp trong môi trường terminal.'
-                : 'Simulating the 5-step quickstart workflow directly in your terminal environment.'}
+                ? 'Không phải autoplay — bấm Enter hoặc "Dòng tiếp" để tự tay chạy từng bước như trên terminal thật, đúng tốc độ khi thuyết trình.'
+                : "Not autoplay — press Enter or \"Next\" to drive each step yourself, at your own presenting pace."}
             </p>
           </div>
 
-          {/* Interactive Terminal Window */}
-          <div className="rounded-2xl bg-[#0A0F1D] border border-[#1F2937] overflow-hidden shadow-2xl text-left">
-            {/* Terminal Top Bar */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#1F2937] bg-[#0F172A]">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#FF5F56] inline-block" />
-                <span className="w-3 h-3 rounded-full bg-[#FFBD2E] inline-block" />
-                <span className="w-3 h-3 rounded-full bg-[#27C93F] inline-block" />
-                <span className="ml-3 text-xs font-mono text-[#94A3B8] flex items-center gap-1.5">
-                  <Terminal size={13} className="text-[#60A5FA]" />
-                  guardian-agent — zsh — 80x24
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsPlaying((p) => !p)}
-                  className="p-1 rounded bg-[#1E293B] text-[#60A5FA] hover:bg-[#334155] cursor-pointer border border-[#3B82F6]/30 text-xs flex items-center gap-1 px-2"
-                >
-                  {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-                  <span>{isPlaying ? (isVi ? 'Tạm dừng' : 'Pause') : (isVi ? 'Tiếp tục' : 'Play')}</span>
-                </button>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1E293B] text-[#3FB950] border border-[#27C93F]/30 font-bold">
-                  {isVi ? 'MÔ PHỎNG TRỰC TIẾP' : 'LIVE SIMULATOR'}
-                </span>
-              </div>
-            </div>
-
-            {/* Terminal Body */}
-            <div className="p-6 font-mono text-xs sm:text-sm min-h-[140px] space-y-3">
-              <div className="text-[#8B949E] text-xs">{currentStep.comment}</div>
-              <div className="text-[#F0F6FC] font-medium flex items-start gap-2.5">
-                <span className="text-[#3FB950] font-bold select-none">$</span>
-                <div>
-                  <span>{currentStep.cmd.slice(0, typedLength)}</span>
-                  <span
-                    className={`inline-block w-[8px] h-[16px] -mb-[3px] ml-0.5 bg-[#60A5FA] ${
-                      showCursor ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  />
-                </div>
-              </div>
-              {typedLength >= currentStep.cmd.length && (
-                <div className="text-[#3FB950] text-xs pt-2 flex items-center gap-2 animate-fadeIn font-semibold">
-                  <CheckCircle2 size={15} className="text-[#3FB950]" />
-                  <span>{currentStep.detail}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Step Selector Controls */}
-            <div className="flex flex-wrap items-center justify-between px-4 py-3 bg-[#0F172A] border-t border-[#1F2937] font-mono text-xs gap-3">
-              <div className="flex items-center gap-2">
-                {SETUP_DEMO_STEPS.map((s, i) => (
-                  <button
-                    key={s.step}
-                    onClick={() => {
-                      setStepIndex(i)
-                      setTypedLength(SETUP_DEMO_STEPS[i].cmd.length)
-                    }}
-                    className={`px-2.5 py-1 rounded text-xs font-mono transition-all cursor-pointer border ${
-                      i === stepIndex
-                        ? 'bg-[#C8102E] text-white border-[#C8102E] font-bold'
-                        : 'bg-[#1E293B] text-[#94A3B8] border-[#334155] hover:text-[#F0F6FC]'
-                    }`}
-                  >
-                    {isVi ? `Bước ${s.step}` : `Step ${s.step}`}
-                  </button>
-                ))}
-              </div>
-              <span className="text-[#94A3B8] text-[11px]">
-                {isVi ? `Bước ${stepIndex + 1} / ${SETUP_DEMO_STEPS.length}: ${currentStep.title}` : `${stepIndex + 1} of ${SETUP_DEMO_STEPS.length}: ${currentStep.title}`}
-              </span>
-            </div>
-          </div>
+          <GuardianLiveDemo isVi={isVi} />
         </section>
 
         {/* 4. HOW IT WORKS */}
