@@ -394,7 +394,7 @@ export function NoteBook() {
   return (
     <div className="min-h-screen arcade-grid-bg text-[#002060] dark:text-[#E2E8F0] font-sans selection:bg-[#C8102E] selection:text-white transition-colors duration-200">
       {/* 1. HEADER / NAVIGATION */}
-      <header className="sticky top-0 z-50 border-b border-[#E2E8F0] dark:border-[#1F2937] bg-[#FFFFFF]/95 dark:bg-[#0A0F1D]/95 backdrop-blur-md px-3 sm:px-6 py-3">
+      <header className="sticky top-0 z-50 border-b border-[#E2E8F0] dark:border-[#1F2937] bg-[#FFFFFF]/95 dark:bg-[#0A0F1D]/95 backdrop-blur-md px-2 sm:px-6 py-3">
         <div className="w-full max-w-[1600px] mx-auto flex items-center justify-between gap-2 lg:gap-4">
           {/* Brand Logo */}
           <div className="flex items-center gap-3 shrink-0 whitespace-nowrap">
@@ -409,11 +409,11 @@ export function NoteBook() {
                 <div className="flex items-center gap-1.5 font-mono text-sm font-bold tracking-tight text-[#002060] dark:text-[#F8FAFC]">
                   <span>qwoang</span>
                   <span className="text-[#C8102E]">·guardian</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#C8102E]/10 text-[#C8102E] border border-[#C8102E]/20 font-bold">
+                  <span className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#C8102E]/10 text-[#C8102E] border border-[#C8102E]/20 font-bold">
                     v1.2.0
                   </span>
                 </div>
-                <div className="text-[10px] font-mono text-[#64748B] dark:text-[#94A3B8]">
+                <div className="hidden sm:block text-[10px] font-mono text-[#64748B] dark:text-[#94A3B8]">
                   QWOANG AI Dev Security & Context Engine
                 </div>
               </div>
@@ -461,7 +461,7 @@ export function NoteBook() {
           </nav>
 
           {/* Header Actions */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 whitespace-nowrap">
             {/* Language Switcher Button with Flag Icons */}
             <button
               onClick={() => setLang(isVi ? 'en' : 'vi')}
@@ -476,12 +476,13 @@ export function NoteBook() {
               </span>
             </button>
 
-            {/* GitHub Repo Button */}
+            {/* GitHub Repo Button — ẩn dưới sm: cụm nút bên phải quá chật trên màn hình ~390px
+                (iPhone 15) nếu hiện đủ 4 nút, đây là nút ít thiết yếu nhất nên bỏ trước */}
             <a
               href="https://github.com/dquangai/ai-dev-guardian"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-all cursor-pointer bg-[#F8FAFC] dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] text-[#002060] dark:text-[#94A3B8] hover:text-[#C8102E] dark:hover:text-[#F8FAFC] hover:border-[#C8102E]/40 shrink-0 whitespace-nowrap"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-all cursor-pointer bg-[#F8FAFC] dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] text-[#002060] dark:text-[#94A3B8] hover:text-[#C8102E] dark:hover:text-[#F8FAFC] hover:border-[#C8102E]/40 shrink-0 whitespace-nowrap"
             >
               <svg className="w-3.5 h-3.5 fill-current text-[#002060] dark:text-[#F8FAFC]" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
@@ -502,7 +503,7 @@ export function NoteBook() {
             {/* Login Action Button */}
             <button
               onClick={() => navigate('/login')}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#C8102E] text-white px-4 py-1.5 text-xs font-bold hover:bg-[#A00C24] transition-all cursor-pointer shadow-xs border-0 shrink-0 whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#C8102E] text-white px-3 sm:px-4 py-1.5 text-xs font-bold hover:bg-[#A00C24] transition-all cursor-pointer shadow-xs border-0 shrink-0 whitespace-nowrap"
             >
               <span>{isVi ? 'Đăng nhập' : 'Login'}</span>
               <ArrowRight size={13} />
