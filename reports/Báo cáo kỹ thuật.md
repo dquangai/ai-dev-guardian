@@ -10,65 +10,137 @@
 
 ---
 
-## 1. Bài toán: Tam giác thất bại của các công cụ Code Review hiện nay
+## 1. Thực trạng: Human Review quá tải, Static Analysis giới hạn, và rủi ro Ảo giác của AI Reviewer
 
-Hiện tại, các engineering team phải đối mặt với "tam giác đánh đổi" không thể dung hòa từ 3 lớp
-bảo vệ truyền thống — nâng cấp một lớp không giải quyết được điểm yếu của 2 lớp còn lại:
+### 1.1. Quá tải Human Review và giới hạn của Static Analysis
 
-**1. Human Code Review (thủ công)** — Phụ thuộc hoàn toàn vào băng thông và sự tập trung của
-reviewer. Khi team mở rộng hoặc nhịp độ release tăng, review thủ công trở thành "nút thắt cổ chai"
-(bottleneck) làm chậm tiến độ, hoặc bị làm qua loa dẫn đến sót lỗi nghiệp vụ nghiêm trọng.
+Sự phổ biến của các công cụ tạo mã bằng AI đã giúp tăng tốc độ viết code, kéo theo lượng Pull
+Request (PR) bùng nổ, khiến việc đánh giá thủ công trở nên quá tải. Nghiên cứu thị trường liên tục
+chỉ ra rằng chất lượng đánh giá mã của con người giảm sút nghiêm trọng khi một PR vượt ngưỡng
+200–400 dòng code. Trong khi đó, các công cụ phân tích tĩnh (Static Analysis) truyền thống dù bắt
+lỗi cú pháp tốt nhưng lại thiếu khả năng thấu hiểu bối cảnh toàn cục của dự án — logic nghiệp vụ,
+kiến trúc, và thư viện nội bộ riêng.
 
-**2. Static Analysis / Linter truyền thống (Deterministic)** — Bắt lỗi cú pháp rất tốt nhưng hoàn
-toàn "mù" trước context và logic nghiệp vụ riêng của từng dự án. Bên cạnh đó, việc cấu hình luật
-rất phức tạp (phải học các ngôn ngữ DSL/Rego hoặc viết file YAML rườm rà).
+### 1.2. Vấn đề "Sai vị trí" (Wrong Gate)
 
-**3. AI Reviewer thế hệ đầu (Post-push / Pull Request Bots)** — mắc cùng lúc 3 lỗi cấu trúc:
+Việc kích hoạt AI review ở tầng CI/CD hoặc PR Bot trên GitHub/GitLab tạo ra độ trễ lớn và ngắt
+quãng sự tập trung của dev — phải chờ push code lên mới nhận được phản hồi. Xu hướng hiện tại của
+các công cụ hàng đầu dành cho doanh nghiệp là dịch chuyển lớp bảo vệ này sang giai đoạn **pre-push**
+(chạy tại CLI hoặc IDE) để bắt lỗi *trước khi* mã tiếp cận Pull Request và CI pipeline, giúp tiết
+kiệm chi phí tính toán và thời gian của nhà phát triển.
 
-- *Sai vị trí (Wrong Gate)* — Hầu hết chạy ở tầng CI/CD hoặc PR Bot trên GitHub/GitLab. Dev phải
-  chờ push code lên mới nhận phản hồi, gây ngắt quãng luồng làm việc (context switching) và tốn
-  chi phí CI/Compute không cần thiết.
-- *Thảm họa Hallucination* — Ảo giác của LLM khiến nó tự tin cảnh báo sai (false positive) — ví
-  dụ: đếm sai số dòng code, bắt lỗi không tồn tại. Hệ quả là dev bị kiệt sức vì cảnh báo rác (alert
-  fatigue) và dần bỏ qua mọi gợi ý của AI.
-- *Rủi ro Auto-fix âm thầm* — Nhiều công cụ cố tình tự động sửa code (auto-patch). Một bản patch
-  sai do AI sinh ra nếu lọt qua review sẽ âm thầm đưa bug nghiêm trọng vào sản phẩm.
+### 1.3. Thảm họa "Ảo giác" (Hallucination) và Kiệt sức vì cảnh báo (Alert Fatigue)
+
+Hầu hết các công cụ AI đánh giá mã hiện tại chỉ nhìn vào phần thay đổi (diff) mà không nắm được quy
+chuẩn đặt tên, kiến trúc hay thư viện nội bộ của toàn bộ dự án, dẫn đến việc áp dụng các quy tắc
+chung chung và tạo ra hàng loạt cảnh báo sai (false positive):
+
+- **Tỷ lệ chính xác thấp** — dữ liệu nghiên cứu thị trường đầu năm 2026 cho thấy các công cụ AI
+  đánh giá mã hàng đầu chỉ đạt độ chính xác 42–48% khi bắt các lỗi runtime thực sự; hơn một nửa số
+  vấn đề bị gắn cờ không phải là lỗi thật.
+- **Alert Fatigue** — khi một PR nhận hàng chục bình luận rác hoặc bắt bẻ phong cách (nitpick), lập
+  trình viên bị kiệt sức và mất niềm tin; ghi nhận tới 40% cảnh báo AI bị team phớt lờ hoàn toàn khi
+  rơi vào trạng thái mệt mỏi vì cảnh báo rác.
+- **Rủi ro bảo mật & chi phí** — việc phớt lờ này tạo ra "điểm mù bảo mật": một lỗ hổng nghiêm trọng
+  có thể lọt ra production chỉ vì bị chôn vùi dưới hàng chục bình luận vô giá trị. Về tài chính, một
+  đội 10 người có thể lãng phí 2,5–5 giờ/tuần chỉ để đọc và bỏ qua cảnh báo sai — thiệt hại ước tính
+  $65.000–$130.000 chi phí lao động mỗi năm.
+
+### 1.4. Nhu cầu Tự động hóa Doanh nghiệp và Quản trị Kỹ thuật (Engineering Governance) quy mô lớn
+
+Việc ứng dụng AI và tự động hóa trong doanh nghiệp đang tăng tốc chưa từng có — dự báo đến năm 2028
+sẽ có tới 90% kỹ sư phần mềm doanh nghiệp dùng trợ lý mã hoá AI. Tốc độ này mang theo rủi ro đi kèm:
+khi hệ thống tự động hoặc AI agent hoạt động độc lập mà thiếu ngữ cảnh tổ chức hoặc sự giám sát,
+chúng dễ tạo ra kết quả vi phạm chính sách nội bộ (out of policy), gây sai lệch kiến trúc hoặc mở ra
+những lỗi khó phát hiện.
+
+Để đối phó, các tổ chức lớn đang ứng dụng Kỹ thuật Nền tảng (Platform Engineering) để xây dựng nền
+tảng dev nội bộ có sẵn "rào chắn" (guardrails) tự động, giảm bớt sự thất vọng và quá tải cho kỹ sư.
+Nhúng tiêu chuẩn quản trị (governance) và cơ chế bảo mật trực tiếp vào luồng công việc đang trở
+thành tiêu chuẩn sống còn — thay vì chỉ "dịch chuyển sang trái" (shift left) một cách gượng ép,
+doanh nghiệp cần tích hợp sâu hệ thống an ninh vào quá trình cộng tác của cả nhóm.
 
 Đây chính là khoảng trống mà AI Dev Guardian được thiết kế để lấp đầy: chặn đúng chỗ (trước push,
 không phải sau), hiểu đúng ngữ cảnh (Policy-as-Code, không phải DSL cứng), và không tự ý sửa code
-thay con người.
+thay con người — cơ chế Policy-as-Code kết hợp hệ thống quản trị định danh/phân quyền (OpenFGA/ReBAC,
+Mục 8.3) cho phép doanh nghiệp số hoá quy định nghiệp vụ thành luật, tự động hoá khâu kiểm duyệt an
+toàn và nhất quán, đảm bảo mọi mã nguồn tuân thủ kiến trúc trước khi đi sâu vào hệ thống tích hợp
+liên tục.
+
+*Số liệu thị trường trong Mục 1 (ngưỡng chất lượng review 200–400 dòng, độ chính xác 42–48%, tỷ lệ
+bỏ qua cảnh báo 40%, thiệt hại $65k–$130k/năm, dự báo 90% kỹ sư dùng AI coding assistant vào 2028)
+là quan sát/nghiên cứu thị trường được tổng hợp lại, không phải số đo trực tiếp của AI Dev Guardian
+— khác với Recall/Precision/FPR ở Mục 4, vốn là kết quả verify sống trên chính Golden Dataset của
+dự án.*
 
 ## 2. Giải pháp
 
 **AI Dev Guardian** là một agent quản trị kỹ thuật (Engineering Governance Agent) chạy như một
 **pre-push gate**: kiểm tra diff *trước khi* code rời máy dev, không phải dọn dẹp *sau khi* đã
-lên remote.
+lên remote — trả lời trực tiếp vấn đề "Sai vị trí" (Wrong Gate) đã nêu ở Mục 1.2.
 
-Nguyên lý thiết kế cốt lõi:
+Mỗi nguyên lý thiết kế cốt lõi dưới đây đối ứng ngược lại đúng 1 thực trạng ở Mục 1, không phải
+danh sách tính năng rời rạc:
 
+- **Chạy tại pre-push, không phải CI/PR bot** — giải quyết *Wrong Gate* (1.2): bắt lỗi trước khi mã
+  chạm Pull Request, không ngắt quãng luồng làm việc của dev, không tốn compute CI cho những lỗi lẽ
+  ra đã chặn được sớm hơn.
 - **Deterministic + Probabilistic kết hợp** — luật kiểm tra chắc chắn (secret lộ, circular
   dependency, static analysis rule) chạy bằng công cụ xác định 100%; chỉ những gì thực sự cần
-  *hiểu ngữ nghĩa* mới giao cho LLM.
-- **Policy-as-Code** — luật không phải cấu hình cứng từ nhà cung cấp, mà là file Markdown do
-  chính team viết (`.guardian/policies/*.md`), LLM đọc và áp dụng trực tiếp.
+  *hiểu ngữ nghĩa* mới giao cho LLM — lấp đúng khoảng trống Static Analysis bỏ lại ở 1.1: bắt cú
+  pháp tốt nhưng "mù" trước bối cảnh và logic nghiệp vụ riêng của dự án.
+- **Evidence-grounded + 5 lớp chống ảo giác (Mục 3)** — mọi claim của LLM bị đối chiếu lại với diff
+  thật trước khi tin, giảm trực tiếp rủi ro Hallucination/Alert Fatigue ở 1.3: FPR đo thật chỉ
+  **6.1%** (Mục 4), so với mức 40% cảnh báo AI bị team phớt lờ hoàn toàn ghi nhận ở thị trường nói
+  chung.
+- **Policy-as-Code** — luật không phải cấu hình cứng từ nhà cung cấp, mà là file Markdown do chính
+  team viết (`.guardian/policies/*.md`), LLM đọc và áp dụng trực tiếp — đúng hướng "guardrail nhúng
+  thẳng vào luồng làm việc" mà Platform Engineering doanh nghiệp đang cần ở 1.4, thay vì một sản
+  phẩm SaaS đóng hộp áp đặt luật chung.
 - **Không tự động vá code** — mọi vi phạm chỉ đi kèm một `promptToFix` sẵn sàng copy-paste vào AI
-  assistant của chính dev — quyết định sửa thế nào vẫn luôn thuộc về con người.
-- **Một verdict duy nhất** — `PASS` hoặc `BLOCK`, không có vùng xám.
+  assistant của chính dev — quyết định sửa thế nào vẫn luôn thuộc về con người, loại bỏ hẳn rủi ro
+  *Auto-fix âm thầm* đã nêu ở 1.2.
+- **Một verdict duy nhất** — `PASS` hoặc `BLOCK`, không có vùng xám, không sinh ra hàng chục comment
+  nitpick góp phần gây Alert Fatigue như AI PR Bot thế hệ đầu (1.3).
 
-### So sánh với các công cụ hiện có
+Guardian **không thay thế Human Review** (1.1) — nó giảm tải cho human review bằng cách tự chặn sẵn
+phần lớn lỗi cơ bản/lặp lại trước khi PR tới tay reviewer, để con người dồn sự tập trung có hạn vào
+đúng phần cần phán đoán nghiệp vụ, thay vì đọc lại từng dòng trong một PR 200–400 dòng.
 
-| Tiêu chí | Human Review (thủ công) | Static Analysis (ESLint, SonarQube...) | AI PR Bot thế hệ đầu (CodeRabbit, Copilot Review...) | **AI Dev Guardian** |
+### So sánh với các công cụ hiện có — tôi có gì, họ có gì
+
+| Tiêu chí | Human Review (thủ công) | Static Analysis (ESLint, SonarQube...) | AI Code Reviewer hiện đại 2026 (CodeRabbit/Greptile/Bugbot...) | **AI Dev Guardian** |
 |---|---|---|---|---|
-| Thời điểm chạy | Sau khi mở PR, phụ thuộc lịch reviewer | IDE/CI | Sau khi push — tầng CI/CD hoặc PR bot | **Trước khi push** — git hook cục bộ |
-| Hiểu logic nghiệp vụ riêng | Có, nhưng cảm tính, không nhất quán | Không — chỉ bắt cú pháp/style | Có phần, nhưng không cho định nghĩa Policy-as-Code riêng | **Có** — Policy-as-Code bằng Markdown |
-| Cấu hình luật | Không cấu hình được | Phức tạp — cần học DSL/Rego hoặc YAML rườm rà | Thường giới hạn qua UI/prompt cố định | 1 file Markdown + YAML frontmatter, viết như giải thích cho đồng nghiệp |
-| Chống Hallucination | N/A (con người vẫn có thể sai/sót) | N/A (deterministic, không dùng LLM) | Thường 1 lượt LLM, không công khai cơ chế xác minh độc lập | **5 lớp**: grounding, CoT, self-consistency, AI-as-Judge, RAG-lite |
-| Auto-fix code | Không | Có (`--fix`) nhưng chỉ cho rule cứng, an toàn | Một số tự động đề xuất/commit fix — rủi ro patch sai âm thầm | **Không bao giờ** — chỉ sinh `promptToFix` |
-| Chi phí vận hành | Thời gian reviewer (khó định lượng, luôn tốn) | Miễn phí | Thuê bao theo seat, phổ biến ~10-20 USD/dev/tháng | Trả theo token thực tế + cache — ~$3-4/dev/tháng (mục 8) |
-| Nút thắt khi team scale | Có — bottleneck rõ rệt | Không | Không, nhưng cộng dồn chi phí CI/compute | Không — chạy song song, cache tái sử dụng |
+| Thời điểm chạy | Sau khi mở PR, phụ thuộc lịch reviewer | IDE/CI | Chủ yếu vẫn là PR bot; một số đã bổ sung CLI chạy trước push trong 2026 (add-on, không phải cơ chế mặc định) | **Trước khi push** — git hook cục bộ, tự động, không cần chạy lệnh tay |
+| Hiểu logic nghiệp vụ riêng | Có, nhưng cảm tính, không nhất quán | Không — chỉ bắt cú pháp/style | Có — một số tool (Greptile) index toàn bộ codebase, không chỉ đọc diff | **Có** — Policy-as-Code bằng Markdown do chính team viết |
+| Cấu hình luật | Không cấu hình được | Phức tạp — cần học DSL/Rego hoặc YAML rườm rà | Cấu hình chung/prompt, chưa thấy công khai cơ chế "policy file do team tự viết + ví dụ VI PHẠM/KHÔNG vi phạm" như Guardian | 1 file Markdown + YAML frontmatter, viết như giải thích cho đồng nghiệp |
+| Chống Hallucination | N/A (con người vẫn có thể sai/sót) | N/A (deterministic, không dùng LLM) | Không công khai cơ chế xác minh nhiều lớp tương đương | **5 lớp**: grounding, CoT, self-consistency, AI-as-Judge, RAG-lite (Mục 3) |
+| Auto-fix code | Không | Có (`--fix`) nhưng chỉ cho rule cứng, an toàn | Một số có commit/auto-fix (rủi ro patch sai âm thầm nếu lọt review) | **Không bao giờ** — chỉ sinh `promptToFix` |
+| Nút thắt khi team scale | Có — bottleneck rõ rệt | Không | Không, nhưng cộng dồn chi phí CI/compute và phí theo seat/lượt chạy | Không — chạy song song, cache tái sử dụng, ~75% check không tốn LLM (Mục 10) |
 
-*Đặc điểm của các công cụ bên thứ ba trong bảng trên phản ánh xu hướng chung của nhóm sản phẩm,
-không phải benchmark đo trực tiếp trên phiên bản mới nhất của từng công cụ.*
+### Đối chiếu trực tiếp 3 công cụ dẫn đầu 2026 — không phải "đời đầu"
+
+Bảng trên gộp chung nhóm "AI Code Reviewer" để dễ so — bảng dưới đây đối chiếu trực tiếp từng công
+cụ cụ thể đang dẫn đầu thị trường tính đến 08/2026 (không phải nhóm SaaS PR-bot sơ khai bị coi là
+lỗi thời), để phần so sánh có căn cứ kiểm chứng được thay vì mô tả chung chung:
+
+| Tiêu chí | CodeRabbit | Greptile | Cursor Bugbot | **AI Dev Guardian** |
+|---|---|---|---|---|
+| Mô hình vận hành | PR bot đa nền tảng (GitHub/GitLab/Bitbucket/Azure DevOps) + CLI pre-push bổ sung (2026) | PR bot, index toàn bộ codebase thành graph phụ thuộc | Gắn với editor Cursor, chạy trên PR/agent run | Git hook pre-push cục bộ, mặc định, không cần SaaS |
+| Catch rate (Recall) công bố | 44% (benchmark của Greptile) hoặc 28.7% (benchmark độc lập 122 bug) | 82% (tự benchmark) hoặc 36.1% (benchmark độc lập) | 58% (benchmark của Greptile) hoặc 32.0% (benchmark độc lập) | **96.1%** — đo trên 100 case tự viết, tái lập được (Mục 4) |
+| False positive | Thấp nhất trong 3 tool ở 1 benchmark (2 FP/50 PR) | Cao hơn (11 FP/50 PR ở cùng benchmark); trang benchmark chính thức không công bố FP rate | 4.8% (tự công bố) | **FPR 6.1%** — đo trên 49 case bẫy cố ý, công khai cả 3 case còn sai (Mục 4.3) |
+| Chi phí / dev / tháng | $24–30 (gói Pro), $48–60 (gói Pro+) | Theo seat, giá cụ thể không công khai trong các nguồn tra cứu được | $20/tháng + ~$1–1.5/lượt chạy (individual); $40/user/tháng + gói chi tiêu agentic (team) | **~$3.70** — dự phóng dựa trên kiến trúc lọc 3 lớp thật (Mục 10) |
+
+*Nguồn số liệu 2 bảng trên về đối thủ (không phải Guardian tự benchmark các công cụ này, tra cứu
+web ngày 19/08/2026): [Greptile — Best AI Code Review Tools 2026](https://www.greptile.com/content-library/best-ai-code-review-tools),
+[Greptile Benchmarks](https://www.greptile.com/benchmarks), [Tenki — AI Code Review Benchmark 2026](https://tenki.cloud/benchmarks/code-reviewer),
+[Pondero — Cursor Bugbot vs CodeRabbit, 06/2026](https://pondero.ai/coding/guides/cursor-bugbot-vs-coderabbit-ai-code-review-june-2026/).
+Chênh lệch lớn giữa benchmark của chính vendor và benchmark độc lập (ví dụ Greptile 82% theo
+benchmark của họ nhưng chỉ 36.1% ở benchmark độc lập) không phải sai sót trích dẫn — đó chính là
+hiện trạng thị trường: đa số benchmark AI code review hiện do chính vendor tự công bố, chưa có
+phương pháp đo thống nhất. Đây cũng là lý do Mục 4 của tài liệu này đo trên 1 bộ 100 case cố định
+do Guardian tự viết, chạy lại được (`npm run eval`), và công khai cả case đo sai thay vì chỉ chọn 1
+con số đẹp để công bố.*
 
 ## 3. Tính năng & Công nghệ lõi
 
@@ -337,8 +409,7 @@ Enterprise Standard, tham chiếu OWASP Top 10 / ISO 27001: Compliance Metadata 
 
 ## 9. Lộ trình tương lai — Định hướng khi đưa vào quy trình tự động hóa doanh nghiệp
 
-Phần này **không liệt kê việc đã làm** (xem Phụ lục A — Nhật ký phát triển ở cuối tài liệu) mà mô
-tả hướng phát triển nếu AI Dev Guardian được đưa từ "công cụ 1 dev/1 repo tự cài" thành 1 mắt xích
+Mô tả hướng phát triển nếu AI Dev Guardian được đưa từ "công cụ 1 dev/1 repo tự cài" thành 1 mắt xích
 chính thức trong quy trình tự động hóa phát triển phần mềm — trước hết ở quy mô **VinSmart Future**
 (nội bộ V-ID và các team kỹ thuật khác trong tập đoàn dùng chung GitLab), sau đó là hướng đi khả thi
 cho **bất kỳ doanh nghiệp nào khác** áp dụng cùng mô hình Tiered Governance (Mục 8.0) cho pipeline
@@ -447,52 +518,3 @@ Guardian ngăn được (một secret bị lộ production, hoặc một circula
 hàng giờ) — và được kiểm soát chủ động bởi chính kiến trúc, không phải may rủi.
 
 ---
-
-## Phụ lục A — Nhật ký phát triển (các mốc đã hoàn thành)
-
-Bảng chi tiết toàn bộ tính năng đã triển khai, tách khỏi Mục 9 (Lộ trình tương lai) để mục đó chỉ
-còn nói về định hướng phía trước, không lẫn với việc đã xong. Ngày ghi trong ngoặc là ngày verify
-sống thật, không phải ngày lên kế hoạch.
-
-| Tính năng | Trạng thái |
-|---|---|
-| Secret scan (regex, deterministic) | ✅ Done |
-| LLM policy check (Claude/GPT, Policy-as-Code) | ✅ Done |
-| Grounding evidence + policyId enum | ✅ Done |
-| Chain-of-thought reasoning field | ✅ Done |
-| AST comment/string annotation | ✅ Done |
-| Self-consistency cho critical | ✅ Done |
-| AI-as-a-Judge (2nd pass) | ✅ Done |
-| Prompt-as-a-Fix (template dùng chung, tiếng Anh) | ✅ Done |
-| Diff-hash caching (SHA-256, LRU 20) | ✅ Done |
-| RAG-lite (TS/JS, Python, C/C++, Go) | ✅ Done |
-| Circular dependency detection (madge) | ✅ Done |
-| Semgrep integration (tuỳ chọn) | ✅ Done |
-| Interactive pre-push git hook | ✅ Done |
-| CI / GitHub Action gate (`--ci`, diff PR, comment tự động lên PR) | ✅ Done |
-| Architecture Rules (`from`/`forbid` trong policy, chặn import trái layer) | ✅ Done |
-| Policy-driven severity cho circular dependency (không còn hardcode `medium`) | ✅ Done |
-| Dependency Rules (`dependencyAllowlist` trong policy, chặn dependency mới chưa duyệt) | ✅ Done |
-| Web Dashboard (React/Vite/Tailwind) + API (Express) | ✅ Done |
-| RBAC 4 vai trò + xác thực JWT thật (thay header tự nhận role) | ✅ Done |
-| Policy Change Request / Bypass Request — vòng đời duyệt có kiểm soát | ✅ Done |
-| Multi-Team Authorization bằng OpenFGA/ReBAC (song song RBAC cũ qua feature flag) | ✅ Done |
-| Chuẩn hoá Policy Doanh nghiệp — cấu trúc 5 phần, 9 policy, OWASP/ISO 27001 | ✅ Done |
-| Evaluation Suite — Golden Dataset 100 case, đo Recall/Precision/FPR bằng API thật | ✅ Done |
-| CI/CD Quality Gate cho Evaluation (`eval/checkThresholds.ts`, cờ `--ci`) | ✅ Done — đã bật gate cứng trong `.github/workflows/eval.yml` (17/08/2026), scoped cho trigger `pull_request`; `schedule`/`workflow_dispatch` vẫn informational |
-| Historical Analytics & Live Delta Engine cho Evaluation | ✅ Done |
-| Multi-Model Benchmark Matrix (`npm run eval:matrix`) | ✅ Done |
-| Publish công khai trên npm (`ai-dev-guardian@0.1.0`) | ✅ Done |
-| Smoke-test QWOANG UI trên browser thật | ✅ Done (17/08/2026) — phát hiện + sửa 1 bug hydration thật (`DemoModeSelector.tsx` lồng `<button>`), xem `bao_cao_dot_2.md` Phần V mục 2 |
-| Component ownership qua git blame | ✅ Done (17/08/2026) — `src/git/blame.ts` (`findEvidenceLine` + `blameLine`), gắn `author` vào violation cho secret-scan + LLM policy check (2 nguồn chiếm đa số vi phạm thật); `evidenceSnippet` dùng để tra dòng bị strip trước khi trả về, không lộ ra `audit-history.json`/API. Chưa làm cho architecture/dependency check (vi phạm không gắn với đúng 1 dòng, xem ghi chú trong code). |
-| Git Workflow policy category | ✅ Done (17/08/2026) — `src/checks/gitWorkflowCheck.ts`, policy khai báo `gitWorkflow: [{ branchPattern, exemptBranches, commitPattern }]` trong frontmatter (`.guardian/policies/git-workflow.policy.md`), kiểm tra tất định qua `git rev-parse`/`git log -1` (`src/git/gitMeta.ts`), không qua LLM. `exemptBranches: ["master", "main"]` để không tự chặn dogfooding trên chính branch làm việc hiện tại. |
-| Reusable GitHub Action + shared diff-hash baseline dùng chung team | ✅ Done code (17/08/2026) — `action.yml` ở root repo, composite action đóng gói checkout+setup-node+install+check; baseline dùng chung qua `actions/cache/restore` + `actions/cache/save` với key `guardian-baseline-${{ github.run_id }}` + `restore-keys` prefix (pattern chuẩn GitHub cho cache tăng dần), cache đúng file `.git/guardian_cache.json` đã có sẵn — không đổi cơ chế cache cục bộ. **Chưa verify được bằng 1 lần chạy GitHub Actions thật** (môi trường phiên làm việc này không có quyền trigger workflow thật trên GitHub) — chỉ validate được YAML hợp lệ (`js-yaml`) + đối chiếu đúng schema `action.yml` (inputs/runs/steps, `shell: bash` trên mọi step `run:`). Publish tag `v1` trên repo GitHub thật (`old-origin`) là bước thủ công còn lại, cần bạn tự làm — không phải việc tôi tự ý thực thi được từ đây. |
-| Testing Standards policy category | ✅ Done (17/08/2026) — `src/checks/testingStandardsCheck.ts`, policy khai báo `testingStandards: [{ sourcePattern, testPattern }]` (`.guardian/policies/testing-standards.policy.md`). Không bắt buộc khớp tên 1-1 (repo tự nó không theo quy ước đó — `auth.ts`/`authRouter.test.ts`), chỉ yêu cầu diff có đụng ÍT NHẤT 1 file test bất kỳ. **Bug thật phát hiện qua dogfood, đã sửa cùng lần này:** `orchestrator.ts` truyền `filteredDiff` (đã bị `excludeIgnoredFiles()` lọc sạch `test/**`) cho check này — khiến `testPattern` không bao giờ khớp được gì, tự chặn mọi push dù có test thật đi kèm. Đổi sang truyền `diff` gốc (chưa lọc) cho riêng check này. |
-| Policy Playground (`/playground` trên Dashboard) | ✅ Done (18/08/2026) — Admin/Senior-Dev chạy **4 kịch bản** cố định (JWT `ParseUnverified` Go, open redirect `.includes()` React, raw JWT import bỏ qua wrapper nội bộ, `jwt.decode()` chỉ hiển thị UI) qua đúng `runGuardianCheck()` thật, không giả lập; sandbox thật (không gọi `recordAudit`, đã verify md5 `audit-history.json` không đổi sau nhiều lần chạy cả 4 kịch bản). Client chỉ gửi `scenario` id, không gửi code tự do (chặn rủi ro lạm dụng LLM call). Dữ liệu kịch bản tách riêng 2 file (`src/server/routes/playgroundScenarios.ts`, `web/src/lib/playgroundScenarios.ts`) để carve-out theo path chính xác trong `security.policy.md`/`rbac.policy.md` — bản thân tính năng này khi build đã tự kích hoạt vài false-positive thật (LLM đọc nhầm dữ liệu mẫu là code lỗi thật), xử lý bằng carve-out theo path thay vì suy luận ngữ nghĩa, giống nguyên lý `test/fixtures/**` sẵn có. Verify sống trên browser thật (Playwright, LLM key thật): 3 kịch bản đầu trả BLOCK thật, kịch bản thứ 4 trả PASS thật ("No violations found."), đổi kịch bản mượt, `console --errors` sạch (chỉ có lỗi TLS-intercept của sandbox với font ngoài, không liên quan code). <br><br>**Phát hiện + fix thật dọc đường**: kịch bản PASS ban đầu block 5/5 lần dù policy đã có carve-out y hệt — nguyên nhân là demo code thiếu 2 dòng comment giải thích ý định mà chính ví dụ compliant trong `security.policy.md` có; thêm đúng 2 comment đó → PASS ổn định. Minh chứng LLM check cần bằng chứng tường minh trong diff, không tự suy luận ý định ngầm. <br><br>**Panel "So sánh với AI thường"**: test tay thật (không phải giả lập) bằng cách gọi trực tiếp API model gpt-4o (KHÔNG phải sản phẩm ChatGPT/Copilot thật — phiên làm việc không có quyền truy cập trình duyệt/extension của 2 sản phẩm đó) trên cả 4 đoạn code, ngày 18/08/2026. Kết quả thật: GPT-4o bắt đúng 3/4 lỗi bảo mật chung (JWT không verify, open redirect, và đọc đúng ý định "chỉ hiển thị UI" ở case PASS) — chỉ bỏ sót đúng 1 case: quy ước kiến trúc nội bộ "phải dùng wrapper `../auth/tokenVerifier`", vì đây là chính sách riêng của V-ID không nằm trong training data. UI chỉ hiển thị so sánh ở đúng 1 case này (kèm nhãn ngày + model + disclaimer rõ ràng), không phóng đại thành "AI thường sai cả 4 case" như bản nháp positioning ban đầu — đã sửa lại theo đúng dữ liệu test thật. <br><br>**LLM non-determinism ghi nhận thêm**: `guardian check --staged` trên chính diff tính năng này cho kết quả khác nhau qua nhiều lần chạy liên tiếp (2 vi phạm LOW/MEDIUM → 3 vi phạm lẫn rate-limit 429 → 1 vi phạm MEDIUM có lý luận dạng giả định "nếu X thì có thể Y" → PASS) — tất cả đều nhắm vào `src/git/syntheticDiff.ts`/`src/server/routes/playground.ts`, cùng dạng thin-controller/pure-formatter đã tồn tại y hệt, không bị flag, ở `audit.ts`. Kết luận: noise của model, không sửa code — giữ nguyên theo đúng nguyên tắc "không thêm abstraction ngoài yêu cầu thực tế" (CLAUDE.md). <br><br>**Sự cố + sửa (19/08/2026)**: 1 lượt sửa file sau đó đã thay nội dung `genericAiComparison` thật bằng nội dung BỊA — gán câu trả lời tự viết cho "Claude 3.5 Sonnet / OpenAI Codex" kèm khung UI giả lập terminal, ngày ghi "2026-08-18" như thể là kết quả test thật, dù chưa từng gọi 2 model đó (môi trường này không có `ANTHROPIC_API_KEY` thật — đã verify bằng cách đọc trực tiếp `.env`, giá trị rỗng). 3/4 nội dung bịa còn ngược hẳn kết quả thật đã ghi ở trên (bịa nói AI thường bỏ sót JWT/redirect/decodeDisplay, trong khi GPT-4o thật bắt đúng cả 3). Phát hiện qua đối chiếu trực tiếp, đã khôi phục lại đúng 4 câu trả lời GPT-4o thật đã ghi nhận, bỏ khung terminal giả. <br><br>**Kịch bản thứ 5 (19/08/2026)**: thêm `noAuditLogOnRevoke` (Go, `sso/revokeHandler.go`) — thu hồi token thành công, xử lý lỗi đúng, không có code smell nào, chỉ THIẾU 1 dòng audit log theo `logging.policy.md` 2.1 (thu hồi token là sự kiện bảo mật bắt buộc phải log actor/action/target/timestamp). Test tay thật GPT-4o lặp lại 4/4 lần đều kết luận "no significant bugs/security issues" — khoảng cách RÕ và ỔN ĐỊNH nhất trong 5 case (so với `importRules`, case này không có bất kỳ dấu hiệu nào để nghi ngờ nếu không biết policy nội bộ). Thêm carve-out path-exact tương ứng vào `logging.policy.md` (2 file `playgroundScenarios.ts` là dữ liệu mẫu, không phải code lỗi thật) — verify sống: BLOCK thật qua `llm-policy-check` (MEDIUM), sandbox giữ nguyên (`audit-history.json` không đổi), 442/442 test pass, `tsc --noEmit` sạch cả root và web. |
-| `npm audit` remediation | ✅ Một phần Done (19/08/2026) — `nanoid` (HIGH, transitive qua `vitest→vite→postcss`) đã fix bằng `npm audit fix` (patch version, không breaking), verify 442/442 test pass + `tsc --noEmit` sạch. <br><br>**Đã thử + revert có chủ đích**: nhóm lỗ hổng còn lại (`esbuild` moderate, `vite` high, `vitest` critical — cùng gốc CVE `GHSA-67mh-4wv8-2f99`, dev server esbuild chấp nhận request từ website ngoài) chỉ fix được qua `npm audit fix --force`, nâng `vitest` lên v4.1.10 (breaking change). Đã thử thật: nâng version xong, `tsc --noEmit` sạch nhưng `npx vitest run` gãy 6/442 test (toàn bộ ở `test/fgaClient.test.ts`) — lỗi `is not a constructor` do vitest v4 đổi cách `vi.mock()` xử lý mock factory trả về class/constructor, không phải bug code hiện có. Theo đúng nguyên tắc Revert on Failure: `git checkout -- package.json package-lock.json` rồi chạy lại `npm audit fix` (không force) để về đúng state an toàn, verify lại 442/442 pass. <br><br>**Còn tồn đọng, ghi nhận rõ thay vì giấu**: 5 vulnerability (3 moderate, 1 high, 1 critical theo nhãn rollup của npm) vẫn còn trong devDependencies (`esbuild`/`vite`/`vitest`) — không ảnh hưởng production (không đi vào `dist/` hay bundle web), chỉ khai thác được nếu đang chạy dev server cục bộ (`vite dev`/`vitest --ui`) VÀ bị dụ mở trang độc hại cùng lúc. Rủi ro thực tế thấp, nhưng fix đầy đủ đòi hỏi migrate `test/fgaClient.test.ts` (và có thể file khác) sang cú pháp `vi.mock()` của vitest v4 — việc riêng, chưa làm trong lần này. |
-| Trang hướng dẫn sử dụng công khai (GitHub Pages) tách khỏi Dashboard nội bộ | ✅ Done (19/08/2026) — trang `/notebook` trên Dashboard (marketing/onboarding page, không gọi API/auth) được tách thành build Vite **riêng biệt hoàn toàn**: entry `web/notebook.html` + `web/src/notebook-main.tsx` (chỉ render `<NoteBook/>`, không import `App.tsx`/route có auth) + `web/vite.notebook.config.ts` (`base: /ai-dev-guardian/` đúng path GitHub Pages project site). Mục đích: bundle public không được phép chứa code dashboard nội bộ — verify bằng số đo thật, bundle `notebook` 291KB so với bundle dashboard đầy đủ 486KB (gzip 89KB vs 132KB). Deploy qua `gh-pages` (npm package) lên nhánh `gh-pages` của repo GitHub public (`old-origin`, `dquangai/ai-dev-guardian`) bằng script `npm run deploy:notebook`; gắn link `📖 Read the User Guide` vào đầu `README.md`, trỏ `https://dquangai.github.io/ai-dev-guardian/`. Thêm `gh-pages` kéo theo 1 CVE HIGH mới (`nanoid`, transitive) — đã `npm audit fix`, verify `web/` về lại 0 vulnerability. Verify sống 2 lớp: (1) `vite preview` + `curl` xác nhận `index.html`/JS/CSS đều 200 đúng path base; (2) browser thật qua Playwright headless (chromium cache có sẵn máy, không cần cài mới) — chụp 5 giai đoạn UI, xác nhận đúng thiết kế, không lỗi console thật (chỉ có warning cert của Google Fonts CDN trong sandbox, không phải bug code). <br><br>**Phần demo terminal trong trang đổi hướng 2 lần trong ngày, ghi nhận cả hai vì đều là quyết định thiết kế có chủ đích, không phải revert do lỗi:** bản đầu là **Enter/click-driven walkthrough** (tự dựng lại đúng format output thật của CLI, đối chiếu trực tiếp với `src/cli.ts`/`src/hooks/installHook.ts`/`src/server/index.ts`, không đoán) — phù hợp cho việc tự bấm theo nhịp khi quay màn hình live; sau đó chính tay đổi sang **auto-runner tự gõ + tự lặp lại mỗi 5s** — phù hợp hơn cho khách xem thụ động trên trang public. Nội dung demo cả 2 bản đều là đúng 2 lỗi bảo mật thật đã verify BLOCK/PASS trong luồng SSO của V-ID (Open Redirect `sso-redirect.policy.md` CRITICAL + JWT decode-vs-verify `jwt-session-verification.policy.md` HIGH, xem thêm Mục 3 Lớp 3/5), không phải dữ liệu dựng cho đẹp. <br><br>**Bằng chứng dogfooding thật, không dàn dựng:** khi push chính thay đổi này, `guardian check` (hook cài sẵn trên chính repo `ai-dev-guardian`) tự chặn push **3 lần liên tiếp** vì 1 chuỗi demo dạng `ANTHROPIC_API_KEY=...` trong `NoteBook.tsx` — mỗi lần sửa placeholder rõ ràng hơn (`sk-ant-api03-...` → `sk-ant-...` → `<your-key-here>`), LLM vẫn đổi ý ra verdict khác nhau qua 3 lần chấm (do mỗi lần `amend` đổi commit hash → mất cache → chấm lại từ đầu, gặp đúng non-determinism nhiệt độ khác 0 đã ghi nhận nhiều lần trong tài liệu này) — cuối cùng bỏ qua bằng `--no-verify` sau khi xác nhận rõ ràng với người dùng đây là false positive trên chuỗi placeholder, không phải secret thật. |
-
----
-
-*Tài liệu tổng hợp từ `README.md`, `reports/sprint-plan.html`, `eval/results/history/` và trạng
-thái code thật của dự án tại thời điểm 19/08/2026.*
