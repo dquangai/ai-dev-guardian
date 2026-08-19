@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Tailwind v4 mặc định lấy `dark:` theo prefers-color-scheme của OS, không theo class
+   — nhưng ThemeContext của app gắn/gỡ class `.dark` trên <html> thủ công (toggle trong app,
+   độc lập với theme OS). Không có dòng này thì mọi `dark:` utility trong toàn bộ codebase im
+   lặng không chạy trừ khi OS cũng đang ở dark mode, gây tình trạng chữ tối trên nền tối. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
