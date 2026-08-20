@@ -1,0 +1,17 @@
+{
+  "name": "guardian-site-recorder",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Ghi video walkthrough tự động cho trang giới thiệu AI Dev Guardian (dùng cho pitch/gửi Mentor). Tách riêng khỏi package ai-dev-guardian gốc để không kéo Playwright vào bản publish npm.",
+  "scripts": {
+    "record": "node record.mjs",
+    "to-mp4": "node to-mp4.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.49.1"
+  },
+  "devDependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0"
+  }
+}
